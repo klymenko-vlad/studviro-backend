@@ -1,7 +1,3 @@
-# Local development dependencies. `docker compose up -d` then `pnpm start:dev`.
-# The app itself runs on the host for fast reloads; add the `app` profile
-# (`docker compose --profile app up`) to run the built image instead.
-
 services:
   postgres:
     image: postgres:17-alpine
