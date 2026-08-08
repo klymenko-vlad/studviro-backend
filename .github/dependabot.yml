@@ -1,0 +1,49 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+    groups:
+      # One PR per ecosystem instead of twenty: these packages are released in
+      # lockstep and must be upgraded together anyway.
+      nestjs:
+        patterns: ['@nestjs/*']
+      fastify:
+        patterns: ['fastify', '@fastify/*']
+      drizzle:
+        patterns: ['drizzle-orm', 'drizzle-kit']
+      testing:
+        patterns: ['vitest', '@vitest/*', 'testcontainers', '@testcontainers/*']
+      linting:
+        patterns: ['eslint', 'eslint-*', '@eslint/*', 'typescript-eslint', 'prettier', 'prettier-*']
+      types:
+        patterns: ['@types/*']
+    ignore:
+      # Node major bumps are a deliberate infrastructure decision, not a PR.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci(deps)'
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'build(docker)'

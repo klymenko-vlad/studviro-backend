@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# The default token is read-write; CI only ever reads the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:cov
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The suite uses Testcontainers, which brings up Postgres itself — no
+      # service containers to keep in sync with docker-compose.yml.
+      - run: pnpm test:e2e
+
+  openapi:
+    name: OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # `openapi.json` is generated from the controllers and committed, so the
+      # frontend can generate its client with no database and no running server.
+      # This step is what guarantees the committed file still matches the code.
+      - name: Regenerate and diff openapi.json
+        run: |
+          pnpm openapi:generate
+          git diff --exit-code -- openapi.json \
+            || { echo "::error::openapi.json is stale. Run 'pnpm openapi:generate' and commit the result."; exit 1; }
+
+      # Downstream consumers (the frontend's contract job) fetch this.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: openapi.json
+          retention-days: 30
+
+  migrations:
+    name: Migration safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Full history: the lock check diffs this branch against main.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # A generated migration that was never committed means the schema and the
+      # database disagree the moment this merges.
+      - name: Fail if the schema has ungenerated changes
+        run: |
+          pnpm db:generate
+          git diff --exit-code -- drizzle/ \
+            || { echo "::error::Schema changed without a migration. Run 'pnpm db:generate' and commit the result."; exit 1; }
+
+      # Locking DDL takes an ACCESS EXCLUSIVE lock for the length of a table
+      # rewrite, which is an outage on a large table rather than a deploy.
+      - name: Reject migrations that lock a table
+        run: |
+          set -euo pipefail
+          if git diff --name-only origin/main...HEAD -- drizzle/ | grep -q '[.]sql$'; then
+            added=$(git diff origin/main...HEAD -- 'drizzle/*.sql' | grep '^+' || true)
+            # Order-independent: Drizzle emits DEFAULT before NOT NULL, so a
+            # lookahead anchored on NOT NULL would miss the safe form.
+            if echo "$added" | grep -i 'ADD COLUMN' | grep -i 'NOT NULL' | grep -qiv 'DEFAULT'; then
+              echo "::error::ADD COLUMN NOT NULL without a DEFAULT fails against a non-empty table."
+              exit 1
+            fi
+            if echo "$added" | grep -i 'CREATE .*INDEX' | grep -qiv 'CONCURRENTLY'; then
+              echo "::warning::CREATE INDEX without CONCURRENTLY blocks writes while the index builds."
+            fi
+          fi
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint, typecheck, test, e2e, openapi, migrations, build]
+    if: always()
+    steps:
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "All checks passed."

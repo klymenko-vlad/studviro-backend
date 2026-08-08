@@ -1,0 +1,11 @@
+# Fallback owner for everything not matched below.
+* @klymenvlad
+
+# Infrastructure and anything that gates a deploy.
+/.github/          @klymenvlad
+/Dockerfile        @klymenvlad
+/docker-compose.yml @klymenvlad
+
+# Schema and migrations are the hardest things to roll back.
+/drizzle/                  @klymenvlad
+/src/database/schema/      @klymenvlad
