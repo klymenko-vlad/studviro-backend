@@ -8,9 +8,12 @@ on:
     # Weekly, so a vulnerability disclosed after merge still surfaces.
     - cron: '17 4 * * 1'
 
+# The repository is private without GitHub Advanced Security, so code scanning
+# uploads are rejected. Each scanner therefore fails its own job instead of
+# publishing SARIF to the Security tab.
 permissions:
   contents: read
-  security-events: write
+  actions: read
 
 jobs:
   audit:
@@ -44,6 +47,31 @@ jobs:
           queries: security-and-quality
 
       - uses: github/codeql-action/analyze@v3
+        with:
+          upload: never
+          output: codeql-results
+
+      - name: Publish results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results
+          path: codeql-results
+          retention-days: 14
+
+      - name: Fail on security findings
+        # Only error-severity rules: the security-and-quality suite also emits
+        # style warnings that should not block a merge.
+        run: |
+          count=$(jq '[.runs[].results[]? | select(.level == "error")] | length' \
+            codeql-results/javascript.sarif)
+          echo "CodeQL error-severity findings: $count"
+          if [ "$count" -gt 0 ]; then
+            jq -r '.runs[].results[]? | select(.level == "error")
+              | "\(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) \(.message.text)"' \
+              codeql-results/javascript.sarif
+            exit 1
+          fi
 
   image:
     name: Image vulnerability scan
@@ -59,12 +87,8 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: studviro-backend:scan
-          format: sarif
-          output: trivy.sarif
+          format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-
-      - uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy.sarif
+          # No SARIF upload available, so a finding must fail the job directly.
+          exit-code: '1'
