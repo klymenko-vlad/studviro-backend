@@ -37,7 +37,17 @@ ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=512"
 
 # dumb-init reaps zombies and forwards SIGTERM so shutdown hooks actually run.
-RUN apk add --no-cache dumb-init
+# The OpenSSL upgrade picks up base-image CVEs fixed after the node tag was cut.
+RUN apk add --no-cache dumb-init \
+    && apk upgrade --no-cache libcrypto3 libssl3
+
+# The runtime only ever runs `node dist/main.js`, so the bundled package
+# managers are pure attack surface — and they vendor their own copies of tar,
+# sigstore and friends, which the image scanner rightly flags.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
