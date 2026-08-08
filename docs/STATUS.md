@@ -30,6 +30,13 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   lock, `Idempotency-Key` interceptor.
 - **Operations** — Pino logs with correlation IDs, Terminus health, bearer-protected Prometheus
   metrics in production, multi-stage `Dockerfile`, `docker-compose.yml`.
+- **Canonical academic schema** (step 25) — 24 tables across institutions, identity linking,
+  scoped roles, academic structure, enrolment, scheduling, learning and course results
+  (ADR 0009). External IDs are never primary keys: every row carries `institution_id` plus
+  provenance (`source_system`, `external_id`, `source_version`, `source_updated_at`,
+  `last_synchronized_at`, `synchronization_status`), unique per
+  `(institution_id, source_system, external_id)`. `Course`, `CourseOffering` and
+  `LearningSpace` are separate. Grades are split into calculated / proposed / official.
 - **API contract** — `openapi.json` generated from decorators, committed, drift-checked by
   `pnpm openapi:check`; the frontend client is generated from it.
 - **CI** — `.github/workflows/`: lint, typecheck, test, OpenAPI drift, migrations, build;
@@ -38,46 +45,36 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
 ## Not done
 
-Everything domain-specific. The schema holds only `users` and `refresh_tokens`.
+The tables exist; nothing reads or writes them yet.
 
-- No canonical academic tables — this blocks nearly everything else.
+- No repositories, services or endpoints over the canonical tables. No seed data beyond users.
 - No connectors (SIS or LMS), no synchronization engine, no institution configuration.
-- Authorization is a flat `user`/`admin` `RolesGuard`. No canonical roles, no scoping.
-- No OIDC strategy, no `ExternalIdentity` linking.
+- Authorization is still a flat `user`/`admin` `RolesGuard`. `role_assignments` is not enforced,
+  and reads are not scoped by `institution_id` — nothing in the schema forces that today.
+- No OIDC strategy. `external_identities` exists but nothing writes it.
+- Theses, transcripts, notifications and audit are intentionally absent from the model.
 
-## Next task — canonical schema (backlog step 25)
+## Next task — identity linking and scoped roles (steps 26–27)
 
-The critical path. Steps 26 (identity linking), 27 (scoped roles), 28 (institution config),
-29 (mock SIS) and 32–35 (connectors, sync) all need tables to read from or write into.
+The tables are there, so this is now module work rather than modelling.
 
-Proposed scope, in `src/database/schema`, one migration:
+- An `ExternalIdentity` repository and the linking rule: authenticate against a provider
+  subject, find or create the platform user, never match on email.
+- A scope-aware authorization guard that resolves `role_assignments` for the acting user and
+  answers "may this person do X in scope Y", replacing the flat `RolesGuard`. Decide where
+  `institution_id` scoping is enforced — repository base class or row-level security — and make
+  it uniform before any read path exists to retrofit.
+- OIDC strategy is optional and blocked on institutional client registration; the linking model
+  should not assume it arrives.
 
-- `institutions`, `org_units`
-- `external_identities` (user ↔ provider subject), `role_assignments` (role + scope type/id)
-- `academic_terms`, `programs`, `courses`, `course_offerings`, `teaching_assignments`,
-  `enrollments`, `groups`, `group_memberships`
-- `rooms`, `timetable_events`, `exam_terms`, `exam_registrations`
-- `learning_spaces`, `learning_activities`, `assessments`, `assessment_results`,
-  `activity_completions`, `submission_refs`
-- `official_course_results`
-
-Two rules the model exists to enforce:
-
-- **External IDs are never primary keys.** Platform UUID plus provenance columns
-  (`source_system`, `external_id`, `source_version`, `source_updated_at`,
-  `last_synchronized_at`), unique per `(institution_id, source_system, external_id)`.
-- **Every canonical row carries `institution_id`**, even though deployment is
-  single-institution for now. `users` is deliberately left untouched — a user is tied to an
-  institution through `external_identities`, which avoids a nullable tenant key.
-
-Write an ADR for the model. Ownership rules (SIS wins vs Moodle wins per entity) are already
-tabulated in `docs/Tasks Plan.md` — follow them rather than re-deriving.
+Step 28 (institution configuration) and 29 (mock SIS) are the natural follow-ups, and 29
+unblocks the connectors without waiting on AIS2 access.
 
 ## Caveats
 
-- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel. Steps 24–27
-  read as done but are not: the infrastructure landed, the domain did not. Prefer the codebase
-  and current best practice where they conflict, and fix the doc when they do.
+- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel. Steps 26–27
+  read as done but are not. Prefer the codebase and current best practice where they conflict,
+  and fix the doc when they do.
 - Both docs contain broken citation markers (`cite…turn20view0`) — invisible private-use
   Unicode from a research export. They break exact-string edits; anchor edits on clean text.
 - Steps 1–22 are design tasks whose status was inferred from the docs, not verified.
