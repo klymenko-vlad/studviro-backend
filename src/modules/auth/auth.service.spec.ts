@@ -1,0 +1,277 @@
+import { Test } from '@nestjs/testing';
+import { PinoLogger } from 'nestjs-pino';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { PasswordService } from '../../common/crypto/password.service';
+import { UnauthenticatedError } from '../../common/errors/domain.error';
+import { TransactionHost } from '../../database/transaction.host';
+import { UsersRepository } from '../users/users.repository';
+import { UsersService } from '../users/users.service';
+
+import { AuthService } from './auth.service';
+import { RefreshTokensRepository } from './refresh-tokens.repository';
+import { TokenService } from './token.service';
+
+const USER = {
+  id: 'user-1',
+  email: 'ada@example.com',
+  displayName: 'Ada',
+  passwordHash: '$argon2id$stored',
+  locale: 'en',
+  role: 'user' as const,
+  tokenVersion: 0,
+  createdAt: new Date('2026-01-01'),
+  updatedAt: new Date('2026-01-01'),
+  deletedAt: null,
+};
+
+function storedToken(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'rt-1',
+    userId: USER.id,
+    tokenHash: 'hash:refresh-token',
+    replacedByTokenHash: null,
+    revokedAt: null,
+    expiresAt: new Date(Date.now() + 86_400_000),
+    userAgent: null,
+    ipAddress: null,
+    deletedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+describe('AuthService', () => {
+  const usersService = { create: vi.fn(), findOne: vi.fn() };
+
+  const usersRepository = {
+    findByEmail: vi.fn(),
+    findById: vi.fn(),
+    findByIdOrFail: vi.fn(),
+    update: vi.fn(),
+    incrementTokenVersion: vi.fn(),
+  };
+
+  const refreshTokens = {
+    create: vi.fn(),
+    findByHash: vi.fn(),
+    revoke: vi.fn(),
+    revokeAllForUser: vi.fn(),
+  };
+
+  const tokens = {
+    issueAccessToken: vi.fn(() =>
+      Promise.resolve({ token: 'access-token', expiresAt: new Date(Date.now() + 900_000) }),
+    ),
+    issueRefreshToken: vi.fn(() =>
+      Promise.resolve({ token: 'next-refresh', expiresAt: new Date(Date.now() + 86_400_000) }),
+    ),
+    verifyRefreshToken: vi.fn(),
+    hash: vi.fn((token: string) => `hash:${token}`),
+  };
+
+  const passwords = { hash: vi.fn(), verify: vi.fn(), needsRehash: vi.fn(() => false) };
+
+  // Runs the callback inline: the unit under test is the ordering of the writes,
+  // not Postgres' transaction semantics, which the e2e suite covers.
+  const txHost = { run: vi.fn((fn: (tx: unknown) => unknown) => fn(undefined)) };
+
+  let service: AuthService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: UsersService, useValue: usersService },
+        { provide: UsersRepository, useValue: usersRepository },
+        { provide: RefreshTokensRepository, useValue: refreshTokens },
+        { provide: TokenService, useValue: tokens },
+        { provide: PasswordService, useValue: passwords },
+        { provide: TransactionHost, useValue: txHost },
+        { provide: PinoLogger, useValue: { setContext: vi.fn(), warn: vi.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(AuthService);
+  });
+
+  const credentials = { email: 'ada@example.com', password: 'correct horse battery' };
+
+  describe('login', () => {
+    it('issues a token pair and records the session', async () => {
+      usersRepository.findByEmail.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(true);
+
+      const result = await service.login(credentials, { ipAddress: '203.0.113.1' });
+
+      expect(result.accessToken).toBe('access-token');
+      expect(result.refreshToken).toBe('next-refresh');
+      expect(refreshTokens.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: USER.id, tokenHash: 'hash:next-refresh' }),
+      );
+    });
+
+    it('never stores the refresh token itself, only its hash', async () => {
+      usersRepository.findByEmail.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(true);
+
+      await service.login(credentials, {});
+
+      const [values] = refreshTokens.create.mock.calls[0] as [Record<string, unknown>];
+      expect(Object.values(values)).not.toContain('next-refresh');
+      expect(values.tokenHash).toBe('hash:next-refresh');
+    });
+
+    it('verifies a password even when the email is unknown, so timing cannot enumerate accounts', async () => {
+      usersRepository.findByEmail.mockResolvedValue(undefined);
+      passwords.verify.mockResolvedValue(false);
+
+      await expect(service.login(credentials, {})).rejects.toThrow(UnauthenticatedError);
+      expect(passwords.verify).toHaveBeenCalledOnce();
+    });
+
+    it('reports the same error for an unknown email and a wrong password', async () => {
+      usersRepository.findByEmail.mockResolvedValue(undefined);
+      passwords.verify.mockResolvedValue(false);
+      const unknownEmail = await service
+        .login(credentials, {})
+        .catch((error: unknown) => error);
+
+      usersRepository.findByEmail.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(false);
+      const wrongPassword = await service
+        .login(credentials, {})
+        .catch((error: unknown) => error);
+
+      expect((unknownEmail as UnauthenticatedError).code).toBe(
+        (wrongPassword as UnauthenticatedError).code,
+      );
+      expect(unknownEmail).toHaveProperty('message', (wrongPassword as Error).message);
+    });
+
+    it('upgrades a stale password digest on a successful sign-in', async () => {
+      usersRepository.findByEmail.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(true);
+      passwords.needsRehash.mockReturnValueOnce(true);
+      passwords.hash.mockResolvedValue('$argon2id$stronger');
+      usersRepository.update.mockResolvedValue({ ...USER, passwordHash: '$argon2id$stronger' });
+
+      await service.login(credentials, {});
+
+      expect(usersRepository.update).toHaveBeenCalledWith(USER.id, {
+        passwordHash: '$argon2id$stronger',
+      });
+    });
+  });
+
+  describe('refresh', () => {
+    beforeEach(() => {
+      tokens.verifyRefreshToken.mockResolvedValue({ sub: USER.id, jti: 'jti-1' });
+      usersRepository.findById.mockResolvedValue(USER);
+    });
+
+    it('rotates the token, revoking the old one and issuing a successor', async () => {
+      refreshTokens.findByHash.mockResolvedValue(storedToken());
+
+      const result = await service.refresh('refresh-token', {});
+
+      expect(refreshTokens.revoke).toHaveBeenCalledWith('rt-1', 'hash:next-refresh', undefined);
+      expect(refreshTokens.create).toHaveBeenCalledWith(
+        expect.objectContaining({ tokenHash: 'hash:next-refresh' }),
+        undefined,
+      );
+      expect(result.refreshToken).toBe('next-refresh');
+    });
+
+    it('revokes every session when an already-rotated token comes back', async () => {
+      // Revoked *and* replaced: the signature is genuine and the token has
+      // already been spent, so a second holder exists.
+      refreshTokens.findByHash.mockResolvedValue(
+        storedToken({ revokedAt: new Date(), replacedByTokenHash: 'hash:successor' }),
+      );
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+
+      expect(refreshTokens.revokeAllForUser).toHaveBeenCalledWith(USER.id, undefined);
+      // Access tokens already in flight have to die too, or the attacker keeps
+      // their current one until its TTL lapses.
+      expect(usersRepository.incrementTokenVersion).toHaveBeenCalledWith(USER.id, undefined);
+      expect(refreshTokens.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a token revoked by sign-out without cascading to other sessions', async () => {
+      // Revoked but never replaced — an ordinary logout, which a request already
+      // in flight hits routinely. Treating it as a breach would let any user
+      // sign themselves out everywhere by double-clicking.
+      refreshTokens.findByHash.mockResolvedValue(storedToken({ revokedAt: new Date() }));
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+
+      expect(refreshTokens.revokeAllForUser).not.toHaveBeenCalled();
+      expect(usersRepository.incrementTokenVersion).not.toHaveBeenCalled();
+    });
+
+    it('rejects a token whose signature does not verify', async () => {
+      tokens.verifyRefreshToken.mockResolvedValue(undefined);
+
+      await expect(service.refresh('forged', {})).rejects.toThrow(UnauthenticatedError);
+      expect(refreshTokens.findByHash).not.toHaveBeenCalled();
+    });
+
+    it('rejects a signed token that is not in the store', async () => {
+      refreshTokens.findByHash.mockResolvedValue(undefined);
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+    });
+
+    it('rejects a token whose subject does not own the stored row', async () => {
+      refreshTokens.findByHash.mockResolvedValue(storedToken({ userId: 'someone-else' }));
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+      expect(refreshTokens.revoke).not.toHaveBeenCalled();
+    });
+
+    it('rejects a stored token that has expired', async () => {
+      refreshTokens.findByHash.mockResolvedValue(
+        storedToken({ expiresAt: new Date(Date.now() - 1) }),
+      );
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+    });
+
+    it('rejects when the account has since been deleted', async () => {
+      refreshTokens.findByHash.mockResolvedValue(storedToken());
+      usersRepository.findById.mockResolvedValue(undefined);
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+    });
+  });
+
+  describe('logout', () => {
+    it('revokes the presented token', async () => {
+      tokens.verifyRefreshToken.mockResolvedValue({ sub: USER.id, jti: 'jti-1' });
+      refreshTokens.findByHash.mockResolvedValue(storedToken());
+
+      await service.logout('refresh-token');
+
+      expect(refreshTokens.revoke).toHaveBeenCalledWith('rt-1', null);
+    });
+
+    it('succeeds silently for a token the server has never seen', async () => {
+      tokens.verifyRefreshToken.mockResolvedValue(undefined);
+
+      await expect(service.logout('garbage')).resolves.toBeUndefined();
+      expect(refreshTokens.revoke).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('logoutAll', () => {
+    it('ends every session and invalidates outstanding access tokens', async () => {
+      await service.logoutAll(USER.id);
+
+      expect(refreshTokens.revokeAllForUser).toHaveBeenCalledWith(USER.id, undefined);
+      expect(usersRepository.incrementTokenVersion).toHaveBeenCalledWith(USER.id, undefined);
+    });
+  });
+});
