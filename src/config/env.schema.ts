@@ -72,6 +72,7 @@ export const envSchema = z.object({
   JWT_REFRESH_TTL: z.string().default('30d'),
 
   METRICS_ENABLED: bool('true'),
+  METRICS_TOKEN: z.string().min(32).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   SENTRY_DSN: z.string().optional(),
 
@@ -128,6 +129,10 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
       'JWT_REFRESH_SECRET',
       'must differ from JWT_ACCESS_SECRET, or a stolen access token can be replayed as a refresh token',
     );
+  }
+
+  if (env.METRICS_ENABLED && !env.METRICS_TOKEN) {
+    reject('METRICS_TOKEN', 'must be set when metrics are enabled in production');
   }
 }
 

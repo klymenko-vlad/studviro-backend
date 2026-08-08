@@ -25,6 +25,14 @@ export class RefreshTokensRepository extends BaseRepository<typeof refreshTokens
     return this.findOne(eq(refreshTokens.tokenHash, tokenHash), { consistent: true }, tx);
   }
 
+  findByHashForUpdate(tokenHash: string, tx: Transaction): Promise<RefreshToken | undefined> {
+    return this.findOne(
+      eq(refreshTokens.tokenHash, tokenHash),
+      { consistent: true, lock: 'update' },
+      tx,
+    );
+  }
+
   async revoke(
     id: string,
     replacedByTokenHash: string | null,

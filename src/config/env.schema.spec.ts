@@ -13,6 +13,7 @@ const production = {
   SWAGGER_ENABLED: 'false',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
+  METRICS_TOKEN: 'm'.repeat(32),
 };
 
 describe('validateEnv', () => {
@@ -72,6 +73,12 @@ describe('validateEnv', () => {
       expect(() =>
         validateEnv({ ...production, JWT_ACCESS_SECRET: shared, JWT_REFRESH_SECRET: shared }),
       ).toThrow(/JWT_REFRESH_SECRET/);
+    });
+
+    it('requires a metrics token when metrics are enabled', () => {
+      const { METRICS_TOKEN: _omitted, ...withoutMetricsToken } = production;
+
+      expect(() => validateEnv(withoutMetricsToken)).toThrow(/METRICS_TOKEN/);
     });
 
     it('allows those same values outside production', () => {

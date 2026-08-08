@@ -3,6 +3,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { makeHistogramProvider, PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 import { MetricsController } from './metrics.controller';
+import { MetricsGuard } from './metrics.guard';
 import { HTTP_DURATION_HISTOGRAM, MetricsInterceptor } from './metrics.interceptor';
 
 /**
@@ -20,6 +21,7 @@ import { HTTP_DURATION_HISTOGRAM, MetricsInterceptor } from './metrics.intercept
     }),
   ],
   providers: [
+    MetricsGuard,
     makeHistogramProvider({
       name: HTTP_DURATION_HISTOGRAM,
       help: 'HTTP request duration in seconds',

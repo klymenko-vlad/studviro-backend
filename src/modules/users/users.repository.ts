@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import type { Transaction } from '../../database/database.tokens';
 import { BaseRepository } from '../../database/repository/base.repository';
+import type { FindOneOptions } from '../../database/repository/repository.types';
 import { users, type User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -20,8 +21,8 @@ export class UsersRepository extends BaseRepository<typeof users> {
     super(txHost, users);
   }
 
-  findByEmail(email: string): Promise<User | undefined> {
-    return this.findOne(eq(users.email, email));
+  findByEmail(email: string, options: FindOneOptions = {}): Promise<User | undefined> {
+    return this.findOne(eq(users.email, email), options);
   }
 
   /**

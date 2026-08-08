@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * which is the entire reason `users.token_version` exists.
    */
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
-    const user = await this.users.findById(payload.sub);
+    const user = await this.users.findById(payload.sub, { consistent: true });
 
     if (user?.tokenVersion !== payload.tv) {
       throw new UnauthorizedException({
