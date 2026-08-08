@@ -164,6 +164,10 @@ export class AppConfigService {
     return this.config.get<boolean>('METRICS_ENABLED');
   }
 
+  get metricsToken(): string | undefined {
+    return this.config.get<string | undefined>('METRICS_TOKEN');
+  }
+
   get otlpEndpoint(): string | undefined {
     return this.config.get<string | undefined>('OTEL_EXPORTER_OTLP_ENDPOINT');
   }

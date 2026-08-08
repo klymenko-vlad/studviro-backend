@@ -3,6 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
+import type { Transaction } from '../../database/database.tokens';
 import type { User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -48,14 +49,20 @@ export class AuthService {
   }
 
   async register(dto: CreateUserDto, context: SessionContext): Promise<AuthTokensDto> {
-    const user = await this.usersService.create(dto);
-    const entity = await this.usersRepository.findByIdOrFail(user.id, { consistent: true });
+    return this.txHost.run(async (tx) => {
+      const user = await this.usersService.create(dto, tx);
+      const entity = await this.usersRepository.findByIdOrFail(
+        user.id,
+        { consistent: true },
+        tx,
+      );
 
-    return this.issueSession(entity, context);
+      return this.issueSession(entity, context, tx);
+    });
   }
 
   async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensDto> {
-    const user = await this.usersRepository.findByEmail(dto.email);
+    const user = await this.usersRepository.findByEmail(dto.email, { consistent: true });
 
     const passwordMatches = await this.passwords.verify(
       user?.passwordHash ?? ABSENT_USER_DIGEST,
@@ -87,7 +94,7 @@ export class AuthService {
     const tokenHash = this.tokens.hash(refreshToken);
 
     const outcome = await this.txHost.run(async (tx) => {
-      const stored = await this.refreshTokens.findByHash(tokenHash, tx);
+      const stored = await this.refreshTokens.findByHashForUpdate(tokenHash, tx);
 
       if (stored?.userId !== payload.sub) return REJECTED;
 
@@ -179,19 +186,26 @@ export class AuthService {
     return this.usersService.findOne(user.id);
   }
 
-  private async issueSession(user: User, context: SessionContext): Promise<AuthTokensDto> {
+  private async issueSession(
+    user: User,
+    context: SessionContext,
+    tx?: Transaction,
+  ): Promise<AuthTokensDto> {
     const [access, refresh] = await Promise.all([
       this.tokens.issueAccessToken(user),
       this.tokens.issueRefreshToken(user.id),
     ]);
 
-    await this.refreshTokens.create({
-      userId: user.id,
-      tokenHash: this.tokens.hash(refresh.token),
-      expiresAt: refresh.expiresAt,
-      userAgent: context.userAgent ?? null,
-      ipAddress: context.ipAddress ?? null,
-    });
+    await this.refreshTokens.create(
+      {
+        userId: user.id,
+        tokenHash: this.tokens.hash(refresh.token),
+        expiresAt: refresh.expiresAt,
+        userAgent: context.userAgent ?? null,
+        ipAddress: context.ipAddress ?? null,
+      },
+      tx,
+    );
 
     return AuthTokensDto.of(
       access.token,

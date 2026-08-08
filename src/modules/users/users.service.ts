@@ -8,6 +8,7 @@ import {
   PaginationQueryDto,
 } from '../../common/dto/pagination.dto';
 import { ConflictError } from '../../common/errors/domain.error';
+import type { Transaction } from '../../database/database.tokens';
 import { isUniqueViolation } from '../../database/repository/database-error';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -27,13 +28,16 @@ export class UsersService {
    * two concurrent signups can both observe "free" before either inserts. The
    * unique index is the actual guarantee, so the violation is what we handle.
    */
-  async create(dto: CreateUserDto): Promise<UserResponseDto> {
+  async create(dto: CreateUserDto, tx?: Transaction): Promise<UserResponseDto> {
     try {
-      const created = await this.usersRepository.create({
-        email: dto.email,
-        displayName: dto.displayName,
-        passwordHash: await this.passwords.hash(dto.password),
-      });
+      const created = await this.usersRepository.create(
+        {
+          email: dto.email,
+          displayName: dto.displayName,
+          passwordHash: await this.passwords.hash(dto.password),
+        },
+        tx,
+      );
 
       return UserResponseDto.fromEntity(created);
     } catch (error) {

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
 import { TransactionHost } from '../../database/transaction.host';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersRepository } from '../users/users.repository';
 import { UsersService } from '../users/users.service';
 
@@ -56,6 +57,7 @@ describe('AuthService', () => {
   const refreshTokens = {
     create: vi.fn(),
     findByHash: vi.fn(),
+    findByHashForUpdate: vi.fn(),
     revoke: vi.fn(),
     revokeAllForUser: vi.fn(),
   };
@@ -98,6 +100,26 @@ describe('AuthService', () => {
 
   const credentials = { email: 'ada@example.com', password: 'correct horse battery' };
 
+  describe('register', () => {
+    it('creates the user and initial refresh token in the same transaction', async () => {
+      const transaction = { id: 'tx-1' };
+      const registration = { ...credentials, displayName: 'Ada' };
+      txHost.run.mockImplementationOnce((fn: (tx: unknown) => unknown) => fn(transaction));
+      usersService.create.mockResolvedValue(UserResponseDto.fromEntity(USER));
+      usersRepository.findByIdOrFail.mockResolvedValue(USER);
+
+      await service.register(registration, {});
+
+      expect(usersService.create).toHaveBeenCalledWith(registration, transaction);
+      expect(usersRepository.findByIdOrFail).toHaveBeenCalledWith(
+        USER.id,
+        { consistent: true },
+        transaction,
+      );
+      expect(refreshTokens.create).toHaveBeenCalledWith(expect.any(Object), transaction);
+    });
+  });
+
   describe('login', () => {
     it('issues a token pair and records the session', async () => {
       usersRepository.findByEmail.mockResolvedValue(USER);
@@ -109,7 +131,11 @@ describe('AuthService', () => {
       expect(result.refreshToken).toBe('next-refresh');
       expect(refreshTokens.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: USER.id, tokenHash: 'hash:next-refresh' }),
+        undefined,
       );
+      expect(usersRepository.findByEmail).toHaveBeenCalledWith(credentials.email, {
+        consistent: true,
+      });
     });
 
     it('never stores the refresh token itself, only its hash', async () => {
@@ -172,7 +198,7 @@ describe('AuthService', () => {
     });
 
     it('rotates the token, revoking the old one and issuing a successor', async () => {
-      refreshTokens.findByHash.mockResolvedValue(storedToken());
+      refreshTokens.findByHashForUpdate.mockResolvedValue(storedToken());
 
       const result = await service.refresh('refresh-token', {});
 
@@ -187,7 +213,7 @@ describe('AuthService', () => {
     it('revokes every session when an already-rotated token comes back', async () => {
       // Revoked *and* replaced: the signature is genuine and the token has
       // already been spent, so a second holder exists.
-      refreshTokens.findByHash.mockResolvedValue(
+      refreshTokens.findByHashForUpdate.mockResolvedValue(
         storedToken({ revokedAt: new Date(), replacedByTokenHash: 'hash:successor' }),
       );
 
@@ -204,7 +230,9 @@ describe('AuthService', () => {
       // Revoked but never replaced — an ordinary logout, which a request already
       // in flight hits routinely. Treating it as a breach would let any user
       // sign themselves out everywhere by double-clicking.
-      refreshTokens.findByHash.mockResolvedValue(storedToken({ revokedAt: new Date() }));
+      refreshTokens.findByHashForUpdate.mockResolvedValue(
+        storedToken({ revokedAt: new Date() }),
+      );
 
       await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
 
@@ -216,24 +244,26 @@ describe('AuthService', () => {
       tokens.verifyRefreshToken.mockResolvedValue(undefined);
 
       await expect(service.refresh('forged', {})).rejects.toThrow(UnauthenticatedError);
-      expect(refreshTokens.findByHash).not.toHaveBeenCalled();
+      expect(refreshTokens.findByHashForUpdate).not.toHaveBeenCalled();
     });
 
     it('rejects a signed token that is not in the store', async () => {
-      refreshTokens.findByHash.mockResolvedValue(undefined);
+      refreshTokens.findByHashForUpdate.mockResolvedValue(undefined);
 
       await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
     });
 
     it('rejects a token whose subject does not own the stored row', async () => {
-      refreshTokens.findByHash.mockResolvedValue(storedToken({ userId: 'someone-else' }));
+      refreshTokens.findByHashForUpdate.mockResolvedValue(
+        storedToken({ userId: 'someone-else' }),
+      );
 
       await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
       expect(refreshTokens.revoke).not.toHaveBeenCalled();
     });
 
     it('rejects a stored token that has expired', async () => {
-      refreshTokens.findByHash.mockResolvedValue(
+      refreshTokens.findByHashForUpdate.mockResolvedValue(
         storedToken({ expiresAt: new Date(Date.now() - 1) }),
       );
 
@@ -241,7 +271,7 @@ describe('AuthService', () => {
     });
 
     it('rejects when the account has since been deleted', async () => {
-      refreshTokens.findByHash.mockResolvedValue(storedToken());
+      refreshTokens.findByHashForUpdate.mockResolvedValue(storedToken());
       usersRepository.findById.mockResolvedValue(undefined);
 
       await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);

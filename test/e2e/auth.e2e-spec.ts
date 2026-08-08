@@ -109,6 +109,14 @@ describe('Auth (e2e)', () => {
       expect((await refresh(refreshToken)).statusCode).toBe(401);
     });
 
+    it('allows exactly one of two concurrent rotations', async () => {
+      const { refreshToken } = (await register()).json();
+
+      const responses = await Promise.all([refresh(refreshToken), refresh(refreshToken)]);
+
+      expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 401]);
+    });
+
     it('revokes the whole family when a rotated token is replayed', async () => {
       const { refreshToken } = (await register()).json();
       const rotated = (await refresh(refreshToken)).json();
