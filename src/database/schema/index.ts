@@ -10,4 +10,5 @@ export * from './learning';
 export * from './refresh-tokens';
 export * from './role-assignments';
 export * from './scheduling';
+export * from './synchronization';
 export * from './users';

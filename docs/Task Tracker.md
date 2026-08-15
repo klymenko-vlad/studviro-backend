@@ -59,7 +59,7 @@ the same commit whenever the picture they describe has changed.
 | 13  | Generic `AcademicSystemConnector` interface            | ✅      | —        | Done — interface, capability model and records in `modules/connectors` |
 | 14  | Generic `LearningSystemConnector` interface            | ✅      | —        | In progress — interface and records exist; no implementation yet       |
 | 15  | Document available AIS2 access                         | —       | —        | Blocked                                                                |
-| 16  | Synchronization semantics                              | —       | —        | In progress                                                            |
+| 16  | Synchronization semantics                              | —       | —        | Done — ADR 0010                                                        |
 | 17  | Authentication strategy and development IdP            | —       | —        | Done                                                                   |
 | 18  | Canonical RBAC / scoping model                         | —       | —        | Done                                                                   |
 | 19  | GDPR data inventory and DPIA screening                 | —       | —        | Not started                                                            |
@@ -78,19 +78,19 @@ the same commit whenever the picture they describe has changed.
 | 27  | Server-side authorization and scoped roles            | ✅      | ✅       | Done — permissions, scope hierarchy, `PermissionsGuard`, the role assignment API and the administrator's grant and revoke screens       |
 | 28  | Institution configuration, terminology, feature flags | ✅      | ✅       | Done — `institution_settings`, a resolving service, the configuration API and the institution settings screen                           |
 | 29  | Synthetic / mock SIS connector                        | ✅      | ✅       | Done — deterministic `mock-sis` connector, a registry, and connector health and capabilities on the settings screen                     |
-| 30  | Realistic synthetic university dataset                | ✅      | —        | In progress — the mock SIS generates one; nothing imports it into the canonical tables yet                                              |
+| 30  | Realistic synthetic university dataset                | ✅      | —        | Done — the mock SIS generates one and the synchronization engine imports it into the canonical tables                                   |
 | 31  | Moodle development instance                           | —       | —        | Not started                                                                                                                             |
 
 ### Integration (32–37)
 
-| #   | Task                                              | Backend | Frontend | Status                                                           |
-| --- | ------------------------------------------------- | ------- | -------- | ---------------------------------------------------------------- |
-| 32  | Moodle identity / course / enrolment reads        | ⬜      | —        | Not started                                                      |
-| 33  | Moodle activities, deadlines, completion, grades  | ⬜      | —        | Not started                                                      |
-| 34  | AIS2 connector                                    | ⬜      | —        | Blocked on step 15                                               |
-| 35  | Synchronization engine and job state machine      | ⬜      | —        | Not started                                                      |
-| 36  | Retries, idempotency, change tracking, tombstones | ⬜      | —        | In progress — generic queue, lock and idempotency plumbing exist |
-| 37  | Reconciliation checks                             | ⬜      | ⬜       | Not started                                                      |
+| #   | Task                                              | Backend | Frontend | Status                                                                                                                                |
+| --- | ------------------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 32  | Moodle identity / course / enrolment reads        | ⬜      | —        | Not started                                                                                                                           |
+| 33  | Moodle activities, deadlines, completion, grades  | ⬜      | —        | Not started                                                                                                                           |
+| 34  | AIS2 connector                                    | ⬜      | —        | Blocked on step 15                                                                                                                    |
+| 35  | Synchronization engine and job state machine      | ✅      | ⬜       | In progress — engine, run state machine, watermarks and the run API ship; the monitoring screen is step 47                            |
+| 36  | Retries, idempotency, change tracking, tombstones | ✅      | —        | Done — provenance upsert with a stale-write guard, per-domain watermarks, tombstones, child pruning and per-record failure accounting |
+| 37  | Reconciliation checks                             | ⬜      | ⬜       | Not started                                                                                                                           |
 
 ### Product surfaces (38–52)
 
@@ -105,7 +105,7 @@ the same commit whenever the picture they describe has changed.
 | 44  | Notification aggregation and deduplication  | ⬜      | ⬜       | Not started                                                                                           |
 | 45  | Teacher course / roster dashboard           | ⬜      | ⬜       | Not started                                                                                           |
 | 46  | Admin connector configuration               | ✅      | ✅       | In progress — connector selection, health and capabilities ship; credentials and field mapping do not |
-| 47  | Sync monitoring and retry UI                | ⬜      | ⬜       | Not started                                                                                           |
+| 47  | Sync monitoring and retry UI                | ✅      | ⬜       | In progress — run history, per-domain results and freshness are readable over the API; no screen yet  |
 | 48  | Mapping / conflict / reconciliation UI      | ⬜      | ⬜       | Not started                                                                                           |
 | 49  | Structured audit events                     | ⬜      | ⬜       | Not started                                                                                           |
 | 50  | Personal-data inventory and export workflow | ⬜      | ⬜       | Not started                                                                                           |
@@ -114,19 +114,19 @@ the same commit whenever the picture they describe has changed.
 
 ### Operations and quality (53–63)
 
-| #   | Task                                                 | Backend | Frontend | Status                               |
-| --- | ---------------------------------------------------- | ------- | -------- | ------------------------------------ |
-| 53  | Observability: logs, health, metrics, sync freshness | ✅      | —        | In progress — sync freshness missing |
-| 54  | Containerization and repeatable deployment           | ✅      | ⬜       | In progress                          |
-| 55  | Backup and restore procedures                        | ⬜      | —        | Not started                          |
-| 56  | Unit and domain tests                                | ✅      | ⬜       | In progress — continuous             |
-| 57  | Connector contract tests                             | ⬜      | —        | Not started                          |
-| 58  | Integration tests with Moodle and mock SIS           | ⬜      | —        | Not started                          |
-| 59  | End-to-end student / teacher / admin tests           | ⬜      | ⬜       | Not started                          |
-| 60  | Authorization-negative and security tests            | ⬜      | ⬜       | Not started                          |
-| 61  | Performance and load tests                           | ⬜      | ⬜       | Not started                          |
-| 62  | Automated and manual accessibility tests             | —       | ⬜       | Not started                          |
-| 63  | Migration dry run on synthetic data                  | ⬜      | —        | Not started                          |
+| #   | Task                                                 | Backend | Frontend | Status                                                                  |
+| --- | ---------------------------------------------------- | ------- | -------- | ----------------------------------------------------------------------- |
+| 53  | Observability: logs, health, metrics, sync freshness | ✅      | —        | In progress — freshness readable over the API, not exported as a metric |
+| 54  | Containerization and repeatable deployment           | ✅      | ⬜       | In progress                                                             |
+| 55  | Backup and restore procedures                        | ⬜      | —        | Not started                                                             |
+| 56  | Unit and domain tests                                | ✅      | ⬜       | In progress — continuous                                                |
+| 57  | Connector contract tests                             | ⬜      | —        | Not started                                                             |
+| 58  | Integration tests with Moodle and mock SIS           | ⬜      | —        | Not started                                                             |
+| 59  | End-to-end student / teacher / admin tests           | ⬜      | ⬜       | Not started                                                             |
+| 60  | Authorization-negative and security tests            | ⬜      | ⬜       | Not started                                                             |
+| 61  | Performance and load tests                           | ⬜      | ⬜       | Not started                                                             |
+| 62  | Automated and manual accessibility tests             | —       | ⬜       | Not started                                                             |
+| 63  | Migration dry run on synthetic data                  | ⬜      | —        | Not started                                                             |
 
 ### Evaluation and documentation (64–71)
 

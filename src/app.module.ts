@@ -22,6 +22,7 @@ import { AuthorizationModule } from './modules/authorization/authorization.modul
 import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
+import { SynchronizationModule } from './modules/synchronization/synchronization.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -114,6 +115,7 @@ function workerModules(): DynamicModule[] {
     IdentityModule,
     InstitutionsModule,
     UsersModule,
+    SynchronizationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

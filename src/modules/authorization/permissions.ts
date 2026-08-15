@@ -18,6 +18,8 @@ export const PERMISSIONS = [
   'role:assign',
   'institution:read',
   'institution:manage',
+  'sync:read',
+  'sync:run',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -53,8 +55,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<CanonicalRole, readonly Permissio
   teacher: TEACHING,
   course_coordinator: COURSE_ADMINISTRATION,
   program_coordinator: [...COURSE_ADMINISTRATION, 'program:manage'],
-  registrar: [...READS, 'role:read', 'enrollment:manage', 'grade:publish'],
-  org_unit_manager: [...COURSE_ADMINISTRATION, 'program:manage', 'role:assign'],
+  registrar: [...READS, 'role:read', 'enrollment:manage', 'grade:publish', 'sync:read'],
+  org_unit_manager: [...COURSE_ADMINISTRATION, 'program:manage', 'role:assign', 'sync:read'],
   institution_admin: PERMISSIONS,
 };
 

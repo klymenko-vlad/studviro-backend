@@ -1,27 +1,37 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/api/v1/auth/register": {
+    "/api/v1/institutions/{institutionId}/synchronization/runs": {
       "post": {
-        "operationId": "register",
-        "parameters": [],
+        "description": "Returns the run already in flight instead of queueing a second one, so a repeated request cannot double-import.",
+        "operationId": "startSynchronizationRun",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateUserDto"
+                "$ref": "#/components/schemas/StartSyncRunDto"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "202": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthTokensDto"
+                  "$ref": "#/components/schemas/SyncRunResponseDto"
                 }
               }
             }
@@ -36,8 +46,8 @@
               }
             }
           },
-          "409": {
-            "description": "Conflicts with an existing record.",
+          "404": {
+            "description": "Not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -65,170 +75,6 @@
                 }
               }
             }
-          }
-        },
-        "summary": "Create an account and start a session",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/login": {
-      "post": {
-        "operationId": "login",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthTokensDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Exchange credentials for tokens",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "operationId": "refresh",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthTokensDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Rotate a refresh token for a new pair",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/logout": {
-      "post": {
-        "operationId": "logout",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "summary": "Revoke a single refresh token",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/logout-all": {
-      "post": {
-        "operationId": "logoutAll",
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": ""
           }
         },
         "security": [
@@ -236,15 +82,345 @@
             "access-token": []
           }
         ],
-        "summary": "Revoke every session for the current user",
+        "summary": "Queue a synchronization run against the institution’s academic connector",
         "tags": [
-          "auth"
+          "synchronization"
         ]
-      }
-    },
-    "/api/v1/auth/me": {
+      },
       "get": {
-        "operationId": "me",
+        "operationId": "listSynchronizationRuns",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncRunResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the most recent synchronization runs",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/synchronization/runs/{runId}": {
+      "get": {
+        "operationId": "getSynchronizationRun",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncRunDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read one synchronization run and its per-domain results",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/synchronization/state": {
+      "get": {
+        "operationId": "getSynchronizationState",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncWatermarkResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Report how fresh each synchronized domain is",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/connectors": {
+      "get": {
+        "operationId": "listInstitutionConnectors",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectorStatusResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Report the health and capabilities of an institution’s connectors",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/institutions": {
+      "get": {
+        "operationId": "listMyInstitutions",
         "parameters": [],
         "responses": {
           "200": {
@@ -252,7 +428,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponseDto"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstitutionResponseDto"
+                  }
                 }
               }
             }
@@ -293,9 +472,305 @@
             "access-token": []
           }
         ],
-        "summary": "The currently authenticated user",
+        "summary": "List the institutions the current user belongs to",
         "tags": [
-          "auth"
+          "institutions"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}": {
+      "get": {
+        "operationId": "getInstitution",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get an institution",
+        "tags": [
+          "institutions"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/configuration": {
+      "get": {
+        "operationId": "getInstitutionConfiguration",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read an institution’s terminology, locale and feature flags",
+        "tags": [
+          "institution-configuration"
+        ]
+      },
+      "patch": {
+        "operationId": "updateInstitutionConfiguration",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstitutionConfigurationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Change an institution’s terminology, locale and feature flags",
+        "tags": [
+          "institution-configuration"
+        ]
+      }
+    },
+    "/api/v1/users/me/identities": {
+      "get": {
+        "operationId": "listMyIdentities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the accounts linked to the current user",
+        "tags": [
+          "identities"
         ]
       }
     },
@@ -735,6 +1210,304 @@
         ]
       }
     },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create an account and start a session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Exchange credentials for tokens",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rotate a refresh token for a new pair",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Revoke a single refresh token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "operationId": "logoutAll",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Revoke every session for the current user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The currently authenticated user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/role-assignments": {
       "get": {
         "operationId": "listRoleAssignments",
@@ -1109,441 +1882,6 @@
           "role-assignments"
         ]
       }
-    },
-    "/api/v1/institutions/{institutionId}/connectors": {
-      "get": {
-        "operationId": "listInstitutionConnectors",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ConnectorStatusResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Report the health and capabilities of an institution’s connectors",
-        "tags": [
-          "connectors"
-        ]
-      }
-    },
-    "/api/v1/institutions": {
-      "get": {
-        "operationId": "listMyInstitutions",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/InstitutionResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "List the institutions the current user belongs to",
-        "tags": [
-          "institutions"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}": {
-      "get": {
-        "operationId": "getInstitution",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstitutionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Get an institution",
-        "tags": [
-          "institutions"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/configuration": {
-      "get": {
-        "operationId": "getInstitutionConfiguration",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Read an institution’s terminology, locale and feature flags",
-        "tags": [
-          "institution-configuration"
-        ]
-      },
-      "patch": {
-        "operationId": "updateInstitutionConfiguration",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateInstitutionConfigurationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Change an institution’s terminology, locale and feature flags",
-        "tags": [
-          "institution-configuration"
-        ]
-      }
-    },
-    "/api/v1/users/me/identities": {
-      "get": {
-        "operationId": "listMyIdentities",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "List the accounts linked to the current user",
-        "tags": [
-          "identities"
-        ]
-      }
     }
   },
   "info": {
@@ -1572,103 +1910,117 @@
       }
     },
     "schemas": {
-      "CreateUserDto": {
+      "StartSyncRunDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "mode": {
+            "enum": [
+              "incremental",
+              "full"
+            ],
             "type": "string",
-            "format": "email",
-            "example": "ada@example.com"
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120,
-            "example": "Ada Lovelace"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 12,
-            "maxLength": 128,
-            "writeOnly": true
+            "default": "incremental",
+            "description": "A full run ignores the stored watermarks and re-reads every record the connector offers."
           }
-        },
-        "required": [
-          "email",
-          "displayName",
-          "password"
-        ]
+        }
       },
-      "UserResponseDto": {
+      "SyncRunResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "email": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "locale": {
+          "institutionId": {
             "type": "string",
-            "description": "The interface language this account is served in. It is part of the user\nrather than a client-side preference so it follows them across devices —\nthe browser cookie is a cache of this value, not the source of truth.",
-            "enum": [
-              "en",
-              "uk"
-            ]
+            "format": "uuid"
           },
-          "role": {
+          "connectorName": {
+            "type": "string"
+          },
+          "mode": {
             "enum": [
-              "user",
-              "admin"
+              "incremental",
+              "full"
             ],
             "type": "string"
           },
-          "createdAt": {
+          "trigger": {
+            "enum": [
+              "manual",
+              "scheduled"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "partial",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "queuedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fetched": {
+            "type": "number"
+          },
+          "created": {
+            "type": "number"
+          },
+          "updated": {
+            "type": "number"
+          },
+          "deleted": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
           "id",
-          "email",
-          "displayName",
-          "locale",
-          "role",
-          "createdAt"
-        ]
-      },
-      "AuthTokensDto": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string"
-          },
-          "refreshToken": {
-            "type": "string"
-          },
-          "expiresIn": {
-            "type": "number",
-            "description": "Access-token lifetime in seconds.",
-            "example": 900
-          },
-          "tokenType": {
-            "type": "string",
-            "example": "Bearer"
-          },
-          "user": {
-            "$ref": "#/components/schemas/UserResponseDto"
-          }
-        },
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "expiresIn",
-          "tokenType",
-          "user"
+          "institutionId",
+          "connectorName",
+          "mode",
+          "trigger",
+          "status",
+          "queuedAt",
+          "startedAt",
+          "finishedAt",
+          "fetched",
+          "created",
+          "updated",
+          "deleted",
+          "skipped",
+          "failed",
+          "errorCode",
+          "errorMessage"
         ]
       },
       "ErrorResponseDto": {
@@ -1721,278 +2073,162 @@
           "timestamp"
         ]
       },
-      "LoginDto": {
+      "SyncDomainResultResponseDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "example": "ada@example.com"
-          },
-          "password": {
-            "type": "string",
-            "description": "Deliberately looser than `CreateUserDto.password`: tightening it here would\nreject a legitimate credential set before the policy changed, and would let\na caller probe the current policy without an account.",
-            "minLength": 1,
-            "maxLength": 128,
-            "writeOnly": true
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "RefreshTokenDto": {
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096,
-            "writeOnly": true
-          }
-        },
-        "required": [
-          "refreshToken"
-        ]
-      },
-      "UpdateMeDto": {
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120,
-            "example": "Ada Lovelace"
-          },
-          "locale": {
+          "domain": {
             "enum": [
-              "en",
-              "uk"
-            ],
-            "type": "string"
-          }
-        }
-      },
-      "PageMetaDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "pageCount": {
-            "type": "number"
-          },
-          "hasNextPage": {
-            "type": "boolean"
-          },
-          "hasPreviousPage": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "pageCount",
-          "hasNextPage",
-          "hasPreviousPage"
-        ]
-      },
-      "UserResponseDtoPage": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserResponseDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PageMetaDto"
-          }
-        },
-        "required": [
-          "items",
-          "meta"
-        ]
-      },
-      "SortOrder": {
-        "type": "string",
-        "enum": [
-          "asc",
-          "desc"
-        ]
-      },
-      "RoleAssignmentResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "institutionId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "student",
-              "teacher",
-              "teaching_assistant",
-              "course_coordinator",
-              "program_coordinator",
-              "registrar",
-              "org_unit_manager",
-              "institution_admin"
+              "orgUnits",
+              "persons",
+              "academicTerms",
+              "rooms",
+              "programs",
+              "courses",
+              "courseOfferings",
+              "programMemberships",
+              "studyGroups",
+              "enrollments",
+              "timetableEvents",
+              "examTerms",
+              "officialResults"
             ],
             "type": "string"
           },
-          "scopeType": {
+          "status": {
             "enum": [
-              "institution",
-              "org_unit",
-              "program",
-              "course_offering"
+              "succeeded",
+              "partial",
+              "failed",
+              "skipped"
             ],
             "type": "string"
           },
-          "scopeId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
+          "fetched": {
+            "type": "number"
           },
-          "validFrom": {
+          "created": {
+            "type": "number"
+          },
+          "updated": {
+            "type": "number"
+          },
+          "deleted": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "watermark": {
             "type": "string",
             "nullable": true,
             "format": "date-time"
           },
-          "validUntil": {
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "domain",
+          "status",
+          "fetched",
+          "created",
+          "updated",
+          "deleted",
+          "skipped",
+          "failed",
+          "durationMs",
+          "watermark",
+          "errorMessage"
+        ]
+      },
+      "SyncRunDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/SyncRunResponseDto"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncDomainResultResponseDto"
+            }
+          }
+        },
+        "required": [
+          "run",
+          "domains"
+        ]
+      },
+      "SyncWatermarkResponseDto": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "enum": [
+              "orgUnits",
+              "persons",
+              "academicTerms",
+              "rooms",
+              "programs",
+              "courses",
+              "courseOfferings",
+              "programMemberships",
+              "studyGroups",
+              "enrollments",
+              "timetableEvents",
+              "examTerms",
+              "officialResults"
+            ],
+            "type": "string"
+          },
+          "connectorName": {
+            "type": "string"
+          },
+          "sourceUpdatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "The newest source change this domain has taken in."
+          },
+          "lastStatus": {
+            "nullable": true,
+            "enum": [
+              "succeeded",
+              "partial",
+              "failed",
+              "skipped"
+            ],
+            "type": "string"
+          },
+          "lastAttemptedAt": {
             "type": "string",
             "nullable": true,
             "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "institutionId",
-          "userId",
-          "role",
-          "scopeType"
-        ]
-      },
-      "GrantRoleDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
+          },
+          "lastSucceededAt": {
             "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "student",
-              "teacher",
-              "teaching_assistant",
-              "course_coordinator",
-              "program_coordinator",
-              "registrar",
-              "org_unit_manager",
-              "institution_admin"
-            ],
-            "type": "string"
-          },
-          "scopeType": {
-            "enum": [
-              "institution",
-              "org_unit",
-              "program",
-              "course_offering"
-            ],
-            "type": "string"
-          },
-          "scopeId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "The org unit, program or course offering the role applies to."
-          },
-          "validFrom": {
-            "type": "string",
+            "nullable": true,
             "format": "date-time"
           },
-          "validUntil": {
+          "lastErrorMessage": {
             "type": "string",
-            "format": "date-time"
+            "nullable": true
           }
         },
         "required": [
-          "userId",
-          "role",
-          "scopeType"
-        ]
-      },
-      "MyPermissionsResponseDto": {
-        "type": "object",
-        "properties": {
-          "institutionId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "student",
-                "teacher",
-                "teaching_assistant",
-                "course_coordinator",
-                "program_coordinator",
-                "registrar",
-                "org_unit_manager",
-                "institution_admin"
-              ]
-            }
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "program:read",
-                "program:manage",
-                "course:read",
-                "course:manage",
-                "offering:read",
-                "offering:manage",
-                "enrollment:read",
-                "enrollment:manage",
-                "grade:read",
-                "grade:propose",
-                "grade:publish",
-                "schedule:read",
-                "schedule:manage",
-                "role:read",
-                "role:assign",
-                "institution:read",
-                "institution:manage"
-              ]
-            }
-          }
-        },
-        "required": [
-          "institutionId",
-          "roles",
-          "permissions"
+          "domain",
+          "connectorName",
+          "sourceUpdatedAt",
+          "lastStatus",
+          "lastAttemptedAt",
+          "lastSucceededAt",
+          "lastErrorMessage"
         ]
       },
       "ConnectorStatusResponseDto": {
@@ -2251,6 +2487,381 @@
           "institutionId",
           "sourceSystem",
           "issuer"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "description": "The interface language this account is served in. It is part of the user\nrather than a client-side preference so it follows them across devices —\nthe browser cookie is a cache of this value, not the source of truth.",
+            "enum": [
+              "en",
+              "uk"
+            ]
+          },
+          "role": {
+            "enum": [
+              "user",
+              "admin"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "locale",
+          "role",
+          "createdAt"
+        ]
+      },
+      "UpdateMeDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Ada Lovelace"
+          },
+          "locale": {
+            "enum": [
+              "en",
+              "uk"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "ada@example.com"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Ada Lovelace"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "displayName",
+          "password"
+        ]
+      },
+      "PageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "pageCount": {
+            "type": "number"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "pageCount",
+          "hasNextPage",
+          "hasPreviousPage"
+        ]
+      },
+      "UserResponseDtoPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "SortOrder": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ]
+      },
+      "AuthTokensDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Access-token lifetime in seconds.",
+            "example": 900
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponseDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "tokenType",
+          "user"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "ada@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Deliberately looser than `CreateUserDto.password`: tightening it here would\nreject a legitimate credential set before the policy changed, and would let\na caller probe the current policy without an account.",
+            "minLength": 1,
+            "maxLength": 128,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "RoleAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "student",
+              "teacher",
+              "teaching_assistant",
+              "course_coordinator",
+              "program_coordinator",
+              "registrar",
+              "org_unit_manager",
+              "institution_admin"
+            ],
+            "type": "string"
+          },
+          "scopeType": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "program",
+              "course_offering"
+            ],
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "institutionId",
+          "userId",
+          "role",
+          "scopeType"
+        ]
+      },
+      "GrantRoleDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "student",
+              "teacher",
+              "teaching_assistant",
+              "course_coordinator",
+              "program_coordinator",
+              "registrar",
+              "org_unit_manager",
+              "institution_admin"
+            ],
+            "type": "string"
+          },
+          "scopeType": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "program",
+              "course_offering"
+            ],
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The org unit, program or course offering the role applies to."
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "role",
+          "scopeType"
+        ]
+      },
+      "MyPermissionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher",
+                "teaching_assistant",
+                "course_coordinator",
+                "program_coordinator",
+                "registrar",
+                "org_unit_manager",
+                "institution_admin"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "program:read",
+                "program:manage",
+                "course:read",
+                "course:manage",
+                "offering:read",
+                "offering:manage",
+                "enrollment:read",
+                "enrollment:manage",
+                "grade:read",
+                "grade:propose",
+                "grade:publish",
+                "schedule:read",
+                "schedule:manage",
+                "role:read",
+                "role:assign",
+                "institution:read",
+                "institution:manage",
+                "sync:read",
+                "sync:run"
+              ]
+            }
+          }
+        },
+        "required": [
+          "institutionId",
+          "roles",
+          "permissions"
         ]
       }
     }

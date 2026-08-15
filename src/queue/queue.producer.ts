@@ -4,11 +4,34 @@ import { Queue } from 'bullmq';
 import type { JobsOptions } from 'bullmq';
 
 import { emailJobSchemas, type EmailJobName, type EmailJobPayload } from './jobs/email.jobs';
+import {
+  synchronizationJobSchemas,
+  type SynchronizationJobName,
+  type SynchronizationJobPayload,
+} from './jobs/synchronization.jobs';
 import { QUEUES } from './queue.constants';
 
 @Injectable()
 export class QueueProducer {
-  constructor(@InjectQueue(QUEUES.EMAIL) private readonly emailQueue: Queue) {}
+  constructor(
+    @InjectQueue(QUEUES.EMAIL) private readonly emailQueue: Queue,
+    @InjectQueue(QUEUES.SYNCHRONIZATION) private readonly synchronizationQueue: Queue,
+  ) {}
+
+  async enqueueSynchronization<TName extends SynchronizationJobName>(
+    name: TName,
+    payload: SynchronizationJobPayload<TName>,
+    options?: JobsOptions,
+  ): Promise<string> {
+    const data = synchronizationJobSchemas[name].parse(payload);
+
+    const job = await this.synchronizationQueue.add(name, data, {
+      deduplication: { id: `${name}:${data.runId}` },
+      ...options,
+    });
+
+    return job.id ?? '';
+  }
 
   async enqueueEmail<TName extends EmailJobName>(
     name: TName,
