@@ -2,13 +2,14 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-08-08
+Last updated: 2026-08-15
 
 ## What this is
 
 A unified academic platform integrating a Student Information System (AIS2) and an LMS
 (Moodle) behind one canonical model, so neither is hard-coded into the core. Full reasoning
-in `docs/System Plan.md`; the 71-step backlog with per-step status is in `docs/Tasks Plan.md`.
+in `docs/System Plan.md`; the 71-step backlog is in `docs/Tasks Plan.md` and its live status,
+plus the working agreement for backlog work, in `docs/Task Tracker.md`.
 
 ## Stack
 
@@ -37,6 +38,15 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   `last_synchronized_at`, `synchronization_status`), unique per
   `(institution_id, source_system, external_id)`. `Course`, `CourseOffering` and
   `LearningSpace` are separate. Grades are split into calculated / proposed / official.
+- **Identity linking** (step 26) — `ExternalIdentitiesRepository` and `IdentityLinkingService`
+  resolve a provider subject to a platform user: find by `(institution, issuer, subject)`, else
+  provision a user with an unusable password. A shared email is never adopted silently — it
+  raises `IDENTITY_EMAIL_CONFLICT` and must be linked deliberately through `link()`.
+- **Scoped authorization** (step 27) — a permission catalogue mapped from `CANONICAL_ROLES`,
+  a `ScopeHierarchyService` that walks org-unit ancestry to decide which grants enclose a
+  target scope, `AuthorizationService.can/assert`, and `@RequirePermission` behind a
+  `PermissionsGuard`. Institution scoping is enforced by `InstitutionScopedRepository`, which
+  every canonical-table repository extends.
 - **API contract** — `openapi.json` generated from decorators, committed, drift-checked by
   `pnpm openapi:check`; the frontend client is generated from it.
 - **CI** — `.github/workflows/`: lint, typecheck, test, OpenAPI drift, migrations, build;
@@ -45,36 +55,33 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
 ## Not done
 
-The tables exist; nothing reads or writes them yet.
+Authorization and identity linking exist as services, but no HTTP surface uses them yet.
 
-- No repositories, services or endpoints over the canonical tables. No seed data beyond users.
+- No endpoints over the canonical tables beyond users, and no screens in the client for any of
+  it. No seed data beyond users, and no way to grant a role through the API.
 - No connectors (SIS or LMS), no synchronization engine, no institution configuration.
-- Authorization is still a flat `user`/`admin` `RolesGuard`. `role_assignments` is not enforced,
-  and reads are not scoped by `institution_id` — nothing in the schema forces that today.
-- No OIDC strategy. `external_identities` exists but nothing writes it.
+- The flat `user`/`admin` `RolesGuard` still governs the existing user endpoints; the two
+  guards are orthogonal and `RolesGuard` should retire as canonical routes replace them.
+- No OIDC strategy: `IdentityLinkingService` is the model an OIDC callback will call, but the
+  strategy itself is blocked on institutional client registration.
 - Theses, transcripts, notifications and audit are intentionally absent from the model.
 
-## Next task — identity linking and scoped roles (steps 26–27)
+## Next task — institution configuration and a mock SIS (steps 28–29)
 
-The tables are there, so this is now module work rather than modelling.
-
-- An `ExternalIdentity` repository and the linking rule: authenticate against a provider
-  subject, find or create the platform user, never match on email.
-- A scope-aware authorization guard that resolves `role_assignments` for the acting user and
-  answers "may this person do X in scope Y", replacing the flat `RolesGuard`. Decide where
-  `institution_id` scoping is enforced — repository base class or row-level security — and make
-  it uniform before any read path exists to retrofit.
-- OIDC strategy is optional and blocked on institutional client registration; the linking model
-  should not assume it arrives.
-
-Step 28 (institution configuration) and 29 (mock SIS) are the natural follow-ups, and 29
-unblocks the connectors without waiting on AIS2 access.
+- Institution configuration: per-institution terminology, locale and feature flags, read
+  through a service rather than a config file, so a second synthetic university (step 64) is a
+  data change.
+- A deterministic mock SIS connector, which unblocks the synchronization engine without
+  waiting on AIS2 access, together with the synthetic dataset in step 30.
+- The first read endpoints over canonical data should carry `@RequirePermission` from day one
+  and ship with the matching client screens — see the working agreement in
+  `docs/Task Tracker.md`.
 
 ## Caveats
 
-- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel. Steps 26–27
-  read as done but are not. Prefer the codebase and current best practice where they conflict,
-  and fix the doc when they do.
+- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel. Prefer the
+  codebase, `docs/Task Tracker.md` and current best practice where they conflict, and fix the
+  doc when they do.
 - Both docs contain broken citation markers (`cite…turn20view0`) — invisible private-use
   Unicode from a research export. They break exact-string edits; anchor edits on clean text.
 - Steps 1–22 are design tasks whose status was inferred from the docs, not verified.

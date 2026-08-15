@@ -1,0 +1,47 @@
+import { Injectable } from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+
+import type { Transaction } from '../../database/database.tokens';
+import { InstitutionScopedRepository } from '../../database/repository/institution-scoped.repository';
+import { externalIdentities, type ExternalIdentity } from '../../database/schema';
+import { TransactionHost } from '../../database/transaction.host';
+
+@Injectable()
+export class ExternalIdentitiesRepository extends InstitutionScopedRepository<
+  typeof externalIdentities
+> {
+  protected override readonly sortable = {
+    createdAt: externalIdentities.createdAt,
+    lastAuthenticatedAt: externalIdentities.lastAuthenticatedAt,
+  };
+
+  constructor(txHost: TransactionHost) {
+    super(txHost, externalIdentities);
+  }
+
+  findBySubject(
+    institutionId: string,
+    issuer: string,
+    subject: string,
+    tx?: Transaction,
+  ): Promise<ExternalIdentity | undefined> {
+    return this.findOneIn(
+      institutionId,
+      and(eq(externalIdentities.issuer, issuer), eq(externalIdentities.subject, subject)),
+      { consistent: true },
+      tx,
+    );
+  }
+
+  findForUser(
+    institutionId: string,
+    userId: string,
+    tx?: Transaction,
+  ): Promise<ExternalIdentity[]> {
+    return this.findManyIn(institutionId, { where: eq(externalIdentities.userId, userId) }, tx);
+  }
+
+  async markAuthenticated(id: string, tx?: Transaction): Promise<void> {
+    await this.update(id, { lastAuthenticatedAt: new Date() }, tx);
+  }
+}

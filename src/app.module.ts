@@ -18,6 +18,8 @@ import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { IdentityModule } from './modules/identity/identity.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -105,6 +107,8 @@ function workerModules(): DynamicModule[] {
     MetricsModule,
     HealthModule,
     AuthModule,
+    AuthorizationModule,
+    IdentityModule,
     UsersModule,
   ],
   providers: [

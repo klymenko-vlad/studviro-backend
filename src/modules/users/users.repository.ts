@@ -21,8 +21,12 @@ export class UsersRepository extends BaseRepository<typeof users> {
     super(txHost, users);
   }
 
-  findByEmail(email: string, options: FindOneOptions = {}): Promise<User | undefined> {
-    return this.findOne(eq(users.email, email), options);
+  findByEmail(
+    email: string,
+    options: FindOneOptions = {},
+    tx?: Transaction,
+  ): Promise<User | undefined> {
+    return this.findOne(eq(users.email, email), options, tx);
   }
 
   /**
