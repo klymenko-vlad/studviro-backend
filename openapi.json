@@ -1110,10 +1110,19 @@
         ]
       }
     },
-    "/api/v1/users/me/identities": {
+    "/api/v1/institutions/{institutionId}/connectors": {
       "get": {
-        "operationId": "listMyIdentities",
-        "parameters": [],
+        "operationId": "listInstitutionConnectors",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1122,7 +1131,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
+                    "$ref": "#/components/schemas/ConnectorStatusResponseDto"
                   }
                 }
               }
@@ -1130,6 +1139,16 @@
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1164,9 +1183,9 @@
             "access-token": []
           }
         ],
-        "summary": "List the accounts linked to the current user",
+        "summary": "Report the health and capabilities of an institution’s connectors",
         "tags": [
-          "identities"
+          "connectors"
         ]
       }
     },
@@ -1303,6 +1322,226 @@
         "summary": "Get an institution",
         "tags": [
           "institutions"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/configuration": {
+      "get": {
+        "operationId": "getInstitutionConfiguration",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read an institution’s terminology, locale and feature flags",
+        "tags": [
+          "institution-configuration"
+        ]
+      },
+      "patch": {
+        "operationId": "updateInstitutionConfiguration",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstitutionConfigurationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionConfigurationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Change an institution’s terminology, locale and feature flags",
+        "tags": [
+          "institution-configuration"
+        ]
+      }
+    },
+    "/api/v1/users/me/identities": {
+      "get": {
+        "operationId": "listMyIdentities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the accounts linked to the current user",
+        "tags": [
+          "identities"
         ]
       }
     }
@@ -1756,6 +1995,225 @@
           "permissions"
         ]
       },
+      "ConnectorStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "academic",
+              "learning"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "installed": {
+            "type": "boolean"
+          },
+          "healthy": {
+            "type": "boolean"
+          },
+          "checkedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "alternatives": {
+            "description": "Connector names of this kind the deployment can be pointed at.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "installed",
+          "healthy",
+          "checkedAt",
+          "detail",
+          "capabilities",
+          "alternatives"
+        ]
+      },
+      "InstitutionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultLocale": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "defaultLocale",
+          "timezone"
+        ]
+      },
+      "InstitutionConnectorsDto": {
+        "type": "object",
+        "properties": {
+          "academicSystem": {
+            "type": "string",
+            "nullable": true
+          },
+          "learningSystem": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "academicSystem",
+          "learningSystem"
+        ]
+      },
+      "InstitutionConfigurationResponseDto": {
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultLocale": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "terminology": {
+            "type": "object",
+            "description": "Institution label overrides; null means the client uses its own wording.",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "example": {
+              "institution": null,
+              "faculty": null,
+              "department": null,
+              "program": null,
+              "course": null,
+              "courseOffering": null,
+              "academicTerm": null,
+              "student": null,
+              "teacher": null,
+              "studentIdentifier": null,
+              "credits": null
+            }
+          },
+          "features": {
+            "type": "object",
+            "description": "Every feature flag, resolved against the platform defaults.",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "example": {
+              "courseRegistration": true,
+              "examRegistration": true,
+              "timetable": true,
+              "grades": true,
+              "thesis": true,
+              "accommodation": true,
+              "fees": true
+            }
+          },
+          "connectors": {
+            "$ref": "#/components/schemas/InstitutionConnectorsDto"
+          }
+        },
+        "required": [
+          "institutionId",
+          "code",
+          "name",
+          "defaultLocale",
+          "timezone",
+          "terminology",
+          "features",
+          "connectors"
+        ]
+      },
+      "UpdateInstitutionConfigurationDto": {
+        "type": "object",
+        "properties": {
+          "defaultLocale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "uk"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Europe/Bratislava"
+          },
+          "terminology": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "Label overrides to merge in; null clears one.",
+            "example": {
+              "faculty": "School",
+              "course": "Module"
+            }
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Feature flags to merge in.",
+            "example": {
+              "examRegistration": false
+            }
+          },
+          "academicSystemConnector": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64,
+            "example": "mock-sis"
+          },
+          "learningSystemConnector": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64
+          }
+        }
+      },
       "ExternalIdentityResponseDto": {
         "type": "object",
         "properties": {
@@ -1793,34 +2251,6 @@
           "institutionId",
           "sourceSystem",
           "issuer"
-        ]
-      },
-      "InstitutionResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "defaultLocale": {
-            "type": "string"
-          },
-          "timezone": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "name",
-          "defaultLocale",
-          "timezone"
         ]
       }
     }

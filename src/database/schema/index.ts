@@ -4,6 +4,7 @@ export * from './academic-structure';
 export * from './course-results';
 export * from './enrollments';
 export * from './external-identities';
+export * from './institution-settings';
 export * from './institutions';
 export * from './learning';
 export * from './refresh-tokens';

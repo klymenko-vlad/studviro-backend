@@ -15,6 +15,7 @@ import {
   studyGroups,
 } from './enrollments';
 import { externalIdentities } from './external-identities';
+import { institutionSettings } from './institution-settings';
 import { institutions, orgUnits } from './institutions';
 import {
   activityCompletions,
@@ -47,7 +48,15 @@ export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, { fields: [refreshTokens.userId], references: [users.id] }),
 }));
 
-export const institutionsRelations = relations(institutions, ({ many }) => ({
+export const institutionSettingsRelations = relations(institutionSettings, ({ one }) => ({
+  institution: one(institutions, {
+    fields: [institutionSettings.institutionId],
+    references: [institutions.id],
+  }),
+}));
+
+export const institutionsRelations = relations(institutions, ({ many, one }) => ({
+  settings: one(institutionSettings),
   orgUnits: many(orgUnits),
   academicTerms: many(academicTerms),
   programs: many(programs),

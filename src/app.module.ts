@@ -19,6 +19,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { UsersModule } from './modules/users/users.module';
@@ -109,6 +110,7 @@ function workerModules(): DynamicModule[] {
     HealthModule,
     AuthModule,
     AuthorizationModule,
+    ConnectorsModule,
     IdentityModule,
     InstitutionsModule,
     UsersModule,

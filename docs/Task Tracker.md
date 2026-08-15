@@ -42,30 +42,30 @@ the same commit whenever the picture they describe has changed.
 
 ### Scope and research (1–22)
 
-| #   | Task                                                   | Backend | Frontend | Status                                       |
-| --- | ------------------------------------------------------ | ------- | -------- | -------------------------------------------- |
-| 1   | Freeze thesis problem statement and research questions | —       | —        | Done                                         |
-| 2   | Explicit in-scope / out-of-scope list                  | —       | —        | Done                                         |
-| 3   | Inventory actors and stakeholders                      | —       | —        | In progress                                  |
-| 4   | Catalogue AIS2 functions                               | —       | —        | Done                                         |
-| 5   | Catalogue Moodle functionality and APIs                | —       | —        | Done                                         |
-| 6   | Validate workflows with real university users          | —       | —        | Blocked                                      |
-| 7   | AIS2 ↔ Moodle ↔ unified feature mapping                | —       | —        | Done                                         |
-| 8   | Classify features P0–P3                                | —       | —        | Done                                         |
-| 9   | Define user journeys                                   | —       | —        | In progress                                  |
-| 10  | Source-of-truth matrix per shared entity               | —       | —        | Done                                         |
-| 11  | Canonical domain model                                 | —       | —        | Done                                         |
-| 12  | External-ID and provenance model                       | —       | —        | Done                                         |
-| 13  | Generic `AcademicSystemConnector` interface            | —       | —        | In progress — specified in the plan, no code |
-| 14  | Generic `LearningSystemConnector` interface            | —       | —        | In progress — specified in the plan, no code |
-| 15  | Document available AIS2 access                         | —       | —        | Blocked                                      |
-| 16  | Synchronization semantics                              | —       | —        | In progress                                  |
-| 17  | Authentication strategy and development IdP            | —       | —        | Done                                         |
-| 18  | Canonical RBAC / scoping model                         | —       | —        | Done                                         |
-| 19  | GDPR data inventory and DPIA screening                 | —       | —        | Not started                                  |
-| 20  | Threat model                                           | —       | —        | Not started                                  |
-| 21  | Information architecture and wireframes                | —       | —        | In progress                                  |
-| 22  | Usability review of wireframes                         | —       | —        | Not started                                  |
+| #   | Task                                                   | Backend | Frontend | Status                                                                 |
+| --- | ------------------------------------------------------ | ------- | -------- | ---------------------------------------------------------------------- |
+| 1   | Freeze thesis problem statement and research questions | —       | —        | Done                                                                   |
+| 2   | Explicit in-scope / out-of-scope list                  | —       | —        | Done                                                                   |
+| 3   | Inventory actors and stakeholders                      | —       | —        | In progress                                                            |
+| 4   | Catalogue AIS2 functions                               | —       | —        | Done                                                                   |
+| 5   | Catalogue Moodle functionality and APIs                | —       | —        | Done                                                                   |
+| 6   | Validate workflows with real university users          | —       | —        | Blocked                                                                |
+| 7   | AIS2 ↔ Moodle ↔ unified feature mapping                | —       | —        | Done                                                                   |
+| 8   | Classify features P0–P3                                | —       | —        | Done                                                                   |
+| 9   | Define user journeys                                   | —       | —        | In progress                                                            |
+| 10  | Source-of-truth matrix per shared entity               | —       | —        | Done                                                                   |
+| 11  | Canonical domain model                                 | —       | —        | Done                                                                   |
+| 12  | External-ID and provenance model                       | —       | —        | Done                                                                   |
+| 13  | Generic `AcademicSystemConnector` interface            | ✅      | —        | Done — interface, capability model and records in `modules/connectors` |
+| 14  | Generic `LearningSystemConnector` interface            | ✅      | —        | In progress — interface and records exist; no implementation yet       |
+| 15  | Document available AIS2 access                         | —       | —        | Blocked                                                                |
+| 16  | Synchronization semantics                              | —       | —        | In progress                                                            |
+| 17  | Authentication strategy and development IdP            | —       | —        | Done                                                                   |
+| 18  | Canonical RBAC / scoping model                         | —       | —        | Done                                                                   |
+| 19  | GDPR data inventory and DPIA screening                 | —       | —        | Not started                                                            |
+| 20  | Threat model                                           | —       | —        | Not started                                                            |
+| 21  | Information architecture and wireframes                | —       | —        | In progress                                                            |
+| 22  | Usability review of wireframes                         | —       | —        | Not started                                                            |
 
 ### Platform foundation (23–31)
 
@@ -76,9 +76,9 @@ the same commit whenever the picture they describe has changed.
 | 25  | Migration infrastructure and canonical schema         | ✅      | —        | Done                                                                                                                                    |
 | 26  | Authentication and identity linking                   | ✅      | ✅       | In progress — credentials, `ExternalIdentity` linking and the linked-accounts screen ship; OIDC strategy blocked on client registration |
 | 27  | Server-side authorization and scoped roles            | ✅      | ✅       | Done — permissions, scope hierarchy, `PermissionsGuard`, the role assignment API and the administrator's grant and revoke screens       |
-| 28  | Institution configuration, terminology, feature flags | ⬜      | ⬜       | Not started                                                                                                                             |
-| 29  | Synthetic / mock SIS connector                        | ⬜      | —        | Not started                                                                                                                             |
-| 30  | Realistic synthetic university dataset                | ⬜      | —        | Not started                                                                                                                             |
+| 28  | Institution configuration, terminology, feature flags | ✅      | ✅       | Done — `institution_settings`, a resolving service, the configuration API and the institution settings screen                           |
+| 29  | Synthetic / mock SIS connector                        | ✅      | ✅       | Done — deterministic `mock-sis` connector, a registry, and connector health and capabilities on the settings screen                     |
+| 30  | Realistic synthetic university dataset                | ✅      | —        | In progress — the mock SIS generates one; nothing imports it into the canonical tables yet                                              |
 | 31  | Moodle development instance                           | —       | —        | Not started                                                                                                                             |
 
 ### Integration (32–37)
@@ -94,23 +94,23 @@ the same commit whenever the picture they describe has changed.
 
 ### Product surfaces (38–52)
 
-| #   | Task                                        | Backend | Frontend | Status      |
-| --- | ------------------------------------------- | ------- | -------- | ----------- |
-| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started |
-| 39  | Unified calendar                            | ⬜      | ⬜       | Not started |
-| 40  | Course 360° page                            | ⬜      | ⬜       | Not started |
-| 41  | Unified grades view with provenance         | ⬜      | ⬜       | Not started |
-| 42  | Exam-term view                              | ⬜      | ⬜       | Not started |
-| 43  | Controlled exam registration                | ⬜      | ⬜       | Not started |
-| 44  | Notification aggregation and deduplication  | ⬜      | ⬜       | Not started |
-| 45  | Teacher course / roster dashboard           | ⬜      | ⬜       | Not started |
-| 46  | Admin connector configuration               | ⬜      | ⬜       | Not started |
-| 47  | Sync monitoring and retry UI                | ⬜      | ⬜       | Not started |
-| 48  | Mapping / conflict / reconciliation UI      | ⬜      | ⬜       | Not started |
-| 49  | Structured audit events                     | ⬜      | ⬜       | Not started |
-| 50  | Personal-data inventory and export workflow | ⬜      | ⬜       | Not started |
-| 51  | Search over authorized canonical data       | ⬜      | ⬜       | Not started |
-| 52  | WCAG 2.2 AA implementation pass             | —       | ⬜       | Not started |
+| #   | Task                                        | Backend | Frontend | Status                                                                                                |
+| --- | ------------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started                                                                                           |
+| 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                           |
+| 40  | Course 360° page                            | ⬜      | ⬜       | Not started                                                                                           |
+| 41  | Unified grades view with provenance         | ⬜      | ⬜       | Not started                                                                                           |
+| 42  | Exam-term view                              | ⬜      | ⬜       | Not started                                                                                           |
+| 43  | Controlled exam registration                | ⬜      | ⬜       | Not started                                                                                           |
+| 44  | Notification aggregation and deduplication  | ⬜      | ⬜       | Not started                                                                                           |
+| 45  | Teacher course / roster dashboard           | ⬜      | ⬜       | Not started                                                                                           |
+| 46  | Admin connector configuration               | ✅      | ✅       | In progress — connector selection, health and capabilities ship; credentials and field mapping do not |
+| 47  | Sync monitoring and retry UI                | ⬜      | ⬜       | Not started                                                                                           |
+| 48  | Mapping / conflict / reconciliation UI      | ⬜      | ⬜       | Not started                                                                                           |
+| 49  | Structured audit events                     | ⬜      | ⬜       | Not started                                                                                           |
+| 50  | Personal-data inventory and export workflow | ⬜      | ⬜       | Not started                                                                                           |
+| 51  | Search over authorized canonical data       | ⬜      | ⬜       | Not started                                                                                           |
+| 52  | WCAG 2.2 AA implementation pass             | —       | ⬜       | Not started                                                                                           |
 
 ### Operations and quality (53–63)
 
