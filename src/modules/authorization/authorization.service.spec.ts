@@ -112,6 +112,21 @@ describe('AuthorizationService', () => {
     expect(repository.findActiveForUser).toHaveBeenCalledWith(INSTITUTION, USER);
   });
 
+  it('reports every permission the held roles carry in a scope', async () => {
+    const { service } = serviceWith(offeringScope, [assignment({ role: 'teacher' })]);
+
+    const permissions = await service.permissionsIn(USER, request.scope);
+
+    expect(permissions).toContain('grade:publish');
+    expect(permissions).not.toContain('institution:manage');
+  });
+
+  it('reports no permissions for a scope the principal holds nothing in', async () => {
+    const { service } = serviceWith(offeringScope, []);
+
+    await expect(service.permissionsIn(USER, request.scope)).resolves.toEqual([]);
+  });
+
   it('assert passes through when the permission is held', async () => {
     const { service } = serviceWith(offeringScope, [assignment()]);
 

@@ -4,7 +4,7 @@ import { PermissionDeniedError } from '../../common/errors/domain.error';
 import type { CanonicalRole } from '../../database/schema';
 
 import { assignmentScopeKey, type ScopeRef } from './authorization.constants';
-import { grants, type Permission } from './permissions';
+import { grants, permissionsForRoles, type Permission } from './permissions';
 import { RoleAssignmentsRepository } from './role-assignments.repository';
 import { ScopeHierarchyService } from './scope-hierarchy.service';
 
@@ -29,6 +29,10 @@ export class AuthorizationService {
 
   async assert(request: AuthorizationRequest): Promise<void> {
     if (!(await this.can(request))) throw new PermissionDeniedError();
+  }
+
+  async permissionsIn(userId: string, scope: ScopeRef): Promise<Permission[]> {
+    return [...permissionsForRoles(await this.rolesIn(userId, scope))];
   }
 
   async rolesIn(userId: string, scope: ScopeRef): Promise<CanonicalRole[]> {

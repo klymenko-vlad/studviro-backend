@@ -5,6 +5,7 @@ import { UsersModule } from '../users/users.module';
 
 import { AuthorizationService } from './authorization.service';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { MyPermissionsController } from './my-permissions.controller';
 import { MyRolesController } from './my-roles.controller';
 import { RoleAssignmentsController } from './role-assignments.controller';
 import { RoleAssignmentsRepository } from './role-assignments.repository';
@@ -14,7 +15,7 @@ import { ScopeHierarchyService } from './scope-hierarchy.service';
 @Global()
 @Module({
   imports: [UsersModule],
-  controllers: [RoleAssignmentsController, MyRolesController],
+  controllers: [RoleAssignmentsController, MyRolesController, MyPermissionsController],
   providers: [
     AuthorizationService,
     RoleAssignmentsService,

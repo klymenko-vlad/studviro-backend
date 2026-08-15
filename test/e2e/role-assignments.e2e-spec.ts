@@ -215,6 +215,44 @@ describe('Role assignments (e2e)', () => {
     ]);
   });
 
+  it('reports what the caller may do in the institution', async () => {
+    await grantInDatabase(subject.user.id, 'institution_admin');
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/me/permissions`,
+      headers: subject.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ institutionId, roles: ['institution_admin'] });
+    expect(response.json<{ permissions: string[] }>().permissions).toContain('role:assign');
+  });
+
+  it('reports a student as unable to assign roles', async () => {
+    await grantInDatabase(subject.user.id, 'student');
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/me/permissions`,
+      headers: subject.headers,
+    });
+
+    expect(response.json<{ permissions: string[] }>().permissions).not.toContain('role:assign');
+  });
+
+  it('refuses the permission report to someone outside the institution', async () => {
+    const stranger = await harness.actingAs();
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/me/permissions`,
+      headers: stranger.headers,
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
   it('never reports another principal roles as your own', async () => {
     await grantInDatabase(subject.user.id, 'student');
     const stranger = await harness.actingAs();

@@ -1044,6 +1044,72 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/me/permissions": {
+      "get": {
+        "operationId": "listMyPermissions",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPermissionsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List what the current user may do in an institution",
+        "tags": [
+          "role-assignments"
+        ]
+      }
+    },
     "/api/v1/users/me/identities": {
       "get": {
         "operationId": "listMyIdentities",
@@ -1633,6 +1699,61 @@
           "userId",
           "role",
           "scopeType"
+        ]
+      },
+      "MyPermissionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher",
+                "teaching_assistant",
+                "course_coordinator",
+                "program_coordinator",
+                "registrar",
+                "org_unit_manager",
+                "institution_admin"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "program:read",
+                "program:manage",
+                "course:read",
+                "course:manage",
+                "offering:read",
+                "offering:manage",
+                "enrollment:read",
+                "enrollment:manage",
+                "grade:read",
+                "grade:propose",
+                "grade:publish",
+                "schedule:read",
+                "schedule:manage",
+                "role:read",
+                "role:assign",
+                "institution:read",
+                "institution:manage"
+              ]
+            }
+          }
+        },
+        "required": [
+          "institutionId",
+          "roles",
+          "permissions"
         ]
       },
       "ExternalIdentityResponseDto": {
