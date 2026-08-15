@@ -69,17 +69,17 @@ the same commit whenever the picture they describe has changed.
 
 ### Platform foundation (23–31)
 
-| #   | Task                                                  | Backend | Frontend | Status                                                                                                                                                                                       |
-| --- | ----------------------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 23  | Select technical stack                                | —       | —        | Done                                                                                                                                                                                         |
-| 24  | Repository structure, tooling, CI                     | ✅      | ✅       | Done                                                                                                                                                                                         |
-| 25  | Migration infrastructure and canonical schema         | ✅      | —        | Done                                                                                                                                                                                         |
-| 26  | Authentication and identity linking                   | ✅      | ✅       | In progress — credentials, `ExternalIdentity` linking and the linked-accounts screen ship; OIDC strategy blocked on client registration                                                      |
-| 27  | Server-side authorization and scoped roles            | ✅      | ⬜       | In progress — permissions, scope hierarchy, `PermissionsGuard` and the role assignment API ship, and a person can read their own roles; the administrator's grant and revoke UI is not built |
-| 28  | Institution configuration, terminology, feature flags | ⬜      | ⬜       | Not started                                                                                                                                                                                  |
-| 29  | Synthetic / mock SIS connector                        | ⬜      | —        | Not started                                                                                                                                                                                  |
-| 30  | Realistic synthetic university dataset                | ⬜      | —        | Not started                                                                                                                                                                                  |
-| 31  | Moodle development instance                           | —       | —        | Not started                                                                                                                                                                                  |
+| #   | Task                                                  | Backend | Frontend | Status                                                                                                                                  |
+| --- | ----------------------------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 23  | Select technical stack                                | —       | —        | Done                                                                                                                                    |
+| 24  | Repository structure, tooling, CI                     | ✅      | ✅       | Done                                                                                                                                    |
+| 25  | Migration infrastructure and canonical schema         | ✅      | —        | Done                                                                                                                                    |
+| 26  | Authentication and identity linking                   | ✅      | ✅       | In progress — credentials, `ExternalIdentity` linking and the linked-accounts screen ship; OIDC strategy blocked on client registration |
+| 27  | Server-side authorization and scoped roles            | ✅      | ✅       | Done — permissions, scope hierarchy, `PermissionsGuard`, the role assignment API and the administrator's grant and revoke screens       |
+| 28  | Institution configuration, terminology, feature flags | ⬜      | ⬜       | Not started                                                                                                                             |
+| 29  | Synthetic / mock SIS connector                        | ⬜      | —        | Not started                                                                                                                             |
+| 30  | Realistic synthetic university dataset                | ⬜      | —        | Not started                                                                                                                             |
+| 31  | Moodle development instance                           | —       | —        | Not started                                                                                                                             |
 
 ### Integration (32–37)
 
