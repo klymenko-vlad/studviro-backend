@@ -20,9 +20,10 @@ that are pure design, infrastructure or documentation carry `—` in both column
 Shipping the backend half of a feature includes regenerating `openapi.json`, because the
 client's API layer is generated from it.
 
-**Branching.** All work lands on `dev`. Branch from `dev`, keep commits Conventional-Commit
-formatted, and merge or push back to `dev`. Never push to `main` — `main` moves only through
-a release merge from `dev`.
+**Branching.** All work lands on `dev`, in this repository and in the client. Branch from
+`dev`, keep commits Conventional-Commit formatted (each repository's `commitlint.config.mjs`
+fixes the allowed scopes), and merge or push back to `dev`. Never push to `main` — `main`
+moves only through a release merge from `dev`.
 
 **Committing.** Once `pnpm verify` is green, commit and push the work to `dev` without
 waiting to be asked. Do not add AI co-authors. Update this tracker and `docs/STATUS.md` in
@@ -68,17 +69,17 @@ the same commit whenever the picture they describe has changed.
 
 ### Platform foundation (23–31)
 
-| #   | Task                                                  | Backend | Frontend | Status                                                                                                                 |
-| --- | ----------------------------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 23  | Select technical stack                                | —       | —        | Done                                                                                                                   |
-| 24  | Repository structure, tooling, CI                     | ✅      | ✅       | Done                                                                                                                   |
-| 25  | Migration infrastructure and canonical schema         | ✅      | —        | Done                                                                                                                   |
-| 26  | Authentication and identity linking                   | ✅      | ⬜       | In progress — local credentials and `ExternalIdentity` linking done; OIDC strategy blocked on client registration      |
-| 27  | Server-side authorization and scoped roles            | ✅      | ⬜       | In progress — permission catalogue, scope hierarchy and `PermissionsGuard` done; no protected read paths to expose yet |
-| 28  | Institution configuration, terminology, feature flags | ⬜      | ⬜       | Not started                                                                                                            |
-| 29  | Synthetic / mock SIS connector                        | ⬜      | —        | Not started                                                                                                            |
-| 30  | Realistic synthetic university dataset                | ⬜      | —        | Not started                                                                                                            |
-| 31  | Moodle development instance                           | —       | —        | Not started                                                                                                            |
+| #   | Task                                                  | Backend | Frontend | Status                                                                                                                                                                                       |
+| --- | ----------------------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 23  | Select technical stack                                | —       | —        | Done                                                                                                                                                                                         |
+| 24  | Repository structure, tooling, CI                     | ✅      | ✅       | Done                                                                                                                                                                                         |
+| 25  | Migration infrastructure and canonical schema         | ✅      | —        | Done                                                                                                                                                                                         |
+| 26  | Authentication and identity linking                   | ✅      | ✅       | In progress — credentials, `ExternalIdentity` linking and the linked-accounts screen ship; OIDC strategy blocked on client registration                                                      |
+| 27  | Server-side authorization and scoped roles            | ✅      | ⬜       | In progress — permissions, scope hierarchy, `PermissionsGuard` and the role assignment API ship, and a person can read their own roles; the administrator's grant and revoke UI is not built |
+| 28  | Institution configuration, terminology, feature flags | ⬜      | ⬜       | Not started                                                                                                                                                                                  |
+| 29  | Synthetic / mock SIS connector                        | ⬜      | —        | Not started                                                                                                                                                                                  |
+| 30  | Realistic synthetic university dataset                | ⬜      | —        | Not started                                                                                                                                                                                  |
+| 31  | Moodle development instance                           | —       | —        | Not started                                                                                                                                                                                  |
 
 ### Integration (32–37)
 

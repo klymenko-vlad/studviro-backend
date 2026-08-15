@@ -38,6 +38,10 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   `last_synchronized_at`, `synchronization_status`), unique per
   `(institution_id, source_system, external_id)`. `Course`, `CourseOffering` and
   `LearningSpace` are separate. Grades are split into calculated / proposed / official.
+- **Role and identity API** — institution-scoped `role-assignments` routes (`role:read` to
+  list, `role:assign` to grant and revoke, a grant validated against the scope's own
+  institution) plus `users/me/roles` and `users/me/identities`. The client renders both on
+  `/account`.
 - **Identity linking** (step 26) — `ExternalIdentitiesRepository` and `IdentityLinkingService`
   resolve a provider subject to a platform user: find by `(institution, issuer, subject)`, else
   provision a user with an unusable password. A shared email is never adopted silently — it
@@ -55,10 +59,10 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
 ## Not done
 
-Authorization and identity linking exist as services, but no HTTP surface uses them yet.
-
-- No endpoints over the canonical tables beyond users, and no screens in the client for any of
-  it. No seed data beyond users, and no way to grant a role through the API.
+- No endpoints over the canonical academic tables — courses, offerings, enrolment, grades and
+  scheduling are still write-only schema. No seed data beyond users.
+- No administrator UI for granting and revoking roles; the API exists and is guarded, but the
+  client only reads a person's own roles and linked accounts on `/account`.
 - No connectors (SIS or LMS), no synchronization engine, no institution configuration.
 - The flat `user`/`admin` `RolesGuard` still governs the existing user endpoints; the two
   guards are orthogonal and `RolesGuard` should retire as canonical routes replace them.
