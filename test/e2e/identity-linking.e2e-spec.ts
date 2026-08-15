@@ -109,6 +109,36 @@ describe('Identity linking (e2e)', () => {
     expect(first.id).not.toBe(other.user.id);
   });
 
+  it('reports the linked accounts of the current user', async () => {
+    const actor = await harness.actingAs({ email: 'jana@upjs.sk' });
+    await linking.link(actor.user.id, provider({ externalUsername: 'jnovakova' }));
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: '/api/v1/users/me/identities',
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject([
+      { institutionId, sourceSystem: 'sis', externalUsername: 'jnovakova' },
+    ]);
+  });
+
+  it('never reports another account linked identities', async () => {
+    const owner = await harness.actingAs({ email: 'jana@upjs.sk' });
+    await linking.link(owner.user.id, provider());
+    const stranger = await harness.actingAs();
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: '/api/v1/users/me/identities',
+      headers: stranger.headers,
+    });
+
+    expect(response.json()).toHaveLength(0);
+  });
+
   it('leaves no user behind when linking fails', async () => {
     await harness.actingAs({ email: 'jana@upjs.sk' });
 

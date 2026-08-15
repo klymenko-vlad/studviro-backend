@@ -41,6 +41,16 @@ export class ExternalIdentitiesRepository extends InstitutionScopedRepository<
     return this.findManyIn(institutionId, { where: eq(externalIdentities.userId, userId) }, tx);
   }
 
+  findAllForUser(userId: string, tx?: Transaction): Promise<ExternalIdentity[]> {
+    return this.findMany(
+      {
+        where: eq(externalIdentities.userId, userId),
+        orderBy: externalIdentities.createdAt,
+      },
+      tx,
+    );
+  }
+
   async markAuthenticated(id: string, tx?: Transaction): Promise<void> {
     await this.update(id, { lastAuthenticatedAt: new Date() }, tx);
   }
