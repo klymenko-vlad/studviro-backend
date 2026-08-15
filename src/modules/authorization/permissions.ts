@@ -16,12 +16,14 @@ export const PERMISSIONS = [
   'schedule:manage',
   'role:read',
   'role:assign',
+  'institution:read',
   'institution:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 
 const READS = [
+  'institution:read',
   'program:read',
   'course:read',
   'offering:read',
