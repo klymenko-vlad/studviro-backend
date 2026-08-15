@@ -14,7 +14,10 @@ export class MyIdentitiesController {
   constructor(private readonly identities: ExternalIdentitiesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List the accounts linked to the current user' })
+  @ApiOperation({
+    operationId: 'listMyIdentities',
+    summary: 'List the accounts linked to the current user',
+  })
   @ApiOkResponse({ type: ExternalIdentityResponseDto, isArray: true })
   @ApiErrorResponses()
   findMine(@CurrentUser('id') userId: string): Promise<ExternalIdentityResponseDto[]> {

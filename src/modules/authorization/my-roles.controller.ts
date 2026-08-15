@@ -14,7 +14,10 @@ export class MyRolesController {
   constructor(private readonly assignments: RoleAssignmentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List the current user roles in every institution' })
+  @ApiOperation({
+    operationId: 'listMyRoles',
+    summary: 'List the current user roles in every institution',
+  })
   @ApiOkResponse({ type: RoleAssignmentResponseDto, isArray: true })
   @ApiErrorResponses()
   findMine(@CurrentUser('id') userId: string): Promise<RoleAssignmentResponseDto[]> {

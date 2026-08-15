@@ -737,7 +737,7 @@
     },
     "/api/v1/institutions/{institutionId}/role-assignments": {
       "get": {
-        "operationId": "findAll",
+        "operationId": "listRoleAssignments",
         "parameters": [
           {
             "name": "institutionId",
@@ -813,7 +813,7 @@
         ]
       },
       "post": {
-        "operationId": "grant",
+        "operationId": "grantRole",
         "parameters": [
           {
             "name": "institutionId",
@@ -909,7 +909,7 @@
     },
     "/api/v1/institutions/{institutionId}/role-assignments/{id}": {
       "delete": {
-        "operationId": "revoke",
+        "operationId": "revokeRole",
         "parameters": [
           {
             "name": "institutionId",
@@ -986,7 +986,7 @@
     },
     "/api/v1/users/me/roles": {
       "get": {
-        "operationId": "findMine",
+        "operationId": "listMyRoles",
         "parameters": [],
         "responses": {
           "200": {
@@ -1046,7 +1046,7 @@
     },
     "/api/v1/users/me/identities": {
       "get": {
-        "operationId": "findMine",
+        "operationId": "listMyIdentities",
         "parameters": [],
         "responses": {
           "200": {

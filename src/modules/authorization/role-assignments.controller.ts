@@ -37,7 +37,10 @@ export class RoleAssignmentsController {
 
   @Get()
   @RequirePermission('role:read', INSTITUTION_SCOPE)
-  @ApiOperation({ summary: 'List role assignments in an institution' })
+  @ApiOperation({
+    operationId: 'listRoleAssignments',
+    summary: 'List role assignments in an institution',
+  })
   @ApiQuery({ name: 'userId', required: false, format: 'uuid' })
   @ApiOkResponse({ type: RoleAssignmentResponseDto, isArray: true })
   @ApiErrorResponses()
@@ -50,7 +53,7 @@ export class RoleAssignmentsController {
 
   @Post()
   @RequirePermission('role:assign', INSTITUTION_SCOPE)
-  @ApiOperation({ summary: 'Grant a role in a scope' })
+  @ApiOperation({ operationId: 'grantRole', summary: 'Grant a role in a scope' })
   @ApiCreatedResponse({ type: RoleAssignmentResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   grant(
@@ -63,7 +66,7 @@ export class RoleAssignmentsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermission('role:assign', INSTITUTION_SCOPE)
-  @ApiOperation({ summary: 'Revoke a role assignment' })
+  @ApiOperation({ operationId: 'revokeRole', summary: 'Revoke a role assignment' })
   @ApiNoContentResponse({ description: 'The assignment was revoked.' })
   @ApiErrorResponses({ notFound: true })
   revoke(
