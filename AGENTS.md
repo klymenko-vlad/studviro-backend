@@ -27,6 +27,28 @@ module or table, or invalidating something it claims. Rewrite the affected lines
 append a changelog. It must stay under ~100 lines, so trimming stale detail is part of the
 edit. Leave it alone for changes it does not affect.
 
+## Size and decomposition
+
+Keep every unit small and single-purpose — files, modules, services, components, hooks,
+functions. This holds on both sides of the product: a NestJS service and a React component
+are subject to the same rule.
+
+- One exported concern per file. A service that handles two subjects is two services; a
+  component rendering two independent regions is two components.
+- Extract as soon as a file grows past roughly 150–200 lines, a function past one screen,
+  or a component past one clear responsibility. Prefer several small collaborators over one
+  file that "has everything in one place".
+- Split by responsibility, not by line count: the extracted piece must be nameable in a few
+  words without "and" in the name.
+- A long file that only aggregates small pieces (a schema barrel, a route table) is fine.
+  A long file that reasons is not.
+
+## Backlog work
+
+When the work comes from the backlog, read `docs/Task Tracker.md` first: it carries the
+current status of every step and the working agreement that governs how those steps are
+delivered and committed.
+
 ## Comments
 
 Write no comments. Treat this as the rule, not a preference.
