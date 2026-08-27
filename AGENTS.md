@@ -1,52 +1,37 @@
 # AGENTS.md
 
-Instructions for AI agents working in this repository.
+NestJS 11 · Fastify · Drizzle · PostgreSQL 17 · Redis 7. The client is `../frontend`.
 
-## Test-driven development
+## Delivery
 
-Use test-driven development when adding or changing behavior:
+- The loop from picking a step to marking it `Done` is the `ship-backlog-step` skill
+  (`../.claude/skills/ship-backlog-step/SKILL.md`). Read it before feature work.
+- "continue development" = run that loop for exactly one step.
+- `docs/STATUS.md` is the entry point: what exists, what does not, what is next.
+  `docs/Feature Status.md` is the product view, `docs/Task Tracker.md` the backlog status
+  and the working agreement.
+- Update all three in the same commit as the work that changes them. Rewrite affected
+  lines; never append a changelog. STATUS.md stays under ~100 lines.
 
-1. Write tests that describe the expected behavior before implementing it.
-2. Cover representative positive, negative, boundary and failure cases.
-3. Run the tests and confirm that the new or changed tests fail for the expected
-   reason.
-4. Implement the smallest complete change that makes the tests pass.
-5. Refactor while keeping the full test suite green.
+## Tests
 
-Test observable behavior rather than implementation details. Keep tests focused,
-readable and independent. For bug fixes, add a regression test that reproduces
-the bug before fixing it.
+Test-driven, always: failing test first, then the smallest change that passes it, then
+refactor green. Cover positive, negative, boundary and failure cases. Test observable
+behavior, not implementation. Reproduce every bug with a regression test before fixing it.
 
-## Status handoff
+## Structure
 
-`docs/STATUS.md` is the entry point. Read it first — it says what exists, what does not, and
-what the next task is.
-
-Update it as part of any change that alters that picture: finishing a backlog step, adding a
-module or table, or invalidating something it claims. Rewrite the affected lines; do not
-append a changelog. It must stay under ~100 lines, so trimming stale detail is part of the
-edit. Leave it alone for changes it does not affect.
+- One exported concern per file. Two subjects means two files.
+- Extract past ~150–200 lines, or a function past one screen. The extracted piece must be
+  nameable without "and".
+- Long files that only aggregate (schema barrels, route tables) are fine. Long files that
+  reason are not.
 
 ## Comments
 
-Write no comments. Treat this as the rule, not a preference.
+Write none. Fix the code instead — rename, extract, tighten the type. No restatements, no
+doc blocks, no rationale prose (that goes in `docs/adr/` or the commit message), no
+banners, no `TODO`s, no commented-out code. Strip them from code you edit, too.
 
-Code explains itself through naming, decomposition and types. If something seems
-to need a comment, fix the code instead — rename the variable, extract the
-function, tighten the type.
-
-Specifically, do not write:
-
-- comments restating what the next line does;
-- doc blocks on types, columns, tables, constants or self-evident functions;
-- rationale prose ("we do X because Y") — that belongs in `docs/adr/` or the
-  commit message, not the source;
-- section banners, `TODO`s, or commented-out code.
-
-The rare exception is a single line warning of something genuinely
-counter-intuitive that a reader would otherwise break — a protocol quirk, a
-deliberate deviation from an obvious implementation. If you are writing more than
-one such comment in a file, you are still writing too many.
-
-This applies to code you add and to code you edit: do not carry existing comments
-forward by default.
+The one exception: a single line warning of something genuinely counter-intuitive that a
+reader would otherwise break. More than one per file means you are still writing too many.

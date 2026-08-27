@@ -18,6 +18,12 @@ import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { ConnectorsModule } from './modules/connectors/connectors.module';
+import { CoursesModule } from './modules/courses/courses.module';
+import { IdentityModule } from './modules/identity/identity.module';
+import { InstitutionsModule } from './modules/institutions/institutions.module';
+import { SynchronizationModule } from './modules/synchronization/synchronization.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -105,7 +111,13 @@ function workerModules(): DynamicModule[] {
     MetricsModule,
     HealthModule,
     AuthModule,
+    AuthorizationModule,
+    ConnectorsModule,
+    CoursesModule,
+    IdentityModule,
+    InstitutionsModule,
     UsersModule,
+    SynchronizationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

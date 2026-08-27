@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    # Weekly, so a vulnerability disclosed after merge still surfaces.
-    - cron: '17 4 * * 1'
+  # Weekly schedule temporarily disabled — a vulnerability disclosed after
+  # merge won't surface until push/PR/manual trigger.
+  # schedule:
+  #   - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 # The repository is private without GitHub Advanced Security, so code scanning
 # uploads are rejected. Each scanner therefore fails its own job instead of

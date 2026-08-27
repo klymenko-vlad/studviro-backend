@@ -15,6 +15,7 @@ import {
   studyGroups,
 } from './enrollments';
 import { externalIdentities } from './external-identities';
+import { institutionSettings } from './institution-settings';
 import { institutions, orgUnits } from './institutions';
 import {
   activityCompletions,
@@ -27,6 +28,7 @@ import {
 import { refreshTokens } from './refresh-tokens';
 import { roleAssignments } from './role-assignments';
 import { examRegistrations, examTerms, rooms, timetableEvents } from './scheduling';
+import { syncDomainResults, syncRuns, syncWatermarks } from './synchronization';
 import { users } from './users';
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -47,7 +49,15 @@ export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, { fields: [refreshTokens.userId], references: [users.id] }),
 }));
 
-export const institutionsRelations = relations(institutions, ({ many }) => ({
+export const institutionSettingsRelations = relations(institutionSettings, ({ one }) => ({
+  institution: one(institutions, {
+    fields: [institutionSettings.institutionId],
+    references: [institutions.id],
+  }),
+}));
+
+export const institutionsRelations = relations(institutions, ({ many, one }) => ({
+  settings: one(institutionSettings),
   orgUnits: many(orgUnits),
   academicTerms: many(academicTerms),
   programs: many(programs),
@@ -290,4 +300,25 @@ export const officialCourseResultsRelations = relations(officialCourseResults, (
     references: [users.id],
     relationName: 'officialCourseResultRecorder',
   }),
+}));
+
+export const syncRunsRelations = relations(syncRuns, ({ one, many }) => ({
+  institution: one(institutions, {
+    fields: [syncRuns.institutionId],
+    references: [institutions.id],
+  }),
+  requestedBy: one(users, { fields: [syncRuns.requestedById], references: [users.id] }),
+  domainResults: many(syncDomainResults),
+}));
+
+export const syncDomainResultsRelations = relations(syncDomainResults, ({ one }) => ({
+  run: one(syncRuns, { fields: [syncDomainResults.runId], references: [syncRuns.id] }),
+}));
+
+export const syncWatermarksRelations = relations(syncWatermarks, ({ one }) => ({
+  institution: one(institutions, {
+    fields: [syncWatermarks.institutionId],
+    references: [institutions.id],
+  }),
+  lastRun: one(syncRuns, { fields: [syncWatermarks.lastRunId], references: [syncRuns.id] }),
 }));

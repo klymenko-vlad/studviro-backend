@@ -2,18 +2,21 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-08-08
+Last updated: 2026-08-27
 
 ## What this is
 
 A unified academic platform integrating a Student Information System (AIS2) and an LMS
 (Moodle) behind one canonical model, so neither is hard-coded into the core. Full reasoning
-in `docs/System Plan.md`; the 71-step backlog with per-step status is in `docs/Tasks Plan.md`.
+in `docs/System Plan.md`; the 71-step backlog is in `docs/Tasks Plan.md` and its live status,
+plus the working agreement for backlog work, in `docs/Task Tracker.md`. `docs/Feature
+Status.md` is the product-level view of what a user can do today. The delivery loop
+itself is the `ship-backlog-step` skill at `../.claude/skills/ship-backlog-step/`.
 
 ## Stack
 
-NestJS 11 on Fastify · Drizzle ORM + PostgreSQL 17 · Redis 7 (cache, BullMQ, throttle, locks)
-· class-validator DTOs, Zod for env · generated `openapi.json` · Vitest + Testcontainers.
+NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 (cache, BullMQ, throttle, locks) ·
+class-validator DTOs, Zod for env · generated `openapi.json` · Vitest + Testcontainers.
 Client is Next.js 16 App Router (Feature-Sliced Design) and acts as the BFF, converting
 platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
@@ -21,60 +24,97 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
 - **App skeleton** — modular monolith (ADR 0002), `ROLE=api|worker|all`, Zod-validated env,
   graceful shutdown, request timeouts, Helmet/CORS/compression/body limits.
-- **Persistence infrastructure** — drizzle-kit migrations, `TransactionHost`-mediated
-  repositories, keyset pagination (ADR 0004), soft-delete and ms-precision timestamp
-  conventions in `schema/_shared.ts`.
+- **Persistence** — drizzle-kit migrations, `TransactionHost`-mediated repositories, keyset
+  pagination (ADR 0004), soft-delete and ms-precision timestamps in `schema/_shared.ts`.
 - **Auth** — local credentials: argon2, 15-min access JWT carrying `token_version`, opaque
   refresh token stored as SHA-256 and rotated on use, with reuse detection (ADR 0003).
-- **Async / integration plumbing** — BullMQ with a shared `BaseProcessor`, Redis distributed
-  lock, `Idempotency-Key` interceptor.
-- **Operations** — Pino logs with correlation IDs, Terminus health, bearer-protected Prometheus
-  metrics in production, multi-stage `Dockerfile`, `docker-compose.yml`.
-- **Canonical academic schema** (step 25) — 24 tables across institutions, identity linking,
-  scoped roles, academic structure, enrolment, scheduling, learning and course results
-  (ADR 0009). External IDs are never primary keys: every row carries `institution_id` plus
-  provenance (`source_system`, `external_id`, `source_version`, `source_updated_at`,
-  `last_synchronized_at`, `synchronization_status`), unique per
-  `(institution_id, source_system, external_id)`. `Course`, `CourseOffering` and
-  `LearningSpace` are separate. Grades are split into calculated / proposed / official.
-- **API contract** — `openapi.json` generated from decorators, committed, drift-checked by
-  `pnpm openapi:check`; the frontend client is generated from it.
-- **CI** — `.github/workflows/`: lint, typecheck, test, OpenAPI drift, migrations, build;
-  plus pnpm audit, CodeQL and Trivy image scanning, release publishing and PR title/commit
-  checks. `pnpm verify` is the same gate locally.
+- **Async plumbing and operations** — BullMQ with a shared `BaseProcessor`, Redis lock,
+  `Idempotency-Key`; Pino logs with correlation IDs, Terminus health, bearer-protected
+  Prometheus metrics, multi-stage `Dockerfile`, `docker-compose.yml`.
+- **Canonical academic schema** (step 25) — 25 tables (ADR 0009). External IDs are never
+  primary keys: every row carries `institution_id` plus provenance, unique per
+  `(institution_id, source_system, external_id)`. Grades split calculated/proposed/official.
+- **Role and identity API** — institution-scoped `role-assignments` routes (`role:read`,
+  `role:assign`), `users/me/roles`, `users/me/identities`, the caller's institutions, and
+  `institutions/:id/me/permissions`, so a client gates its UI on the server's answer rather
+  than a second copy of the role map. The client renders `/account` and
+  `/institutions/[id]/roles`.
+- **Identity linking** (step 26) — a provider subject resolves to a platform user by
+  `(institution, issuer, subject)`, else provisions one with an unusable password. A shared
+  email is never adopted silently: it raises `IDENTITY_EMAIL_CONFLICT`.
+- **Institution configuration** (step 28) — `institution_settings` carries terminology
+  overrides (label-only), feature flags and the chosen connector, merged with the platform
+  defaults so every key resolves. `GET`/`PATCH institutions/:id/configuration` behind
+  `institution:read` / `institution:manage`; the client renders `/institutions/[id]/settings`.
+- **Connectors** (steps 13, 14, 29) — `AcademicSystemConnector` and
+  `LearningSystemConnector` interfaces with a `capabilities()` map, plus `mock-sis`: a
+  deterministic SIS built from a seed and a fixed anchor date, ~5k linked records, honouring
+  `changedSince`. `ConnectorRegistry` resolves by configured name;
+  `GET institutions/:id/connectors` reports health and capabilities.
+- **Scoped authorization** (step 27) — a permission catalogue mapped from `CANONICAL_ROLES`,
+  a `ScopeHierarchyService` walking org-unit ancestry to decide which grants enclose a target
+  scope, and `@RequirePermission` behind a `PermissionsGuard`. Institution scoping is enforced
+  by `InstitutionScopedRepository`, which every canonical-table repository extends.
+- **Synchronization engine** (steps 35–36) — a run walks the connector domain by domain in
+  dependency order, upserting on the provenance key behind a stale-write guard, tombstoning
+  deletions, provisioning a user plus `ExternalIdentity` per person, and pruning children the
+  source dropped. `sync_runs`, `sync_domain_results` and `sync_watermarks` hold the state
+  machine and per-domain watermark, so an incremental run asks only for `changedSince` and a
+  failed record holds its watermark back rather than being skipped. Runs go through BullMQ,
+  one per institution behind the Redis lock, driven by
+  `POST`/`GET institutions/:id/synchronization/runs` and `GET .../state` (`sync:run`/`sync:read`).
+- **Canonical reads** (step 40, first half) — `GET institutions/:id/me/courses` behind
+  `enrollment:read` joins the caller's enrolments to their offering, course, term and
+  teaching staff, filtered by term or enrolment status and ordered newest term first. The
+  client renders it at `/institutions/[id]/courses`, grouped by term, and the account page
+  links to it for anyone the server grants that permission.
+- **API contract and CI** — `openapi.json` generated from decorators, committed and
+  drift-checked; the client is generated from it. `.github/workflows/` runs lint, typecheck,
+  test, OpenAPI drift, migrations, build, pnpm audit, CodeQL and Trivy — `pnpm verify` is the
+  same gate locally.
 
 ## Not done
 
-The tables exist; nothing reads or writes them yet.
-
-- No repositories, services or endpoints over the canonical tables. No seed data beyond users.
-- No connectors (SIS or LMS), no synchronization engine, no institution configuration.
-- Authorization is still a flat `user`/`admin` `RolesGuard`. `role_assignments` is not enforced,
-  and reads are not scoped by `institution_id` — nothing in the schema forces that today.
-- No OIDC strategy. `external_identities` exists but nothing writes it.
+- Enrolment is the only canonical table read back. Grades, scheduling, exam terms, programs
+  and the course catalogue itself still have no API and no screen, and there is no course
+  detail page behind the list — a course title is text, not a link.
+- A grant names its subject and scope by identifier: there is no person or scope search
+  behind those fields yet, because neither a user directory nor an org-unit read exists.
+- Synchronization has no screen: runs are queued and read over the API only, and nothing
+  schedules them — every run is triggered by hand. Reconciliation (step 37) and sync-freshness
+  metrics are not built either.
+- No LMS connector implementation — the interface exists, Moodle does not.
+- Institution configuration is read straight from the database on every call; no caching.
+- The flat `user`/`admin` `RolesGuard` still governs the existing user endpoints; the two
+  guards are orthogonal and `RolesGuard` should retire as canonical routes replace them.
+- No OIDC strategy: `IdentityLinkingService` is the model an OIDC callback will call, but the
+  strategy itself is blocked on institutional client registration.
 - Theses, transcripts, notifications and audit are intentionally absent from the model.
 
-## Next task — identity linking and scoped roles (steps 26–27)
+## Next task — the course detail page, finishing step 40
 
-The tables are there, so this is now module work rather than modelling.
-
-- An `ExternalIdentity` repository and the linking rule: authenticate against a provider
-  subject, find or create the platform user, never match on email.
-- A scope-aware authorization guard that resolves `role_assignments` for the acting user and
-  answers "may this person do X in scope Y", replacing the flat `RolesGuard`. Decide where
-  `institution_id` scoping is enforced — repository base class or row-level security — and make
-  it uniform before any read path exists to retrofit.
-- OIDC strategy is optional and blocked on institutional client registration; the linking model
-  should not assume it arrives.
-
-Step 28 (institution configuration) and 29 (mock SIS) are the natural follow-ups, and 29
-unblocks the connectors without waiting on AIS2 access.
+- `GET institutions/:id/me/courses` and `/institutions/[id]/courses` ship. Finish step 40
+  with the course 360° page: `GET institutions/:id/course-offerings/:offeringId` behind
+  `offering:read`, carrying the course, term, teaching staff, study groups the caller
+  belongs to and the caller's own enrolment, with the list's course titles linking into it.
+  Refuse an offering the caller is not enrolled in and has no teaching or admin grant over.
+- Then grades (step 41) over `course_results`, which the schema already splits into
+  calculated / proposed / official — the provenance view is the point of that step.
+- Then the sync monitoring screen (step 47) over the run and state endpoints that already
+  exist, plus a schedule so runs are not hand-triggered, and freshness gauges for step 53.
 
 ## Caveats
 
-- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel. Steps 26–27
-  read as done but are not. Prefer the codebase and current best practice where they conflict,
-  and fix the doc when they do.
-- Both docs contain broken citation markers (`cite…turn20view0`) — invisible private-use
-  Unicode from a research export. They break exact-string edits; anchor edits on clean text.
+- `docs/Tasks Plan.md` and `docs/System Plan.md` are research output, not gospel: prefer the
+  codebase, `docs/Task Tracker.md` and current best practice, and fix the doc when they
+  conflict. Both contain broken citation markers (`cite…turn20view0`) — invisible
+  private-use Unicode that breaks exact-string edits; anchor edits on clean text.
 - Steps 1–22 are design tasks whose status was inferred from the docs, not verified.
+- The client's `pnpm size` budget (330 kB) is exceeded and was already exceeded before this
+  work: 391.68 kB on `dev` beforehand, 401.37 kB now the my-courses screen ships (+9.69 kB).
+  `pnpm verify` fails on that step alone in the client; every other check is green.
+- Local development needs a `.env` per repository; neither is committed. `.env.example` set
+  `METRICS_TOKEN=` empty, which the Zod schema rejects as too short and which stopped the app
+  booting — now commented out. Every port is env-driven if 3000/5432/6379 are taken.
+- The dev seed creates two users and nothing else: canonical data comes from a `mock-sis`
+  run or from hand-written SQL. There is no seeded demo enrolment.

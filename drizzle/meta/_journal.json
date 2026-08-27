@@ -43,6 +43,20 @@
       "when": 1786223820287,
       "tag": "0005_canonical_academic_model",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786809570235,
+      "tag": "0006_institution_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786818194606,
+      "tag": "0007_synchronization_runs",
+      "breakpoints": true
     }
   ]
 }
