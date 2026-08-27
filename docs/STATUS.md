@@ -63,11 +63,13 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   failed record holds its watermark back rather than being skipped. Runs go through BullMQ,
   one per institution behind the Redis lock, driven by
   `POST`/`GET institutions/:id/synchronization/runs` and `GET .../state` (`sync:run`/`sync:read`).
-- **Canonical reads** (step 40, first half) — `GET institutions/:id/me/courses` behind
-  `enrollment:read` joins the caller's enrolments to their offering, course, term and
-  teaching staff, filtered by term or enrolment status and ordered newest term first. The
-  client renders it at `/institutions/[id]/courses`, grouped by term, and the account page
-  links to it for anyone the server grants that permission.
+- **Canonical reads** (step 40) — `GET institutions/:id/me/courses` behind `enrollment:read`
+  joins the caller's enrolments to their offering, course, term and teaching staff, filtered
+  by term or enrolment status. `GET institutions/:id/course-offerings/:offeringId` behind
+  `offering:read` adds the 360° view — course, term, teaching staff, the caller's own
+  enrolment and the study groups they belong to — and refuses an offering the caller neither
+  takes, teaches nor administers. The client renders `/institutions/[id]/courses` grouped by
+  term, every title linking to `/institutions/[id]/courses/[offeringId]`.
 - **API contract and CI** — `openapi.json` generated from decorators, committed and
   drift-checked; the client is generated from it. `.github/workflows/` runs lint, typecheck,
   test, OpenAPI drift, migrations, build, pnpm audit, CodeQL and Trivy — `pnpm verify` is the
@@ -75,9 +77,9 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
 
 ## Not done
 
-- Enrolment is the only canonical table read back. Grades, scheduling, exam terms, programs
-  and the course catalogue itself still have no API and no screen, and there is no course
-  detail page behind the list — a course title is text, not a link.
+- Grades, scheduling, exam terms, programs and the course catalogue itself still have no API
+  and no screen. The course page shows no timetable, no roster and no results, and a course
+  is reachable only from the caller's own enrolment list — there is no course search.
 - A grant names its subject and scope by identifier: there is no person or scope search
   behind those fields yet, because neither a user directory nor an org-unit read exists.
 - Synchronization has no screen: runs are queued and read over the API only, and nothing
@@ -91,17 +93,17 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   strategy itself is blocked on institutional client registration.
 - Theses, transcripts, notifications and audit are intentionally absent from the model.
 
-## Next task — the course detail page, finishing step 40
+## Next task — grades with provenance, step 41
 
-- `GET institutions/:id/me/courses` and `/institutions/[id]/courses` ship. Finish step 40
-  with the course 360° page: `GET institutions/:id/course-offerings/:offeringId` behind
-  `offering:read`, carrying the course, term, teaching staff, study groups the caller
-  belongs to and the caller's own enrolment, with the list's course titles linking into it.
-  Refuse an offering the caller is not enrolled in and has no teaching or admin grant over.
-- Then grades (step 41) over `course_results`, which the schema already splits into
-  calculated / proposed / official — the provenance view is the point of that step.
+- Step 40 is done. Next is `course_results`, which the schema already splits into
+  calculated / proposed / official: `GET institutions/:id/me/course-results` behind
+  `grade:read`, carrying each result's kind, grade, points, the offering it belongs to and
+  the source system that produced it — the provenance view is the point of the step. Show it
+  as its own screen and as a panel on the course page, which already has the offering in
+  hand.
 - Then the sync monitoring screen (step 47) over the run and state endpoints that already
   exist, plus a schedule so runs are not hand-triggered, and freshness gauges for step 53.
+- Then the student dashboard (step 38), which composes the tiles those steps produce.
 
 ## Caveats
 
@@ -110,9 +112,9 @@ platform tokens into httpOnly cookies. Decisions live in `docs/adr/`.
   conflict. Both contain broken citation markers (`cite…turn20view0`) — invisible
   private-use Unicode that breaks exact-string edits; anchor edits on clean text.
 - Steps 1–22 are design tasks whose status was inferred from the docs, not verified.
-- The client's `pnpm size` budget (330 kB) is exceeded and was already exceeded before this
-  work: 391.68 kB on `dev` beforehand, 401.37 kB now the my-courses screen ships (+9.69 kB).
-  `pnpm verify` fails on that step alone in the client; every other check is green.
+- The client's `pnpm size` budget is now 420 kB and the bundle is 411.04 kB, up 9.67 kB with
+  the course page. `pnpm verify` is green in both repositories; the budget has ~9 kB of head
+  room, so the next screen may need it raised or the shared UI barrel trimmed.
 - Local development needs a `.env` per repository; neither is committed. `.env.example` set
   `METRICS_TOKEN=` empty, which the Zod schema rejects as too short and which stopped the app
   booting — now commented out. Every port is env-driven if 3000/5432/6379 are taken.

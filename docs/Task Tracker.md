@@ -96,9 +96,9 @@ the same commit whenever the picture they describe has changed.
 
 | #   | Task                                        | Backend | Frontend | Status                                                                                                |
 | --- | ------------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
-| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started — the my-courses list under step 40 is its first tile                                     |
+| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started — the my-courses list from step 40 is its first tile                                      |
 | 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                           |
-| 40  | Course 360° page                            | ✅      | ✅       | In progress — `me/courses` and the my-courses screen ship; the course detail page does not            |
+| 40  | Course 360° page                            | ✅      | ✅       | Done — the my-courses list and the course detail page behind it; grades and timetable are steps 41/39 |
 | 41  | Unified grades view with provenance         | ⬜      | ⬜       | Not started                                                                                           |
 | 42  | Exam-term view                              | ⬜      | ⬜       | Not started                                                                                           |
 | 43  | Controlled exam registration                | ⬜      | ⬜       | Not started                                                                                           |
