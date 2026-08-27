@@ -5,7 +5,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-08-15
+Last updated: 2026-08-27
 
 ## States
 
@@ -35,8 +35,9 @@ Last updated: 2026-08-15
 | Feature                  | Backend | Frontend | State     | Notes                                               |
 | ------------------------ | ------- | -------- | --------- | --------------------------------------------------- |
 | Unified dashboard        | ⬜      | ⬜       | `Planned` | Step 38 — the next thing to build                   |
+| My courses               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term    |
 | Unified calendar         | ⬜      | ⬜       | `Planned` | Step 39                                             |
-| Course 360° page         | ⬜      | ⬜       | `Planned` | Step 40                                             |
+| Course 360° page         | ⬜      | ⬜       | `Planned` | Step 40 — a course detail page behind the list      |
 | Grades with provenance   | ⬜      | ⬜       | `Planned` | Step 41; schema splits calculated/proposed/official |
 | Exam terms               | ⬜      | ⬜       | `Planned` | Step 42                                             |
 | Exam registration        | ⬜      | ⬜       | `Planned` | Step 43                                             |
@@ -68,7 +69,7 @@ Last updated: 2026-08-15
 | ------------------------------- | --------- | ------------------------------------------------------------------------------- |
 | Canonical academic model        | `Live`    | 25 tables, institution-scoped, full provenance, external IDs never primary keys |
 | Mock SIS connector              | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`           |
-| Synchronization engine          | `Partial` | Imports the SIS into canonical tables; nothing reads those tables yet           |
+| Synchronization engine          | `Partial` | Imports the SIS into canonical tables; only enrolments are read back so far     |
 | Retries, tombstones, watermarks | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures    |
 | Reconciliation checks           | `Planned` | Step 37                                                                         |
 | Moodle connector                | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance  |

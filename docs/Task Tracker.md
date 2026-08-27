@@ -4,7 +4,7 @@ The live checklist for the 71-step backlog in `docs/Tasks Plan.md`. That documen
 research plan and does not change; this one records what is actually built. Update it in the
 same commit as the work it describes.
 
-Last updated: 2026-08-15
+Last updated: 2026-08-27
 
 ## Working agreement
 
@@ -96,9 +96,9 @@ the same commit whenever the picture they describe has changed.
 
 | #   | Task                                        | Backend | Frontend | Status                                                                                                |
 | --- | ------------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
-| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started                                                                                           |
+| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started — the my-courses list under step 40 is its first tile                                     |
 | 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                           |
-| 40  | Course 360° page                            | ⬜      | ⬜       | Not started                                                                                           |
+| 40  | Course 360° page                            | ✅      | ✅       | In progress — `me/courses` and the my-courses screen ship; the course detail page does not            |
 | 41  | Unified grades view with provenance         | ⬜      | ⬜       | Not started                                                                                           |
 | 42  | Exam-term view                              | ⬜      | ⬜       | Not started                                                                                           |
 | 43  | Controlled exam registration                | ⬜      | ⬜       | Not started                                                                                           |
