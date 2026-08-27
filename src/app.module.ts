@@ -21,6 +21,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { SynchronizationModule } from './modules/synchronization/synchronization.module';
@@ -114,6 +115,7 @@ function workerModules(): DynamicModule[] {
     AuthorizationModule,
     ConnectorsModule,
     CoursesModule,
+    GradesModule,
     IdentityModule,
     InstitutionsModule,
     UsersModule,
