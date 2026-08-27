@@ -11,7 +11,7 @@ Last updated: 2026-08-15
 
 | State      | Meaning                                                               |
 | ---------- | --------------------------------------------------------------------- |
-| `Live`     | Usable end to end by its audience: API, screen, tests, both locales   |
+| `Live`     | Usable end to end by its audience: API, screen, tests, strings keyed  |
 | `Partial`  | Usable, but a named part of the capability is missing                 |
 | `API only` | The endpoint works; no screen sits behind it, so nobody can use it    |
 | `Planned`  | Not started                                                           |
@@ -19,16 +19,16 @@ Last updated: 2026-08-15
 
 ## Everyone
 
-| Feature                      | Backend | Frontend | State     | Notes                                                                           |
-| ---------------------------- | ------- | -------- | --------- | ------------------------------------------------------------------------------- |
-| Sign in with a password      | ✅      | ✅       | `Live`    | argon2, 15-min access JWT, rotating refresh token, reuse detection              |
-| Sign in with a university ID | ⬜      | ⬜       | `Blocked` | OIDC strategy blocked on institutional client registration                      |
-| See my roles and identities  | ✅      | ✅       | `Live`    | `/account`                                                                      |
-| Link an external account     | ✅      | ✅       | `Partial` | A shared email raises `IDENTITY_EMAIL_CONFLICT` and must be linked deliberately |
-| Ukrainian and English UI     | —       | ✅       | `Live`    | `NEXT_LOCALE` cookie; no locale route segment                                   |
-| Accessible interface (AA)    | —       | ⬜       | `Planned` | Step 52; no audit pass yet                                                      |
-| Search my data               | ⬜      | ⬜       | `Planned` | Step 51                                                                         |
-| Export my personal data      | ⬜      | ⬜       | `Planned` | Step 50                                                                         |
+| Feature                      | Backend | Frontend | State     | Notes                                                                                                                           |
+| ---------------------------- | ------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Sign in with a password      | ✅      | ✅       | `Live`    | argon2, 15-min access JWT, rotating refresh token, reuse detection                                                              |
+| Sign in with a university ID | ⬜      | ⬜       | `Blocked` | OIDC strategy blocked on institutional client registration                                                                      |
+| See my roles and identities  | ✅      | ✅       | `Live`    | `/account`                                                                                                                      |
+| Link an external account     | ✅      | ✅       | `Partial` | A shared email raises `IDENTITY_EMAIL_CONFLICT` and must be linked deliberately                                                 |
+| Ukrainian and English UI     | —       | ✅       | `Partial` | `NEXT_LOCALE` cookie, no locale route segment; strings are keyed as they are built but Ukrainian translation is a deferred pass |
+| Accessible interface (AA)    | —       | ⬜       | `Planned` | Step 52; no audit pass yet                                                                                                      |
+| Search my data               | ⬜      | ⬜       | `Planned` | Step 51                                                                                                                         |
+| Export my personal data      | ⬜      | ⬜       | `Planned` | Step 50                                                                                                                         |
 
 ## Student
 
