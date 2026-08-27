@@ -1,6 +1,16 @@
 # AGENTS.md
 
-Instructions for AI agents working in this repository.
+Instructions for AI agents working in this repository. This file governs _how code is
+written here_.
+
+## Delivery flow
+
+_How work is delivered_ — the loop from picking a step to marking it `Done` across both
+repositories — lives in the `ship-backlog-step` skill at
+`../.claude/skills/ship-backlog-step/SKILL.md`. Read it before starting feature work,
+and treat "continue development" as an instruction to run it for one step.
+
+The workspace root (`..`) holds the shared `AGENTS.md`; the client is `../frontend`.
 
 ## Test-driven development
 
@@ -20,7 +30,8 @@ the bug before fixing it.
 ## Status handoff
 
 `docs/STATUS.md` is the entry point. Read it first — it says what exists, what does not, and
-what the next task is.
+what the next task is. `docs/Feature Status.md` sits beside it with the product-level view:
+what a user can actually do today, by audience.
 
 Update it as part of any change that alters that picture: finishing a backlog step, adding a
 module or table, or invalidating something it claims. Rewrite the affected lines; do not
@@ -47,7 +58,11 @@ are subject to the same rule.
 
 When the work comes from the backlog, read `docs/Task Tracker.md` first: it carries the
 current status of every step and the working agreement that governs how those steps are
-delivered and committed.
+delivered and committed. Then follow the `ship-backlog-step` skill, which sequences that
+agreement into an ordered loop and says when to stop and ask the user.
+
+Bookkeeping travels with the work, in the same commit: `docs/Task Tracker.md`,
+`docs/Feature Status.md` and `docs/STATUS.md` — including a rewritten _Next task_.
 
 ## Comments
 

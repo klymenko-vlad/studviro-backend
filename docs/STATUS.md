@@ -9,7 +9,9 @@ Last updated: 2026-08-15
 A unified academic platform integrating a Student Information System (AIS2) and an LMS
 (Moodle) behind one canonical model, so neither is hard-coded into the core. Full reasoning
 in `docs/System Plan.md`; the 71-step backlog is in `docs/Tasks Plan.md` and its live status,
-plus the working agreement for backlog work, in `docs/Task Tracker.md`.
+plus the working agreement for backlog work, in `docs/Task Tracker.md`. `docs/Feature
+Status.md` is the product-level view of what a user can do today. The delivery loop
+itself is the `ship-backlog-step` skill at `../.claude/skills/ship-backlog-step/`.
 
 ## Stack
 
