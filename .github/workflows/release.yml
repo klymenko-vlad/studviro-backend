@@ -69,7 +69,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # GitHub's attestation API rejects user-owned private repositories, so this
+      # would fail the release for a reason that has nothing to do with the image.
+      # The push itself already attaches buildkit provenance and an SBOM, so the
+      # supply-chain metadata still travels with the image; this step adds the
+      # signed GitHub attestation on top and switches itself on if the repository
+      # ever becomes public.
       - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
