@@ -11,8 +11,8 @@ import {
   MyCoursesRepository,
   type EnrolledCourseFilter,
   type EnrolledCourseRow,
-  type OfferingTeacherRow,
 } from './my-courses.repository';
+import { TeachingStaffRepository, type OfferingTeacherRow } from './teaching-staff.repository';
 
 export interface EnrolledCourseTeacher {
   userId: string;
@@ -53,7 +53,10 @@ export interface EnrolledCourse {
 
 @Injectable()
 export class MyCoursesService {
-  constructor(private readonly repository: MyCoursesRepository) {}
+  constructor(
+    private readonly repository: MyCoursesRepository,
+    private readonly teachingStaff: TeachingStaffRepository,
+  ) {}
 
   async listEnrolled(
     institutionId: string,
@@ -63,7 +66,7 @@ export class MyCoursesService {
     const rows = await this.repository.findEnrolledCourses(institutionId, userId, filter);
     if (rows.length === 0) return [];
 
-    const teachers = await this.repository.findTeachers([
+    const teachers = await this.teachingStaff.findByOfferings([
       ...new Set(rows.map((row) => row.offeringId)),
     ]);
 

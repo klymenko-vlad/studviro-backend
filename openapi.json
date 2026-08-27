@@ -1976,6 +1976,80 @@
           "courses"
         ]
       }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}": {
+      "get": {
+        "operationId": "getCourseOffering",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOfferingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read one course offering the caller takes, teaches or administers",
+        "tags": [
+          "courses"
+        ]
+      }
     }
   },
   "info": {
@@ -3146,6 +3220,266 @@
           "course",
           "term",
           "teachers"
+        ]
+      },
+      "CourseOfferingSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "language",
+          "capacity"
+        ]
+      },
+      "CourseOfferingCourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "description",
+          "credits"
+        ]
+      },
+      "CourseOfferingTermDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "academicYear",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "CourseOfferingTeacherDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "lecturer",
+              "seminar_leader",
+              "lab_supervisor",
+              "examiner",
+              "assistant"
+            ],
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "role",
+          "isPrimary"
+        ]
+      },
+      "CourseOfferingEnrollmentDto": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "requirementType": {
+            "enum": [
+              "compulsory",
+              "optional",
+              "elective"
+            ],
+            "type": "string"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "enrolledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "status",
+          "requirementType",
+          "attempt",
+          "enrolledAt"
+        ]
+      },
+      "CourseOfferingStudyGroupDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "seminar",
+              "lab",
+              "exercise",
+              "project",
+              "other"
+            ],
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "code",
+          "name",
+          "capacity"
+        ]
+      },
+      "CourseOfferingResponseDto": {
+        "type": "object",
+        "properties": {
+          "offering": {
+            "$ref": "#/components/schemas/CourseOfferingSummaryDto"
+          },
+          "course": {
+            "$ref": "#/components/schemas/CourseOfferingCourseDto"
+          },
+          "term": {
+            "$ref": "#/components/schemas/CourseOfferingTermDto"
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseOfferingTeacherDto"
+            }
+          },
+          "enrollment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourseOfferingEnrollmentDto"
+              }
+            ]
+          },
+          "studyGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseOfferingStudyGroupDto"
+            }
+          },
+          "viewerRole": {
+            "enum": [
+              "student",
+              "teacher",
+              "administrator"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "offering",
+          "course",
+          "term",
+          "teachers",
+          "enrollment",
+          "studyGroups",
+          "viewerRole"
         ]
       }
     }

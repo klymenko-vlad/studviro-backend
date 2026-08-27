@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
   enrollments,
-  teachingAssignments,
-  users,
   type CourseOfferingStatus,
   type EnrollmentRequirementType,
   type EnrollmentStatus,
-  type TeachingRole,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -36,14 +33,6 @@ export interface EnrolledCourseRow {
   academicYear: string;
   termStartsAt: Date;
   termEndsAt: Date;
-}
-
-export interface OfferingTeacherRow {
-  courseOfferingId: string;
-  userId: string;
-  displayName: string;
-  role: TeachingRole;
-  isPrimary: boolean;
 }
 
 export interface EnrolledCourseFilter {
@@ -101,29 +90,6 @@ export class MyCoursesRepository {
       .innerJoin(academicTerms, eq(academicTerms.id, courseOfferings.academicTermId))
       .where(and(...conditions))
       .orderBy(desc(academicTerms.startsAt), courses.code);
-  }
-
-  async findTeachers(offeringIds: string[]): Promise<OfferingTeacherRow[]> {
-    if (offeringIds.length === 0) return [];
-
-    return this.reader
-      .select({
-        courseOfferingId: teachingAssignments.courseOfferingId,
-        userId: users.id,
-        displayName: users.displayName,
-        role: teachingAssignments.role,
-        isPrimary: teachingAssignments.isPrimary,
-      })
-      .from(teachingAssignments)
-      .innerJoin(users, eq(users.id, teachingAssignments.userId))
-      .where(
-        and(
-          inArray(teachingAssignments.courseOfferingId, offeringIds),
-          isNull(teachingAssignments.deletedAt),
-          isNull(users.deletedAt),
-        ),
-      )
-      .orderBy(desc(teachingAssignments.isPrimary), users.displayName);
   }
 
   private get reader() {

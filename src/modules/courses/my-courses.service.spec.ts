@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  EnrolledCourseRow,
-  MyCoursesRepository,
-  OfferingTeacherRow,
-} from './my-courses.repository';
+import type { EnrolledCourseRow, MyCoursesRepository } from './my-courses.repository';
 import { MyCoursesService } from './my-courses.service';
+import type { OfferingTeacherRow, TeachingStaffRepository } from './teaching-staff.repository';
 
 const row = (overrides: Partial<EnrolledCourseRow> = {}): EnrolledCourseRow => ({
   enrollmentId: 'enrollment-1',
@@ -42,17 +39,18 @@ const teacher = (overrides: Partial<OfferingTeacherRow> = {}): OfferingTeacherRo
 
 describe(MyCoursesService.name, () => {
   const findEnrolledCourses = vi.fn();
-  const findTeachers = vi.fn();
-  const repository = { findEnrolledCourses, findTeachers } as unknown as MyCoursesRepository;
+  const findByOfferings = vi.fn();
+  const repository = { findEnrolledCourses } as unknown as MyCoursesRepository;
+  const teachingStaff = { findByOfferings } as unknown as TeachingStaffRepository;
   let service: MyCoursesService;
 
   beforeEach(() => {
-    service = new MyCoursesService(repository);
+    service = new MyCoursesService(repository, teachingStaff);
   });
 
   it('reads credits as a number rather than the numeric column’s string', async () => {
     findEnrolledCourses.mockResolvedValue([row()]);
-    findTeachers.mockResolvedValue([]);
+    findByOfferings.mockResolvedValue([]);
 
     const [course] = await service.listEnrolled('institution-1', 'student-1');
 
@@ -61,7 +59,7 @@ describe(MyCoursesService.name, () => {
 
   it('leaves credits null when the course carries none', async () => {
     findEnrolledCourses.mockResolvedValue([row({ credits: null })]);
-    findTeachers.mockResolvedValue([]);
+    findByOfferings.mockResolvedValue([]);
 
     const [course] = await service.listEnrolled('institution-1', 'student-1');
 
@@ -73,7 +71,7 @@ describe(MyCoursesService.name, () => {
       row(),
       row({ enrollmentId: 'enrollment-2', offeringId: 'offering-2' }),
     ]);
-    findTeachers.mockResolvedValue([
+    findByOfferings.mockResolvedValue([
       teacher(),
       teacher({ courseOfferingId: 'offering-2', userId: 'user-2', displayName: 'Dr Other' }),
     ]);
@@ -86,17 +84,17 @@ describe(MyCoursesService.name, () => {
 
   it('asks for each offering’s teachers only once', async () => {
     findEnrolledCourses.mockResolvedValue([row(), row({ enrollmentId: 'enrollment-2' })]);
-    findTeachers.mockResolvedValue([teacher()]);
+    findByOfferings.mockResolvedValue([teacher()]);
 
     await service.listEnrolled('institution-1', 'student-1');
 
-    expect(findTeachers).toHaveBeenCalledWith(['offering-1']);
+    expect(findByOfferings).toHaveBeenCalledWith(['offering-1']);
   });
 
   it('does not query teachers when nothing is enrolled', async () => {
     findEnrolledCourses.mockResolvedValue([]);
 
     expect(await service.listEnrolled('institution-1', 'student-1')).toEqual([]);
-    expect(findTeachers).not.toHaveBeenCalled();
+    expect(findByOfferings).not.toHaveBeenCalled();
   });
 });
