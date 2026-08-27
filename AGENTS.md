@@ -1,89 +1,37 @@
 # AGENTS.md
 
-Instructions for AI agents working in this repository. This file governs _how code is
-written here_.
+NestJS 11 · Fastify · Drizzle · PostgreSQL 17 · Redis 7. The client is `../frontend`.
 
-## Delivery flow
+## Delivery
 
-_How work is delivered_ — the loop from picking a step to marking it `Done` across both
-repositories — lives in the `ship-backlog-step` skill at
-`../.claude/skills/ship-backlog-step/SKILL.md`. Read it before starting feature work,
-and treat "continue development" as an instruction to run it for one step.
+- The loop from picking a step to marking it `Done` is the `ship-backlog-step` skill
+  (`../.claude/skills/ship-backlog-step/SKILL.md`). Read it before feature work.
+- "continue development" = run that loop for exactly one step.
+- `docs/STATUS.md` is the entry point: what exists, what does not, what is next.
+  `docs/Feature Status.md` is the product view, `docs/Task Tracker.md` the backlog status
+  and the working agreement.
+- Update all three in the same commit as the work that changes them. Rewrite affected
+  lines; never append a changelog. STATUS.md stays under ~100 lines.
 
-The workspace root (`..`) holds the shared `AGENTS.md`; the client is `../frontend`.
+## Tests
 
-## Test-driven development
+Test-driven, always: failing test first, then the smallest change that passes it, then
+refactor green. Cover positive, negative, boundary and failure cases. Test observable
+behavior, not implementation. Reproduce every bug with a regression test before fixing it.
 
-Use test-driven development when adding or changing behavior:
+## Structure
 
-1. Write tests that describe the expected behavior before implementing it.
-2. Cover representative positive, negative, boundary and failure cases.
-3. Run the tests and confirm that the new or changed tests fail for the expected
-   reason.
-4. Implement the smallest complete change that makes the tests pass.
-5. Refactor while keeping the full test suite green.
-
-Test observable behavior rather than implementation details. Keep tests focused,
-readable and independent. For bug fixes, add a regression test that reproduces
-the bug before fixing it.
-
-## Status handoff
-
-`docs/STATUS.md` is the entry point. Read it first — it says what exists, what does not, and
-what the next task is. `docs/Feature Status.md` sits beside it with the product-level view:
-what a user can actually do today, by audience.
-
-Update it as part of any change that alters that picture: finishing a backlog step, adding a
-module or table, or invalidating something it claims. Rewrite the affected lines; do not
-append a changelog. It must stay under ~100 lines, so trimming stale detail is part of the
-edit. Leave it alone for changes it does not affect.
-
-## Size and decomposition
-
-Keep every unit small and single-purpose — files, modules, services, components, hooks,
-functions. This holds on both sides of the product: a NestJS service and a React component
-are subject to the same rule.
-
-- One exported concern per file. A service that handles two subjects is two services; a
-  component rendering two independent regions is two components.
-- Extract as soon as a file grows past roughly 150–200 lines, a function past one screen,
-  or a component past one clear responsibility. Prefer several small collaborators over one
-  file that "has everything in one place".
-- Split by responsibility, not by line count: the extracted piece must be nameable in a few
-  words without "and" in the name.
-- A long file that only aggregates small pieces (a schema barrel, a route table) is fine.
-  A long file that reasons is not.
-
-## Backlog work
-
-When the work comes from the backlog, read `docs/Task Tracker.md` first: it carries the
-current status of every step and the working agreement that governs how those steps are
-delivered and committed. Then follow the `ship-backlog-step` skill, which sequences that
-agreement into an ordered loop and says when to stop and ask the user.
-
-Bookkeeping travels with the work, in the same commit: `docs/Task Tracker.md`,
-`docs/Feature Status.md` and `docs/STATUS.md` — including a rewritten _Next task_.
+- One exported concern per file. Two subjects means two files.
+- Extract past ~150–200 lines, or a function past one screen. The extracted piece must be
+  nameable without "and".
+- Long files that only aggregate (schema barrels, route tables) are fine. Long files that
+  reason are not.
 
 ## Comments
 
-Write no comments. Treat this as the rule, not a preference.
+Write none. Fix the code instead — rename, extract, tighten the type. No restatements, no
+doc blocks, no rationale prose (that goes in `docs/adr/` or the commit message), no
+banners, no `TODO`s, no commented-out code. Strip them from code you edit, too.
 
-Code explains itself through naming, decomposition and types. If something seems
-to need a comment, fix the code instead — rename the variable, extract the
-function, tighten the type.
-
-Specifically, do not write:
-
-- comments restating what the next line does;
-- doc blocks on types, columns, tables, constants or self-evident functions;
-- rationale prose ("we do X because Y") — that belongs in `docs/adr/` or the
-  commit message, not the source;
-- section banners, `TODO`s, or commented-out code.
-
-The rare exception is a single line warning of something genuinely
-counter-intuitive that a reader would otherwise break — a protocol quirk, a
-deliberate deviation from an obvious implementation. If you are writing more than
-one such comment in a file, you are still writing too many.
-
-This applies to code you add and to code you edit: do not carry existing comments
-forward by default.
+The one exception: a single line warning of something genuinely counter-intuitive that a
+reader would otherwise break. More than one per file means you are still writing too many.
