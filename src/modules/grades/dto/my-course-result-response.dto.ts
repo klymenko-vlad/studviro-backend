@@ -25,13 +25,17 @@ export class EffectiveCourseGradeDto {
 
 @Exclude()
 export class CalculatedCourseResultDto {
-  @Expose() @ApiProperty({ enum: COURSE_GRADES, nullable: true }) grade!: CourseGrade | null;
+  @Expose()
+  @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true })
+  grade!: CourseGrade | null;
   @Expose() @ApiProperty({ type: Number, nullable: true }) points!: number | null;
 }
 
 @Exclude()
 export class ProposedCourseResultDto {
-  @Expose() @ApiProperty({ enum: COURSE_GRADES, nullable: true }) grade!: CourseGrade | null;
+  @Expose()
+  @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true })
+  grade!: CourseGrade | null;
 
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
@@ -40,7 +44,9 @@ export class ProposedCourseResultDto {
 
 @Exclude()
 export class OfficialCourseResultDto {
-  @Expose() @ApiProperty({ enum: COURSE_GRADES, nullable: true }) grade!: CourseGrade | null;
+  @Expose()
+  @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true })
+  grade!: CourseGrade | null;
 
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })

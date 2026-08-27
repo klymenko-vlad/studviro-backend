@@ -3628,7 +3628,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ],
             "type": "string"
           },
@@ -3655,7 +3656,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ],
             "type": "string"
           },
@@ -3683,7 +3685,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ],
             "type": "string"
           },
