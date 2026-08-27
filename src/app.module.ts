@@ -20,6 +20,7 @@ import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.c
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { ConnectorsModule } from './modules/connectors/connectors.module';
+import { CoursesModule } from './modules/courses/courses.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { SynchronizationModule } from './modules/synchronization/synchronization.module';
@@ -112,6 +113,7 @@ function workerModules(): DynamicModule[] {
     AuthModule,
     AuthorizationModule,
     ConnectorsModule,
+    CoursesModule,
     IdentityModule,
     InstitutionsModule,
     UsersModule,

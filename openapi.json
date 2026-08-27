@@ -1882,6 +1882,100 @@
           "role-assignments"
         ]
       }
+    },
+    "/api/v1/institutions/{institutionId}/me/courses": {
+      "get": {
+        "operationId": "listMyCourses",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "requested",
+                "provisioning",
+                "active",
+                "completed",
+                "withdrawn",
+                "rejected"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyCourseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the current user’s enrolled courses in an institution",
+        "tags": [
+          "courses"
+        ]
+      }
     }
   },
   "info": {
@@ -2862,6 +2956,196 @@
           "institutionId",
           "roles",
           "permissions"
+        ]
+      },
+      "MyCourseOfferingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "language",
+          "capacity"
+        ]
+      },
+      "MyCourseCourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "description",
+          "credits"
+        ]
+      },
+      "MyCourseTermDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "academicYear",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "MyCourseTeacherDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "lecturer",
+              "seminar_leader",
+              "lab_supervisor",
+              "examiner",
+              "assistant"
+            ],
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "role",
+          "isPrimary"
+        ]
+      },
+      "MyCourseResponseDto": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "requirementType": {
+            "enum": [
+              "compulsory",
+              "optional",
+              "elective"
+            ],
+            "type": "string"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "enrolledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "offering": {
+            "$ref": "#/components/schemas/MyCourseOfferingDto"
+          },
+          "course": {
+            "$ref": "#/components/schemas/MyCourseCourseDto"
+          },
+          "term": {
+            "$ref": "#/components/schemas/MyCourseTermDto"
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyCourseTeacherDto"
+            }
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "status",
+          "requirementType",
+          "attempt",
+          "enrolledAt",
+          "offering",
+          "course",
+          "term",
+          "teachers"
         ]
       }
     }
