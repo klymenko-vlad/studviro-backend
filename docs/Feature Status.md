@@ -42,7 +42,7 @@ Last updated: 2026-08-29
 | Course 360° page         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                                       |
 | Grades with provenance   | ✅      | ✅       | `Live`    | `/institutions/[id]/grades` and each course page; calculated, proposed and official values plus source and sync state               |
 | Exam terms               | ✅      | ✅       | `Live`    | `/institutions/[id]/exams` and each course page; kind, room, examiner, free seats, registration window and whether you hold a place |
-| Exam registration        | ⬜      | ⬜       | `Planned` | Step 43                                                                                                                             |
+| Exam registration        | ✅      | ✅       | `Live`    | Register and cancel from any exam term card; one live registration per course, seats and window enforced by the server              |
 | Aggregated notifications | ⬜      | ⬜       | `Planned` | Step 44; intentionally absent from the model                                                                                        |
 
 ## Teacher

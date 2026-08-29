@@ -175,7 +175,6 @@ export class MyExamRegistrationsRepository {
           and(
             eq(enrollments.courseOfferingId, courseOfferings.id),
             eq(enrollments.userId, userId),
-            eq(enrollments.status, 'active'),
             isNull(enrollments.deletedAt),
           ),
         ),

@@ -270,6 +270,19 @@ describe('My exam registrations (e2e)', () => {
     expect(response.json().code).toBe('EXAM_TERM_CANCELLED');
   });
 
+  it('registers a student whose enrolment has already completed', async () => {
+    const actor = await actingAs('student');
+    await harness.db.insert(enrollments).values({
+      institutionId,
+      userId: actor.user.id,
+      courseOfferingId: algorithmsOfferingId,
+      status: 'completed',
+    });
+    const examTermId = await examTerm({ kind: 'first_retake' });
+
+    expect((await registerFor(actor, examTermId)).statusCode).toBe(201);
+  });
+
   it('refuses a registration for a course the caller does not attend', async () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id, algorithmsOfferingId);

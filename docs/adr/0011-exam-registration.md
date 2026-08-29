@@ -48,6 +48,13 @@ Cancellation sets `status = 'cancelled'`, stamps `cancelled_at`, and sets `delet
 counts only live rows. The cancelled row stays for history. Cancellation is refused once the
 registration window closes, except for a term the institution itself cancelled.
 
+### Enrolment, as the read defines it
+
+Any live enrolment row counts, whatever its status. The read (step 42) shows a term to anyone
+enrolled in its offering, so a stricter write would have offered a button the server then
+refused — a student holding a `completed` enrolment in an earlier attempt is exactly who
+registers for a retake.
+
 ### Serializable, because capacity is a race
 
 Capacity is checked and the row inserted in one serializable transaction. Two students taking
