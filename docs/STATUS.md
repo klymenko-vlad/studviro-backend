@@ -48,18 +48,22 @@ the BFF. Decisions live in `docs/adr/`.
   `schedule:read`, scoped to the offerings and groups the caller belongs to;
   `/institutions/:id/calendar` renders the week in the institution's display timezone.
 - **Exam terms and registration** (steps 42–43) — `GET institutions/:id/me/exam-terms` behind
-  `schedule:read` returns every term of an offering the caller attends or teaches, with the
-  caller's own registration and never another student's. `POST institutions/:id/me/exam-registrations`
-  and `DELETE .../:registrationId` behind `exam:register` take and give up a seat: the window must
-  be open, the term not cancelled, a seat free, one live registration per course. Cancelling
-  soft-deletes, so the seat returns. On `/institutions/:id/exams` and each course page. See ADR 0011.
+  `schedule:read` returns every term of an offering the caller attends or teaches, with the caller's
+  own registration and never another student's. `POST`/`DELETE .../me/exam-registrations` behind
+  `exam:register` take and give up a seat, enforcing the window, the cancellation, free capacity and
+  one live registration per course. On `/institutions/:id/exams` and each course page. See ADR 0011.
 - **Teaching and rosters** (step 45) — `GET institutions/:id/me/teaching-offerings` behind
   `offering:read` returns the caller's own teaching assignments by term with a live enrolment
   count; `GET institutions/:id/course-offerings/:offeringId/roster` behind `enrollment:read`
-  returns the enrolled students, their status, study groups and enrolment date — but only to
-  someone who actually teaches the offering or holds `offering:manage`, because `enrollment:read`
-  alone is held by every student and must never open a classmate list. `/institutions/:id/teaching`
-  lists the offerings; each course page carries a roster panel keyed off the offering's `viewerRole`.
+  returns the enrolled students — but only to someone who teaches the offering or holds
+  `offering:manage`, because `enrollment:read` alone is held by every student and must never open a
+  classmate list. `/institutions/:id/teaching` lists the offerings; each course page carries a roster panel.
+- **Notifications** (step 44) — `notification_events` and `notification_deliveries` carry the first push:
+  the exam terms importer emits when a term is published, moved or cancelled, the dedupe key
+  `type:subject:day` folds repeat changes into one event with an `occurrence_count`, and a re-occurrence
+  clears `read_at` so an aggregated change is never lost. `GET institutions/:id/me/notifications`, its
+  unread count and the two mark-read writes sit behind `notification:read`, scoped to the caller's own
+  deliveries. `/institutions/:id/notifications` is a tab on every institution screen. See ADR 0012.
 - **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
   typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
 - **Navigation and account creation** — `widgets/app-header` in the root layout,
@@ -95,7 +99,12 @@ the BFF. Decisions live in `docs/adr/`.
 - Institution configuration is read from PostgreSQL on every call; no caching.
 - The legacy flat `RolesGuard` still governs old user endpoints and should retire as
   canonical routes replace them.
-- Theses, transcripts, notifications and audit are intentionally absent from the model.
+- Only exam terms emit notifications. Grades, enrolments and timetable events detect changes the emitter
+  could take unchanged, and nothing notifies teaching staff of anything.
+- The inbox is per institution and reachable only from the institution tab bar; the app header carries no
+  unread badge, so a student on `/account` cannot see that something changed.
+- Notifications are never pruned; there is no preference for what to receive, and no channel but the inbox.
+- Theses, transcripts and audit are intentionally absent from the model.
 
 ## Deployment caveat — act on this first
 
@@ -104,29 +113,29 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — notification aggregation and deduplication, step 44
+## Next task — filter the calendar and the exams screen, step 46
 
-- Every read shipped so far is pull-only: a student learns an exam term moved by opening the exams
-  screen. Step 44 is the first push, and its dependencies (35, 38–42) are all done.
-- Nothing in the canonical model records a notification, so this step owns its own tables — an
-  event and a per-recipient delivery, both `institution_id`-scoped and provenance-carrying like
-  every other canonical table. The substance of the step is the deduplication rule: one exam term
-  rescheduled twice in a sync run must reach a student once. Settle it in an ADR before coding.
-- Emit from the change the importers already detect rather than polling, gate reads behind a new
-  `notification:read` permission for the recipient only, and put the list behind the app header so
-  it is reachable from every screen, not only from an institution tab.
+- Both endpoints already take `offeringId` and a type or kind; neither screen exposes them, and the calendar
+  still shows no exam terms beside classes. This is a frontend-weighted step over reads that already exist.
+- Decide first whether an exam term belongs in the calendar as a timetable event of type `exam` (one query,
+  one list, provenance blurred) or as a second, separately-fetched layer. Prefer the second and record it.
+- While you are in the exams screen, give a student a way to see only the terms they may act on: today the
+  reason a registration button is disabled lives only in the window label beside it.
 
 ## Caveats
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 426.1 kB gzipped against the 455 kB guard — the teaching screen and
-  roster panel cost 4.4 kB. Take the Radix Select swap recorded under _Carried work_ before raising the
-  guard, not before spending the headroom.
+- The client bundle measures 430.3 kB gzipped against the 455 kB guard — the notification inbox cost
+  4.2 kB. `pnpm size` is green; take the Radix Select swap before raising the guard, not before spending
+  the headroom.
 - Local development needs uncommitted `.env` files, with the backend's ports matching what
   `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
   demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run.
+  Step 44's walk needed one more hand-edit: notifications only appear when a synchronization run detects a
+  change, so the exam terms of an offering the actor is _actively_ enrolled in had to be skewed and the
+  `examTerms` watermark cleared before re-running.
   Every walk so far has had to hand-edit that data to reach its screen — future teaching weeks for
   the calendar, wider registration windows for the exams, and for step 45 a lecturer assignment for
   `admin@studviro.local` on `PF-P106`. A seed that produces a signed-in user with a plausible
