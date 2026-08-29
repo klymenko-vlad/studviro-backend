@@ -53,6 +53,11 @@ the BFF. Decisions live in `docs/adr/`.
   group event only as a member of that group; a teacher sees every event of an offering they
   teach. `/institutions/:id/calendar` renders the week, grouped by day in the institution's
   display timezone, with week navigation.
+- **Exam terms** (step 42) — `GET institutions/:id/me/exam-terms` behind `schedule:read`
+  returns every exam term of an offering the caller attends or teaches, with kind, room,
+  examiner, capacity, seats still free, the registration window and the caller's own
+  registration — never another student's. `/institutions/:id/exams` splits them into upcoming
+  and past, and each course page carries the same terms for its own offering.
 - **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
   typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
 - **Navigation and account creation** — `widgets/app-header` in the root layout,
@@ -65,11 +70,14 @@ the BFF. Decisions live in `docs/adr/`.
 
 ## Not done
 
-- Exam terms, programs and the course catalogue still have no read API or screen, though
-  `mock-sis` imports all of them. Courses are reachable only through the caller's enrolments;
-  no search exists.
-- The calendar reads one week at a time and cannot be filtered from the screen, though the
-  endpoint takes `offeringId` and `type`. It shows no exam terms — those are step 42.
+- Programs and the course catalogue still have no read API or screen, though `mock-sis`
+  imports both. Courses are reachable only through the caller's enrolments; no search exists.
+- Neither the calendar nor the exams screen can be filtered, though both endpoints take
+  `offeringId` and a type; the calendar still shows no exam terms alongside classes.
+- Nothing writes an exam registration: `mock-sis` imports none and there is no registration
+  endpoint, so `myRegistration` is null for imported data until step 43.
+- The account screen's institution card links every section but Calendar and Exams; only the
+  institution tab bar reaches those two.
 - Role grants still require raw subject and scope identifiers because there is no user or
   organization-unit directory.
 - Synchronization has no schedule (step 37 covers reconciliation, step 53 the Prometheus
@@ -87,29 +95,34 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — exam-term view, step 42
+## Next task — controlled exam registration, step 43
 
-- `exam_terms` and `exam_registrations` are imported by `mock-sis` and unread. Ship the
-  vertical slice the calendar deliberately left out: a `schedule:read` endpoint returning the
-  caller's exam terms for their enrolled offerings — kind, room, examiner, capacity,
-  registration window and their own registration if one exists — regenerate `openapi.json`,
-  then a screen at `/institutions/:id/exams` and a link from the course page. Browser-check it.
-- Registration itself is step 43 and needs `enrollment:manage` plus capacity and window rules;
-  step 42 reads only.
-- `widgets/institution-nav` needs a tab for every new screen, and `widgets/my-calendar` is the
-  closest model for a range-scoped read.
+- Step 42 shipped the read; registration is the write. Add `POST` and `DELETE` on
+  `institutions/:id/me/exam-registrations` behind `enrollment:manage`, enforcing the rules the
+  read already surfaces: the registration window must be open, the term must not be cancelled,
+  capacity must not be exceeded, and one live registration per user per term — the partial
+  unique index on `exam_registrations` already says so. Decide what a second registration for
+  the same course's other term means; SIS practice is one live registration per course.
+- The client half belongs on the existing `ExamTermCard`, which already carries
+  `registrationState`, `isFull` and `myRegistration`. Put the mutation in `features/` per FSD,
+  invalidate `examTermQueries.listKey`, and gate the button on the server's permission answer.
+- Regenerate `openapi.json`, then `pnpm api:generate`. Browser-check the whole loop: register,
+  watch the seat count fall, cancel, watch it rise.
 
 ## Caveats
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 413.57 kB gzipped against the 455 kB guard, so the calendar did
-  not need the Radix Select swap still recorded under _Carried work_. Take that swap before
-  raising the guard again, not before spending the headroom.
+- The client bundle measures 419.45 kB gzipped against the 455 kB guard — the exams screen
+  cost 5.9 kB. Take the Radix Select swap recorded under _Carried work_ before raising the
+  guard, not before spending the headroom.
 - Local development needs uncommitted `.env` files. Every port is env-driven, and the backend
   `.env` must match the ports `docker-compose.yml` publishes (5432 / 6379). The dev seed creates
   only two users and no institution; canonical demo data requires an institution row, a role
   grant, `academicSystemConnector: mock-sis` and a `mock-sis` run. `mock-sis` schedules its
   teaching weeks from the term start, so a calendar check needs an enrolment for the signed-in
-  user and the week navigation to reach the first teaching week.
+  user and the week navigation to reach the first teaching week. `mock-sis` schedules exam
+  terms three weeks after each term's teaching ends, so a local exams check needs an enrolment;
+  the step 42 walk inserted two future terms and one registration by hand into the dev
+  database.
