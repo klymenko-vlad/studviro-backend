@@ -39,7 +39,7 @@ the BFF. Decisions live in `docs/adr/`.
   page with staff, own enrolment and study groups.
 - **Grades with provenance** (step 41) — `GET institutions/:id/me/course-results` behind
   `grade:read` returns the calculated/proposed/official stages, the effective grade and source
-  metadata, on a grades screen and on each course page.
+  metadata, on a grades screen and each course page.
 - **Sync monitoring and retry** (step 47) — `/institutions/:id/sync` shows freshness per
   domain, the latest run's counts and errors and run history; `sync:run` starts another.
 - **Student dashboard** (step 38) — `/institutions/:id` composes the shipped reads into
@@ -47,16 +47,19 @@ the BFF. Decisions live in `docs/adr/`.
 - **Unified calendar** (step 39) — `GET institutions/:id/me/timetable-events` behind
   `schedule:read`, scoped to the offerings and groups the caller belongs to;
   `/institutions/:id/calendar` renders the week in the institution's display timezone.
-- **Exam terms** (step 42) — `GET institutions/:id/me/exam-terms` behind `schedule:read`
-  returns every term of an offering the caller attends or teaches, with kind, room, examiner,
-  seats, window and the caller's own registration — never another student's. Shown on
-  `/institutions/:id/exams` and each course page.
-- **Exam registration** (step 43) — `POST institutions/:id/me/exam-registrations` and
-  `DELETE .../:registrationId` behind the new `exam:register` permission let a student take and
-  give up a seat: the window must be open, the term not cancelled, a seat free, and one live
-  registration per course. Cancelling soft-deletes, so the seat and the right to register
-  return. Every exam term card, on the exams screen and on each course page, carries the
-  button. See ADR 0011.
+- **Exam terms and registration** (steps 42–43) — `GET institutions/:id/me/exam-terms` behind
+  `schedule:read` returns every term of an offering the caller attends or teaches, with the
+  caller's own registration and never another student's. `POST institutions/:id/me/exam-registrations`
+  and `DELETE .../:registrationId` behind `exam:register` take and give up a seat: the window must
+  be open, the term not cancelled, a seat free, one live registration per course. Cancelling
+  soft-deletes, so the seat returns. On `/institutions/:id/exams` and each course page. See ADR 0011.
+- **Teaching and rosters** (step 45) — `GET institutions/:id/me/teaching-offerings` behind
+  `offering:read` returns the caller's own teaching assignments by term with a live enrolment
+  count; `GET institutions/:id/course-offerings/:offeringId/roster` behind `enrollment:read`
+  returns the enrolled students, their status, study groups and enrolment date — but only to
+  someone who actually teaches the offering or holds `offering:manage`, because `enrollment:read`
+  alone is held by every student and must never open a classmate list. `/institutions/:id/teaching`
+  lists the offerings; each course page carries a roster panel keyed off the offering's `viewerRole`.
 - **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
   typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
 - **Navigation and account creation** — `widgets/app-header` in the root layout,
@@ -77,10 +80,15 @@ the BFF. Decisions live in `docs/adr/`.
   until a student registers by hand. Nothing reconciles a registration back to a source system.
 - The exams screen has no way to see only the terms a student may act on; the registration
   button is disabled with the reason only in the window label beside it.
-- The account screen's institution card links every section but Calendar and Exams; only the
-  institution tab bar reaches those two.
+- The account screen's institution card links every section but Calendar, Exams and Teaching; only
+  the institution tab bar reaches those three.
+- The teaching screen cannot be filtered by term and offers no per-offering action beyond opening
+  the course page: no grade entry, no roster export, no way to message a group.
+- The roster is a flat list — it cannot be filtered by study group or status, and it names every
+  enrolment including withdrawn and rejected ones, which the summary counts separately.
 - Role grants still require raw subject and scope identifiers because there is no user or
-  organization-unit directory.
+  organization-unit directory. The roster is now the first screen that names people, so it is the
+  obvious source for such a picker.
 - Synchronization has no schedule (step 37 covers reconciliation, step 53 the Prometheus
   freshness gauges). Runs are still started by hand, now from the screen rather than curl.
 - No Moodle or AIS2 connector implementation. AIS2 and OIDC require institutional access.
@@ -96,34 +104,30 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — teacher course and roster dashboard, step 45
+## Next task — notification aggregation and deduplication, step 44
 
-- Everything shipped so far answers "what am I, the student, enrolled in". A teacher sees the
-  same course page but nothing that lists *their* teaching: the offerings they lead, who is
-  enrolled, and which exam terms they examine. `teaching_assignments`, `enrollments` and
-  `exam_terms` already carry it.
-- Add `GET institutions/:id/me/teaching-offerings` behind `offering:read` (the caller's
-  teaching assignments, grouped by term) and a roster read for one offering behind
-  `enrollment:read`, scoped to an offering the caller actually teaches. Then a
-  `/institutions/:id/teaching` screen with a roster panel on the course page, both gated on
-  the server's permission answer and linked from `widgets/institution-nav`.
-- Regenerate `openapi.json`, then `pnpm api:generate`. Walk it as a teacher: the dev database's
-  `mock-sis` data has teaching assignments, so grant a `teacher` role and follow one.
+- Every read shipped so far is pull-only: a student learns an exam term moved by opening the exams
+  screen. Step 44 is the first push, and its dependencies (35, 38–42) are all done.
+- Nothing in the canonical model records a notification, so this step owns its own tables — an
+  event and a per-recipient delivery, both `institution_id`-scoped and provenance-carrying like
+  every other canonical table. The substance of the step is the deduplication rule: one exam term
+  rescheduled twice in a sync run must reach a student once. Settle it in an ADR before coding.
+- Emit from the change the importers already detect rather than polling, gate reads behind a new
+  `notification:read` permission for the recipient only, and put the list behind the app header so
+  it is reachable from every screen, not only from an institution tab.
 
 ## Caveats
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 421.7 kB gzipped against the 455 kB guard — the registration
-  button cost 2.3 kB. Take the Radix Select swap recorded under _Carried work_ before raising the
+- The client bundle measures 426.1 kB gzipped against the 455 kB guard — the teaching screen and
+  roster panel cost 4.4 kB. Take the Radix Select swap recorded under _Carried work_ before raising the
   guard, not before spending the headroom.
-- Local development needs uncommitted `.env` files. Every port is env-driven, and the backend
-  `.env` must match the ports `docker-compose.yml` publishes (5432 / 6379). The dev seed creates
-  only two users and no institution; canonical demo data requires an institution row, a role
-  grant, `academicSystemConnector: mock-sis` and a `mock-sis` run. `mock-sis` schedules its
-  teaching weeks from the term start, so a calendar check needs an enrolment for the signed-in
-  user and the week navigation to reach the first teaching week. `mock-sis` schedules exam
-  terms three weeks after each term's teaching ends, so a local exams check needs an enrolment;
-  the step 42 walk inserted two future terms and one registration by hand into the dev
-  database, and the step 43 walk widened two exam terms' registration windows to today.
+- Local development needs uncommitted `.env` files, with the backend's ports matching what
+  `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
+  demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run.
+  Every walk so far has had to hand-edit that data to reach its screen — future teaching weeks for
+  the calendar, wider registration windows for the exams, and for step 45 a lecturer assignment for
+  `admin@studviro.local` on `PF-P106`. A seed that produces a signed-in user with a plausible
+  student _and_ teacher life would pay for itself.

@@ -47,9 +47,11 @@ Last updated: 2026-08-29
 
 ## Teacher
 
-| Feature                   | Backend | Frontend | State     | Notes   |
-| ------------------------- | ------- | -------- | --------- | ------- |
-| Course / roster dashboard | ⬜      | ⬜       | `Planned` | Step 45 |
+| Feature                 | Backend | Frontend | State     | Notes                                                                                                                              |
+| ----------------------- | ------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| My teaching             | ✅      | ✅       | `Live`    | `/institutions/[id]/teaching`; the offerings you lead, by term, with your teaching role and how many students are enrolled         |
+| Course roster           | ✅      | ✅       | `Live`    | Roster panel on each course page; student, enrolment status, study groups and enrolment date, to whoever teaches or administers it |
+| Enter or propose grades | ⬜      | ⬜       | `Planned` | `grade:propose` exists but nothing writes a result yet                                                                             |
 
 ## Administrator
 
