@@ -7,6 +7,7 @@ import { ShutdownService } from '../common/lifecycle/shutdown.service';
 import { Public } from '../modules/auth/decorators/public.decorator';
 
 import { DatabaseHealthIndicator } from './database.health';
+import { MigrationsHealthIndicator } from './migrations.health';
 import { QueueHealthIndicator } from './queue.health';
 
 @ApiExcludeController()
@@ -19,6 +20,7 @@ export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
     private readonly db: DatabaseHealthIndicator,
+    private readonly migrations: MigrationsHealthIndicator,
     private readonly queue: QueueHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
     private readonly shutdown: ShutdownService,
@@ -36,7 +38,10 @@ export class HealthController {
       throw new ServiceUnavailableException({ status: 'shutting_down' });
     }
 
-    return this.health.check([() => this.db.pingCheck('database')]);
+    return this.health.check([
+      () => this.db.pingCheck('database'),
+      () => this.migrations.check('migrations'),
+    ]);
   }
 
   @Get()
@@ -44,6 +49,7 @@ export class HealthController {
   full() {
     return this.health.check([
       () => this.db.pingCheck('database'),
+      () => this.migrations.check('migrations'),
       () => this.queue.check('queue'),
       () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
       () => this.memory.checkRSS('memory_rss', 1024 * 1024 * 1024),
