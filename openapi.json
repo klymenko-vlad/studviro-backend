@@ -2265,6 +2265,116 @@
           "schedule"
         ]
       }
+    },
+    "/api/v1/institutions/{institutionId}/me/exam-terms": {
+      "get": {
+        "operationId": "listMyExamTerms",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "regular",
+                "first_retake",
+                "second_retake",
+                "state_exam"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyExamTermResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the exam terms of the courses the current user attends or teaches",
+        "tags": [
+          "schedule"
+        ]
+      }
     }
   },
   "info": {
@@ -4238,6 +4348,314 @@
           "attendance",
           "room",
           "studyGroup",
+          "offering",
+          "course",
+          "term",
+          "provenance"
+        ]
+      },
+      "MyExamRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "registered",
+              "cancelled",
+              "attended",
+              "no_show",
+              "excused"
+            ],
+            "type": "string"
+          },
+          "registeredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "registeredAt",
+          "cancelledAt"
+        ]
+      },
+      "ExamRoomDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "building": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "building"
+        ]
+      },
+      "ExamExaminerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName"
+        ]
+      },
+      "ExamOfferingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ExamCourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title"
+        ]
+      },
+      "ExamTermDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
+      "ExamTermProvenanceDto": {
+        "type": "object",
+        "properties": {
+          "sourceSystem": {
+            "enum": [
+              "platform",
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceUpdatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastSynchronizedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synchronizationStatus": {
+            "enum": [
+              "in_sync",
+              "pending",
+              "conflict",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceSystem",
+          "externalId",
+          "sourceUpdatedAt",
+          "lastSynchronizedAt",
+          "synchronizationStatus"
+        ]
+      },
+      "MyExamTermResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "regular",
+              "first_retake",
+              "second_retake",
+              "state_exam"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isCancelled": {
+            "type": "boolean"
+          },
+          "attendance": {
+            "enum": [
+              "enrolled",
+              "teaching"
+            ],
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "registeredCount": {
+            "type": "number"
+          },
+          "seatsRemaining": {
+            "type": "number",
+            "nullable": true
+          },
+          "isFull": {
+            "type": "boolean"
+          },
+          "registrationOpensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "registrationClosesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "registrationState": {
+            "enum": [
+              "not_open",
+              "open",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "myRegistration": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyExamRegistrationDto"
+              }
+            ]
+          },
+          "room": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamRoomDto"
+              }
+            ]
+          },
+          "examiner": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamExaminerDto"
+              }
+            ]
+          },
+          "offering": {
+            "$ref": "#/components/schemas/ExamOfferingDto"
+          },
+          "course": {
+            "$ref": "#/components/schemas/ExamCourseDto"
+          },
+          "term": {
+            "$ref": "#/components/schemas/ExamTermDto"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ExamTermProvenanceDto"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "startsAt",
+          "endsAt",
+          "cancelledAt",
+          "isCancelled",
+          "attendance",
+          "capacity",
+          "registeredCount",
+          "seatsRemaining",
+          "isFull",
+          "registrationOpensAt",
+          "registrationClosesAt",
+          "registrationState",
+          "myRegistration",
+          "room",
+          "examiner",
           "offering",
           "course",
           "term",
