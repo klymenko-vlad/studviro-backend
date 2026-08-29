@@ -14,6 +14,7 @@ export const PERMISSIONS = [
   'grade:publish',
   'schedule:read',
   'schedule:manage',
+  'exam:register',
   'role:read',
   'role:assign',
   'institution:read',
@@ -34,8 +35,11 @@ const READS = [
   'schedule:read',
 ] as const satisfies readonly Permission[];
 
+const SELF_SERVICE = ['exam:register'] as const satisfies readonly Permission[];
+
 const TEACHING = [
   ...READS,
+  ...SELF_SERVICE,
   'role:read',
   'grade:propose',
   'grade:publish',
@@ -50,12 +54,19 @@ const COURSE_ADMINISTRATION = [
 ] as const satisfies readonly Permission[];
 
 export const ROLE_PERMISSIONS: Readonly<Record<CanonicalRole, readonly Permission[]>> = {
-  student: READS,
-  teaching_assistant: [...READS, 'grade:propose'],
+  student: [...READS, ...SELF_SERVICE],
+  teaching_assistant: [...READS, ...SELF_SERVICE, 'grade:propose'],
   teacher: TEACHING,
   course_coordinator: COURSE_ADMINISTRATION,
   program_coordinator: [...COURSE_ADMINISTRATION, 'program:manage'],
-  registrar: [...READS, 'role:read', 'enrollment:manage', 'grade:publish', 'sync:read'],
+  registrar: [
+    ...READS,
+    ...SELF_SERVICE,
+    'role:read',
+    'enrollment:manage',
+    'grade:publish',
+    'sync:read',
+  ],
   org_unit_manager: [...COURSE_ADMINISTRATION, 'program:manage', 'role:assign', 'sync:read'],
   institution_admin: PERMISSIONS,
 };

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 
+import { MyExamRegistrationsController } from './my-exam-registrations.controller';
+import { MyExamRegistrationsRepository } from './my-exam-registrations.repository';
+import { MyExamRegistrationsService } from './my-exam-registrations.service';
 import { MyExamTermsController } from './my-exam-terms.controller';
 import { MyExamTermsRepository } from './my-exam-terms.repository';
 import { MyExamTermsService } from './my-exam-terms.service';
@@ -8,13 +11,19 @@ import { MyTimetableEventsRepository } from './my-timetable-events.repository';
 import { MyTimetableEventsService } from './my-timetable-events.service';
 
 @Module({
-  controllers: [MyTimetableEventsController, MyExamTermsController],
+  controllers: [
+    MyTimetableEventsController,
+    MyExamTermsController,
+    MyExamRegistrationsController,
+  ],
   providers: [
     MyTimetableEventsService,
     MyTimetableEventsRepository,
     MyExamTermsService,
     MyExamTermsRepository,
+    MyExamRegistrationsService,
+    MyExamRegistrationsRepository,
   ],
-  exports: [MyTimetableEventsService, MyExamTermsService],
+  exports: [MyTimetableEventsService, MyExamTermsService, MyExamRegistrationsService],
 })
 export class SchedulingModule {}

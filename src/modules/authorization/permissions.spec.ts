@@ -33,6 +33,11 @@ describe('permissions', () => {
     expect(grants('student', 'enrollment:manage')).toBe(false);
   });
 
+  it('lets a student register themselves for an exam term', () => {
+    expect(grants('student', 'exam:register')).toBe(true);
+    expect(grants('teacher', 'exam:register')).toBe(true);
+  });
+
   it('separates proposing a grade from publishing one', () => {
     expect(grants('teaching_assistant', 'grade:propose')).toBe(true);
     expect(grants('teaching_assistant', 'grade:publish')).toBe(false);
