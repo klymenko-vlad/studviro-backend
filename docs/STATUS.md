@@ -51,6 +51,16 @@ the BFF. Decisions live in `docs/adr/`.
 - **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
   typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
 
+- **Navigation and account creation** — the app is no longer a set of unlinked URLs.
+  `widgets/app-header` sits in the root layout (brand, account, sign out, locale, theme),
+  `widgets/institution-nav` gives every `/institutions/:id` screen a permission-gated tab
+  bar, `/sign-up` exists and signs the new account straight in, the landing page's calls
+  to action are real links, and `src/proxy.ts` protects `/account` and `/institutions`.
+- **Deployment is migration-aware** — `pnpm db:migrate:prod` runs the compiled migrator
+  inside the pruned production image, and `/health/ready` now fails when
+  `drizzle.__drizzle_migrations` is behind the journal shipped in the image. See
+  `docs/Deployment.md`.
+
 ## Not done
 
 - Timetable events, exam terms, programs and the course catalogue still have no read API or
@@ -65,6 +75,13 @@ the BFF. Decisions live in `docs/adr/`.
 - The legacy flat `RolesGuard` still governs old user endpoints and should retire as
   canonical routes replace them.
 - Theses, transcripts, notifications and audit are intentionally absent from the model.
+
+## Deployment caveat — act on this first
+
+Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** and probe
+`/health/ready`. Until it does, the hosted database has no schema and every query fails
+with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
+`docs/Deployment.md`.
 
 ## Next task — unified calendar, step 39
 

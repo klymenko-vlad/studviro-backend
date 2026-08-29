@@ -5,7 +5,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## States
 
@@ -21,7 +21,9 @@ Last updated: 2026-08-27
 
 | Feature                      | Backend | Frontend | State     | Notes                                                                                                                           |
 | ---------------------------- | ------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Create an account            | ✅      | ✅       | `Live`    | `/sign-up`; registration signs you in and lands on `/account`                                                                   |
 | Sign in with a password      | ✅      | ✅       | `Live`    | argon2, 15-min access JWT, rotating refresh token, reuse detection                                                              |
+| Find my way around the app   | —       | ✅       | `Live`    | Header on every page; per-institution nav gated on the server's permission answer                                               |
 | Sign in with a university ID | ⬜      | ⬜       | `Blocked` | OIDC strategy blocked on institutional client registration                                                                      |
 | See my roles and identities  | ✅      | ✅       | `Live`    | `/account`                                                                                                                      |
 | Link an external account     | ✅      | ✅       | `Partial` | A shared email raises `IDENTITY_EMAIL_CONFLICT` and must be linked deliberately                                                 |
