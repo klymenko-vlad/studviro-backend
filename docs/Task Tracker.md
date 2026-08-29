@@ -4,7 +4,7 @@ The live checklist for the 71-step backlog in `docs/Tasks Plan.md`. That documen
 research plan and does not change; this one records what is actually built. Update it in the
 same commit as the work it describes.
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## Working agreement
 
@@ -88,29 +88,29 @@ the same commit whenever the picture they describe has changed.
 | 32  | Moodle identity / course / enrolment reads        | ⬜      | —        | Not started                                                                                                                           |
 | 33  | Moodle activities, deadlines, completion, grades  | ⬜      | —        | Not started                                                                                                                           |
 | 34  | AIS2 connector                                    | ⬜      | —        | Blocked on step 15                                                                                                                    |
-| 35  | Synchronization engine and job state machine      | ✅      | ⬜       | In progress — engine, run state machine, watermarks and the run API ship; the monitoring screen is step 47                            |
+| 35  | Synchronization engine and job state machine      | ✅      | ✅       | Done — engine, run state machine, watermarks and the run API ship, with the monitoring screen delivered by step 47                    |
 | 36  | Retries, idempotency, change tracking, tombstones | ✅      | —        | Done — provenance upsert with a stale-write guard, per-domain watermarks, tombstones, child pruning and per-record failure accounting |
 | 37  | Reconciliation checks                             | ⬜      | ⬜       | Not started                                                                                                                           |
 
 ### Product surfaces (38–52)
 
-| #   | Task                                        | Backend | Frontend | Status                                                                                                |
-| --- | ------------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
-| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started — the my-courses list from step 40 is its first tile                                      |
-| 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                           |
-| 40  | Course 360° page                            | ✅      | ✅       | Done — the my-courses list and the course detail page behind it; grades and timetable are steps 41/39 |
-| 41  | Unified grades view with provenance         | ⬜      | ⬜       | Not started                                                                                           |
-| 42  | Exam-term view                              | ⬜      | ⬜       | Not started                                                                                           |
-| 43  | Controlled exam registration                | ⬜      | ⬜       | Not started                                                                                           |
-| 44  | Notification aggregation and deduplication  | ⬜      | ⬜       | Not started                                                                                           |
-| 45  | Teacher course / roster dashboard           | ⬜      | ⬜       | Not started                                                                                           |
-| 46  | Admin connector configuration               | ✅      | ✅       | In progress — connector selection, health and capabilities ship; credentials and field mapping do not |
-| 47  | Sync monitoring and retry UI                | ✅      | ⬜       | In progress — run history, per-domain results and freshness are readable over the API; no screen yet  |
-| 48  | Mapping / conflict / reconciliation UI      | ⬜      | ⬜       | Not started                                                                                           |
-| 49  | Structured audit events                     | ⬜      | ⬜       | Not started                                                                                           |
-| 50  | Personal-data inventory and export workflow | ⬜      | ⬜       | Not started                                                                                           |
-| 51  | Search over authorized canonical data       | ⬜      | ⬜       | Not started                                                                                           |
-| 52  | WCAG 2.2 AA implementation pass             | —       | ⬜       | Not started                                                                                           |
+| #   | Task                                        | Backend | Frontend | Status                                                                                                                                            |
+| --- | ------------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 38  | Unified student dashboard                   | —       | ✅       | Done — `/institutions/[id]` composes a current-term course tile and a results tile from the step 40 and 41 reads; no new endpoint was needed      |
+| 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 40  | Course 360° page                            | ✅      | ✅       | Done — the my-courses list and the course detail page behind it; grades and timetable are steps 41/39                                             |
+| 41  | Unified grades view with provenance         | ✅      | ✅       | Done — the caller's calculated, proposed and official results, effective grade and source/sync provenance on a grades screen and each course page |
+| 42  | Exam-term view                              | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 43  | Controlled exam registration                | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 44  | Notification aggregation and deduplication  | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 45  | Teacher course / roster dashboard           | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 46  | Admin connector configuration               | ✅      | ✅       | In progress — connector selection, health and capabilities ship; credentials and field mapping do not                                             |
+| 47  | Sync monitoring and retry UI                | ✅      | ✅       | Done — an administrator sees freshness per domain, the latest run's per-domain counts and errors, run history, and can start a run again          |
+| 48  | Mapping / conflict / reconciliation UI      | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 49  | Structured audit events                     | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 50  | Personal-data inventory and export workflow | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 51  | Search over authorized canonical data       | ⬜      | ⬜       | Not started                                                                                                                                       |
+| 52  | WCAG 2.2 AA implementation pass             | —       | ⬜       | Not started                                                                                                                                       |
 
 ### Operations and quality (53–63)
 
@@ -140,3 +140,12 @@ the same commit whenever the picture they describe has changed.
 | 69  | User workflow documentation                     | —       | —        | Not started                                                                      |
 | 70  | Thesis chapters                                 | —       | —        | Not started                                                                      |
 | 71  | Reproducible demo and contingency demo          | ⬜      | ⬜       | Not started                                                                      |
+
+## Carried work
+
+Work the backlog does not number, raised by a step that could not absorb it. Take these
+like a backlog step: one at a time, end to end.
+
+| Work                                                        | Raised by | Why it is not a rider on that step                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Replace the Radix Select primitive with a native `<select>` | Step 38   | `@radix-ui/react-select` is the single largest thing in the shared client chunk and the only reduction left after the `shared/api` barrel narrowing. Swapping it changes the look and interaction of four already-shipped field groups — role granting, both institution-settings groups and the sync mode picker — and rewrites their tests, which is a UI change in its own right. The bundle guard was raised to 455 kB instead; take this before raising it again. |
