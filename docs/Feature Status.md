@@ -34,7 +34,7 @@ Last updated: 2026-08-27
 
 | Feature                  | Backend | Frontend | State     | Notes                                                                                                                 |
 | ------------------------ | ------- | -------- | --------- | --------------------------------------------------------------------------------------------------------------------- |
-| Unified dashboard        | ⬜      | ⬜       | `Planned` | Step 38 — course and grade tiles are ready to compose                                                                 |
+| Unified dashboard        | —       | ✅       | `Live`    | `/institutions/[id]`; current-term courses and results, each linking through                                          |
 | My courses               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term                                                                      |
 | Unified calendar         | ⬜      | ⬜       | `Planned` | Step 39                                                                                                               |
 | Course 360° page         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                         |

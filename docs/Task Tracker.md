@@ -96,7 +96,7 @@ the same commit whenever the picture they describe has changed.
 
 | #   | Task                                        | Backend | Frontend | Status                                                                                                                                            |
 | --- | ------------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 38  | Unified student dashboard                   | ⬜      | ⬜       | Not started — the my-courses list from step 40 is its first tile                                                                                  |
+| 38  | Unified student dashboard                   | —       | ✅       | Done — `/institutions/[id]` composes a current-term course tile and a results tile from the step 40 and 41 reads; no new endpoint was needed      |
 | 39  | Unified calendar                            | ⬜      | ⬜       | Not started                                                                                                                                       |
 | 40  | Course 360° page                            | ✅      | ✅       | Done — the my-courses list and the course detail page behind it; grades and timetable are steps 41/39                                             |
 | 41  | Unified grades view with provenance         | ✅      | ✅       | Done — the caller's calculated, proposed and official results, effective grade and source/sync provenance on a grades screen and each course page |
@@ -140,3 +140,12 @@ the same commit whenever the picture they describe has changed.
 | 69  | User workflow documentation                     | —       | —        | Not started                                                                      |
 | 70  | Thesis chapters                                 | —       | —        | Not started                                                                      |
 | 71  | Reproducible demo and contingency demo          | ⬜      | ⬜       | Not started                                                                      |
+
+## Carried work
+
+Work the backlog does not number, raised by a step that could not absorb it. Take these
+like a backlog step: one at a time, end to end.
+
+| Work                                                        | Raised by | Why it is not a rider on that step                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Replace the Radix Select primitive with a native `<select>` | Step 38   | `@radix-ui/react-select` is the single largest thing in the shared client chunk and the only reduction left after the `shared/api` barrel narrowing. Swapping it changes the look and interaction of four already-shipped field groups — role granting, both institution-settings groups and the sync mode picker — and rewrites their tests, which is a UI change in its own right. The bundle guard was raised to 455 kB instead; take this before raising it again. |
