@@ -51,17 +51,17 @@ Last updated: 2026-08-27
 
 ## Administrator
 
-| Feature                              | Backend | Frontend | State      | Notes                                                                         |
-| ------------------------------------ | ------- | -------- | ---------- | ----------------------------------------------------------------------------- |
-| Grant and revoke scoped roles        | ✅      | ✅       | `Live`     | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard`  |
-| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned`  | Grants name subject and scope by identifier; no directory or org-unit read    |
-| Institution settings and terminology | ✅      | ✅       | `Live`     | `/institutions/[id]/settings`; terminology overrides are label-only           |
-| Feature flags per institution        | ✅      | ✅       | `Live`     | Resolved against platform defaults; read from the database on every call      |
-| Choose a connector, see its health   | ✅      | ✅       | `Partial`  | Selection, health and capabilities ship; credentials and field mapping do not |
-| Trigger and inspect a sync run       | ✅      | ⬜       | `API only` | Step 47 — run history, per-domain results and freshness readable; no screen   |
-| Schedule syncs                       | ⬜      | ⬜       | `Planned`  | Every run is hand-triggered today                                             |
-| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned`  | Steps 37, 48                                                                  |
-| Read audit events                    | ⬜      | ⬜       | `Planned`  | Step 49                                                                       |
+| Feature                              | Backend | Frontend | State     | Notes                                                                         |
+| ------------------------------------ | ------- | -------- | --------- | ----------------------------------------------------------------------------- |
+| Grant and revoke scoped roles        | ✅      | ✅       | `Live`    | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard`  |
+| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned` | Grants name subject and scope by identifier; no directory or org-unit read    |
+| Institution settings and terminology | ✅      | ✅       | `Live`    | `/institutions/[id]/settings`; terminology overrides are label-only           |
+| Feature flags per institution        | ✅      | ✅       | `Live`    | Resolved against platform defaults; read from the database on every call      |
+| Choose a connector, see its health   | ✅      | ✅       | `Partial` | Selection, health and capabilities ship; credentials and field mapping do not |
+| Trigger and inspect a sync run       | ✅      | ✅       | `Live`    | `/institutions/[id]/sync`; freshness, per-domain results, run history, retry  |
+| Schedule syncs                       | ⬜      | ⬜       | `Planned` | Every run is hand-triggered today                                             |
+| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned` | Steps 37, 48                                                                  |
+| Read audit events                    | ⬜      | ⬜       | `Planned` | Step 49                                                                       |
 
 ## Platform
 
