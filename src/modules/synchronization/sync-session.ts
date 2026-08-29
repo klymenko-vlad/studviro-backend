@@ -3,10 +3,10 @@ import type { SQL } from 'drizzle-orm';
 import type { ConnectorRecord } from '../connectors/connector.types';
 import type { ExternalIdentitiesRepository } from '../identity/external-identities.repository';
 
-import type { CanonicalTable, CanonicalTableName } from './canonical-tables';
+import type { CanonicalRow, CanonicalTable, CanonicalTableName } from './canonical-tables';
 import type { CanonicalRepositories } from './canonical.repositories';
 import type { SourceValues } from './provenance.repository';
-import type { ApplyOutcome, SyncTarget } from './sync.types';
+import type { AppliedChange, ApplyOutcome, SyncTarget } from './sync.types';
 
 export class UnresolvedReferenceError extends Error {
   constructor(reference: string, externalId: string) {
@@ -31,6 +31,7 @@ export class SyncSession {
     table: TName,
     record: ConnectorRecord<unknown>,
     map: () => Promise<SourceValues<CanonicalTable<TName>>>,
+    observe?: (change: AppliedChange<CanonicalRow<TName>>) => Promise<void>,
   ): Promise<ApplyOutcome> {
     const values = record.deleted ? ({} as SourceValues<CanonicalTable<TName>>) : await map();
 
@@ -39,6 +40,8 @@ export class SyncSession {
       .applyRecord(this.target, record, values, this.startedAt);
 
     this.resolved.set(this.key(table, record.externalId), record.deleted ? null : applied.id);
+
+    await observe?.(applied as AppliedChange<CanonicalRow<TName>>);
 
     return applied.outcome;
   }

@@ -35,4 +35,7 @@ export const CANONICAL_TABLES = {
 export type CanonicalTableName = keyof typeof CANONICAL_TABLES;
 export type CanonicalTable<TName extends CanonicalTableName> = (typeof CANONICAL_TABLES)[TName];
 
+export type CanonicalRow<TName extends CanonicalTableName> =
+  CanonicalTable<TName>['$inferSelect'];
+
 export const CANONICAL_TABLE_NAMES = Object.keys(CANONICAL_TABLES) as CanonicalTableName[];

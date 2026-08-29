@@ -5,10 +5,10 @@ import {
   InstitutionScopedRepository,
   type InstitutionScopedTable,
 } from '../../database/repository/institution-scoped.repository';
-import type { InsertModel } from '../../database/repository/repository.types';
+import type { Entity, InsertModel } from '../../database/repository/repository.types';
 import type { ConnectorRecord } from '../connectors/connector.types';
 
-import type { ApplyOutcome, SyncTarget } from './sync.types';
+import type { AppliedChange, SyncTarget } from './sync.types';
 
 export interface ProvenancedTable extends InstitutionScopedTable {
   sourceSystem: PgColumn;
@@ -34,16 +34,24 @@ export type SourceValues<TTable extends ProvenancedTable> = {
   ]: InsertModel<TTable>[K];
 };
 
-export interface AppliedRecord {
+export interface AppliedRecord<TRow> extends AppliedChange<TRow> {
   readonly id: string | null;
-  readonly outcome: ApplyOutcome;
 }
 
 export class ProvenanceRepository<
   TTable extends ProvenancedTable,
 > extends InstitutionScopedRepository<TTable> {
   async findIdByExternalId(target: SyncTarget, externalId: string): Promise<string | null> {
-    const found = await this.findOneIn(
+    const found = await this.findByExternalId(target, externalId);
+
+    return found ? (found as { id: string }).id : null;
+  }
+
+  async findByExternalId(
+    target: SyncTarget,
+    externalId: string,
+  ): Promise<Entity<TTable> | undefined> {
+    return this.findOneIn(
       target.institutionId,
       and(
         eq(this.table.sourceSystem, target.sourceSystem),
@@ -51,8 +59,6 @@ export class ProvenanceRepository<
       ),
       { consistent: true },
     );
-
-    return found ? (found as { id: string }).id : null;
   }
 
   tombstoneMissing(
@@ -75,14 +81,15 @@ export class ProvenanceRepository<
     record: ConnectorRecord<unknown>,
     values: SourceValues<TTable>,
     now: Date,
-  ): Promise<AppliedRecord> {
-    const existingId = await this.findIdByExternalId(target, record.externalId);
+  ): Promise<AppliedRecord<Entity<TTable>>> {
+    const previous = (await this.findByExternalId(target, record.externalId)) ?? null;
+    const existingId = previous ? (previous as { id: string }).id : null;
 
     if (record.deleted) {
-      if (!existingId) return { id: null, outcome: 'skipped' };
-      await this.softDelete(existingId);
+      if (!existingId) return { id: null, outcome: 'skipped', previous: null, current: null };
+      const removed = await this.softDelete(existingId);
 
-      return { id: existingId, outcome: 'deleted' };
+      return { id: existingId, outcome: 'deleted', previous, current: removed };
     }
 
     const written = await this.upsert(
@@ -103,11 +110,13 @@ export class ProvenanceRepository<
       },
     );
 
-    if (!written) return { id: existingId, outcome: 'skipped' };
+    if (!written) return { id: existingId, outcome: 'skipped', previous, current: null };
 
     return {
       id: (written as { id: string }).id,
       outcome: existingId ? 'updated' : 'created',
+      previous,
+      current: written,
     };
   }
 }

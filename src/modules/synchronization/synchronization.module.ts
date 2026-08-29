@@ -4,6 +4,7 @@ import { CryptoModule } from '../../common/crypto/crypto.module';
 import { ConnectorsModule } from '../connectors/connectors.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InstitutionsModule } from '../institutions/institutions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 
 import { AcademicSyncService } from './academic-sync.service';
@@ -21,7 +22,14 @@ import { SynchronizationController } from './synchronization.controller';
 import { SynchronizationService } from './synchronization.service';
 
 @Module({
-  imports: [ConnectorsModule, InstitutionsModule, IdentityModule, UsersModule, CryptoModule],
+  imports: [
+    ConnectorsModule,
+    InstitutionsModule,
+    IdentityModule,
+    UsersModule,
+    CryptoModule,
+    NotificationsModule,
+  ],
   controllers: [SynchronizationController],
   providers: [
     ...ACADEMIC_IMPORTER_CLASSES,

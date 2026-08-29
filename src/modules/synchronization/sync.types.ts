@@ -8,6 +8,12 @@ export interface SyncTarget {
 
 export type ApplyOutcome = 'created' | 'updated' | 'deleted' | 'skipped';
 
+export interface AppliedChange<TRow> {
+  readonly outcome: ApplyOutcome;
+  readonly previous: TRow | null;
+  readonly current: TRow | null;
+}
+
 export interface RecordCounts {
   fetched: number;
   created: number;

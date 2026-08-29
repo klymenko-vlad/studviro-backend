@@ -7,6 +7,7 @@ export * from './external-identities';
 export * from './institution-settings';
 export * from './institutions';
 export * from './learning';
+export * from './notifications';
 export * from './refresh-tokens';
 export * from './role-assignments';
 export * from './scheduling';
