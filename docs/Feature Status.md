@@ -5,7 +5,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-08-29
+Last updated: 2026-09-11
 
 ## States
 
@@ -34,16 +34,16 @@ Last updated: 2026-08-29
 
 ## Student
 
-| Feature                  | Backend | Frontend | State     | Notes                                                                                                                                              |
-| ------------------------ | ------- | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unified dashboard        | —       | ✅       | `Live`    | `/institutions/[id]`; current-term courses, results and the rest of this week, each linking through                                                |
-| My courses               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term                                                                                                   |
-| Unified calendar         | ✅      | ✅       | `Live`    | `/institutions/[id]/calendar`; the week's timetable events with room, group and type, plus a dashboard tile                                        |
-| Course 360° page         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                                                      |
-| Grades with provenance   | ✅      | ✅       | `Live`    | `/institutions/[id]/grades` and each course page; calculated, proposed and official values plus source and sync state                              |
-| Exam terms               | ✅      | ✅       | `Live`    | `/institutions/[id]/exams` and each course page; kind, room, examiner, free seats, registration window and whether you hold a place                |
-| Exam registration        | ✅      | ✅       | `Live`    | Register and cancel from any exam term card; one live registration per course, seats and window enforced by the server                             |
-| Aggregated notifications | ✅      | ✅       | `Partial` | `/institutions/[id]/notifications`; exam terms published, moved or cancelled reach enrolled students once per day per term. Nothing else emits yet |
+| Feature                  | Backend | Frontend | State     | Notes                                                                                                                                                |
+| ------------------------ | ------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unified dashboard        | —       | ✅       | `Live`    | `/institutions/[id]`; current-term courses, results and the rest of this week, each linking through                                                  |
+| My courses               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term                                                                                                     |
+| Unified calendar         | ✅      | ✅       | `Live`    | `/institutions/[id]/calendar`; the week's classes and its exam terms as two layers, filterable by course and type, plus a dashboard tile             |
+| Course 360° page         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                                                        |
+| Grades with provenance   | ✅      | ✅       | `Live`    | `/institutions/[id]/grades` and each course page; calculated, proposed and official values plus source and sync state                                |
+| Exam terms               | ✅      | ✅       | `Live`    | `/institutions/[id]/exams` and each course page; filterable by course, kind and whether you may act on it, with seats, window and examiner           |
+| Exam registration        | ✅      | ✅       | `Live`    | Register and cancel from any exam term card; the server says whether you may and why not — a closed window, a full room, a seat held on another term |
+| Aggregated notifications | ✅      | ✅       | `Partial` | `/institutions/[id]/notifications`; exam terms published, moved or cancelled reach enrolled students once per day per term. Nothing else emits yet   |
 
 ## Teacher
 

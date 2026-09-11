@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-08-29
+Last updated: 2026-09-11
 
 ## What this is
 
@@ -20,50 +20,46 @@ the BFF. Decisions live in `docs/adr/`.
 ## Done
 
 - **Foundation** — modular monolith (ADR 0002), `ROLE=api|worker|all`, validated env, graceful
-  shutdown, request limits, Pino correlation logs, health, metrics, BullMQ, Redis locks and
-  idempotency.
-- **Persistence and canonical model** — Drizzle migrations, transaction-mediated and
-  institution-scoped repositories, keyset pagination, soft deletion, provenance and 25 academic
-  tables (ADR 0009). External identifiers are never primary keys.
-- **Authentication and identity** — argon2 credentials, rotating JWT/refresh sessions
-  (ADR 0003), linked-identity reads and conflict-safe provisioning. OIDC remains blocked on
+  shutdown, request limits, Pino correlation logs, health, metrics, BullMQ, Redis locks, idempotency.
+- **Persistence and canonical model** — Drizzle migrations, transaction-mediated institution-scoped
+  repositories, keyset pagination, soft deletion, provenance, 25 academic tables (ADR 0009). External
+  identifiers are never primary keys.
+- **Authentication and authorization** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003),
+  linked-identity provisioning, canonical roles, scope ancestry, the permission catalogue,
+  `PermissionsGuard` / `@RequirePermission` and the role assignment UI. OIDC is blocked on
   institutional registration.
-- **Authorization** — canonical roles, scope ancestry, the permission catalogue,
-  `PermissionsGuard` / `@RequirePermission`, role assignment routes and the client role UI.
-- **Institution setup** — terminology, flags and connector selection resolve over platform
-  defaults through a guarded configuration API and settings screen.
-- **Connectors and synchronization** — connector contracts, deterministic `mock-sis`, registry
-  health/capabilities, ordered imports, provenance upserts, stale-write guards, tombstones,
-  child pruning, watermarks and a locked BullMQ run state machine.
-- **Course reads** (step 40) — the caller's term-grouped courses and a guarded 360° course
-  page with staff, own enrolment and study groups.
-- **Grades with provenance** (step 41) — `GET institutions/:id/me/course-results` behind
-  `grade:read` returns the calculated/proposed/official stages, the effective grade and source
-  metadata, on a grades screen and each course page.
-- **Sync monitoring and retry** (step 47) — `/institutions/:id/sync` shows freshness per
-  domain, the latest run's counts and errors and run history; `sync:run` starts another.
-- **Student dashboard** (step 38) — `/institutions/:id` composes the shipped reads into
-  course, results and week tiles, each gated on the server's own permission answer.
+- **Institution setup, connectors and synchronization** — terminology, flags and connector selection
+  resolving over platform defaults through a guarded configuration API and settings screen; connector
+  contracts, deterministic `mock-sis`, registry health/capabilities, ordered imports, provenance
+  upserts, stale-write guards, tombstones, child pruning, watermarks and a locked run state machine.
+- **Course reads, grades, dashboard, sync monitoring** (steps 38, 40, 41, 47) — term-grouped
+  courses and a 360° course page; `me/course-results` behind `grade:read` with the
+  calculated/proposed/official stages and their provenance; a dashboard composing them; and
+  `/institutions/:id/sync` showing freshness, run counts, errors and history behind `sync:run`.
 - **Unified calendar** (step 39) — `GET institutions/:id/me/timetable-events` behind
   `schedule:read`, scoped to the offerings and groups the caller belongs to;
-  `/institutions/:id/calendar` renders the week in the institution's display timezone.
+  `/institutions/:id/calendar` renders the week in the institution's display timezone, filtered by
+  course and type on the server, with exam terms interleaved as a second fetched layer that the
+  reader can switch off. An exam term is never synthesized into a timetable event — see ADR 0013.
 - **Exam terms and registration** (steps 42–43) — `GET institutions/:id/me/exam-terms` behind
   `schedule:read` returns every term of an offering the caller attends or teaches, with the caller's
   own registration and never another student's. `POST`/`DELETE .../me/exam-registrations` behind
   `exam:register` take and give up a seat, enforcing the window, the cancellation, free capacity and
-  one live registration per course. On `/institutions/:id/exams` and each course page. See ADR 0011.
-- **Teaching and rosters** (step 45) — `GET institutions/:id/me/teaching-offerings` behind
-  `offering:read` returns the caller's own teaching assignments by term with a live enrolment
-  count; `GET institutions/:id/course-offerings/:offeringId/roster` behind `enrollment:read`
-  returns the enrolled students — but only to someone who teaches the offering or holds
-  `offering:manage`, because `enrollment:read` alone is held by every student and must never open a
-  classmate list. `/institutions/:id/teaching` lists the offerings; each course page carries a roster panel.
-- **Notifications** (step 44) — `notification_events` and `notification_deliveries` carry the first push:
-  the exam terms importer emits when a term is published, moved or cancelled, the dedupe key
-  `type:subject:day` folds repeat changes into one event with an `occurrence_count`, and a re-occurrence
-  clears `read_at` so an aggregated change is never lost. `GET institutions/:id/me/notifications`, its
-  unread count and the two mark-read writes sit behind `notification:read`, scoped to the caller's own
-  deliveries. `/institutions/:id/notifications` is a tab on every institution screen. See ADR 0012.
+  one live registration per course. The read answers `registrationAvailability` — `canRegister`,
+  `canCancel` and a `reason` — from those same rules, so the client keeps no second copy of them, the
+  exams screen can show only the terms a student may act on, and every card says why a seat is out of
+  reach: most usefully when a seat is already held on another term of the same course, which the
+  registration window alone could never explain. `/institutions/:id/exams` filters by course and kind
+  on the server. See ADR 0011 and ADR 0013.
+- **Teaching and rosters** (step 45) — `me/teaching-offerings` behind `offering:read`, and an
+  offering roster behind `enrollment:read` that additionally demands the caller teach the offering
+  or hold `offering:manage` — `enrollment:read` alone is held by every student and must never open
+  a classmate list. `/institutions/:id/teaching`, plus a roster panel on each course page.
+- **Notifications** (step 44) — `notification_events` and `notification_deliveries` carry the first
+  push: the exam terms importer emits on publish, move and cancel, the dedupe key `type:subject:day`
+  folds repeats into one event with an `occurrence_count`, and a re-occurrence clears `read_at`. The
+  inbox and its two mark-read writes sit behind `notification:read`, scoped to the caller's own
+  deliveries, on `/institutions/:id/notifications`. See ADR 0012.
 - **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
   typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
 - **Navigation and account creation** — `widgets/app-header` in the root layout,
@@ -78,32 +74,24 @@ the BFF. Decisions live in `docs/adr/`.
 
 - Programs and the course catalogue still have no read API or screen, though `mock-sis`
   imports both. Courses are reachable only through the caller's enrolments; no search exists.
-- Neither the calendar nor the exams screen can be filtered, though both endpoints take
-  `offeringId` and a type; the calendar still shows no exam terms alongside classes.
 - `mock-sis` imports no exam registrations, so an imported term shows `myRegistration: null`
   until a student registers by hand. Nothing reconciles a registration back to a source system.
-- The exams screen has no way to see only the terms a student may act on; the registration
-  button is disabled with the reason only in the window label beside it.
+- The calendar's course picker lists only the courses that have an event in the week on screen, so a
+  course with no class that week cannot be selected. Neither screen remembers a filter in the URL, so
+  a filtered view cannot be linked or survive a reload.
 - The account screen's institution card links every section but Calendar, Exams and Teaching; only
   the institution tab bar reaches those three.
-- The teaching screen cannot be filtered by term and offers no per-offering action beyond opening
-  the course page: no grade entry, no roster export, no way to message a group.
-- The roster is a flat list — it cannot be filtered by study group or status, and it names every
-  enrolment including withdrawn and rejected ones, which the summary counts separately.
-- Role grants still require raw subject and scope identifiers because there is no user or
-  organization-unit directory. The roster is now the first screen that names people, so it is the
-  obvious source for such a picker.
-- Synchronization has no schedule (step 37 covers reconciliation, step 53 the Prometheus
-  freshness gauges). Runs are still started by hand, now from the screen rather than curl.
-- No Moodle or AIS2 connector implementation. AIS2 and OIDC require institutional access.
-- Institution configuration is read from PostgreSQL on every call; no caching.
-- The legacy flat `RolesGuard` still governs old user endpoints and should retire as
-  canonical routes replace them.
-- Only exam terms emit notifications. Grades, enrolments and timetable events detect changes the emitter
-  could take unchanged, and nothing notifies teaching staff of anything.
-- The inbox is per institution and reachable only from the institution tab bar; the app header carries no
-  unread badge, so a student on `/account` cannot see that something changed.
-- Notifications are never pruned; there is no preference for what to receive, and no channel but the inbox.
+- The teaching screen has no term filter and no per-offering action beyond opening the course page. The
+  roster is a flat list naming every enrolment including withdrawn and rejected ones, with no filter by
+  group or status. Role grants still need raw identifiers because there is no directory — the roster is
+  the obvious source for a picker.
+- Synchronization has no schedule (step 37 is reconciliation, step 53 the freshness gauges); runs are
+  started by hand. No Moodle or AIS2 connector — both need institutional access. Institution
+  configuration is read from PostgreSQL on every call. The legacy flat `RolesGuard` still governs the
+  old user endpoints and should retire as canonical routes replace them.
+- Only exam terms emit notifications; grades, enrolments and timetable events detect changes the emitter
+  could take unchanged, and staff are notified of nothing. The inbox is per institution with no unread
+  badge in the app header, is never pruned, has no preferences and no channel but itself.
 - Theses, transcripts and audit are intentionally absent from the model.
 
 ## Deployment caveat — act on this first
@@ -113,30 +101,33 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — filter the calendar and the exams screen, step 46
+## Next task — admin connector configuration, step 46
 
-- Both endpoints already take `offeringId` and a type or kind; neither screen exposes them, and the calendar
-  still shows no exam terms beside classes. This is a frontend-weighted step over reads that already exist.
-- Decide first whether an exam term belongs in the calendar as a timetable event of type `exam` (one query,
-  one list, provenance blurred) or as a second, separately-fetched layer. Prefer the second and record it.
-- While you are in the exams screen, give a student a way to see only the terms they may act on: today the
-  reason a registration button is disabled lives only in the window label beside it.
+- The tracker's step 46 is _Admin connector configuration_, and it is the oldest `In progress` row in the
+  delivery band: connector selection, health and capabilities ship on the settings screen; credentials and
+  field mapping do not. (The previous _Next task_ called the calendar and exam filtering "step 46"; that was
+  a mis-numbering — that work was a refinement of steps 39 and 42/43 and is now recorded against them.)
+- Decide first where a connector credential lives. It must not sit in `institution_settings` beside the
+  terminology and flags, which every configuration read returns in full to anyone with the settings
+  permission. Prefer a separate table with its own permission, values encrypted at rest and never echoed
+  back — the API returns whether a credential is set, not what it is. Record the decision as an ADR.
+- `mock-sis` needs no credential, so the step needs a connector that does, or an explicit contract on
+  `AcademicSystemConnector` describing the fields a connector declares and the platform collects. Prefer
+  the second: a declared field descriptor list is what makes the screen generic instead of Moodle-shaped.
+- Stop and ask before inventing a real credential value or a hosted endpoint.
 
 ## Caveats
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 430.3 kB gzipped against the 455 kB guard — the notification inbox cost
-  4.2 kB. `pnpm size` is green; take the Radix Select swap before raising the guard, not before spending
-  the headroom.
+- The client bundle measures 435.2 kB gzipped against the 455 kB guard — the schedule filters cost 4.9 kB.
+  `pnpm size` is green with under 20 kB of headroom left; take the Radix Select swap before raising the
+  guard, not before spending what remains.
 - Local development needs uncommitted `.env` files, with the backend's ports matching what
   `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
   demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run.
-  Step 44's walk needed one more hand-edit: notifications only appear when a synchronization run detects a
-  change, so the exam terms of an offering the actor is _actively_ enrolled in had to be skewed and the
-  `examTerms` watermark cleared before re-running.
-  Every walk so far has had to hand-edit that data to reach its screen — future teaching weeks for
-  the calendar, wider registration windows for the exams, and for step 45 a lecturer assignment for
-  `admin@studviro.local` on `PF-P106`. A seed that produces a signed-in user with a plausible
-  student _and_ teacher life would pay for itself.
+  Every walk so far has had to hand-edit that data to reach its screen — teaching weeks moved into the
+  current week, registration windows widened, a lecturer assignment added, a watermark cleared. This
+  walk needed a sibling exam term's window opened to reach `other_term_registered` at all. A seed that
+  produces a signed-in user with a plausible student _and_ teacher life would pay for itself.

@@ -31,7 +31,7 @@ interface ExamTermBody {
   registrationAvailability: {
     canRegister: boolean;
     canCancel: boolean;
-    blockedReason: string | null;
+    reason: string;
   };
   myRegistration: { status: ExamRegistrationStatus } | null;
   examiner: { displayName: string } | null;
@@ -377,12 +377,12 @@ describe('My exam terms (e2e)', () => {
     expect(asStudent!.registrationAvailability).toEqual({
       canRegister: true,
       canCancel: false,
-      blockedReason: null,
+      reason: 'open',
     });
     expect(asTeacher!.registrationAvailability).toEqual({
       canRegister: false,
       canCancel: false,
-      blockedReason: 'teaching',
+      reason: 'teaching',
     });
   });
 
@@ -401,10 +401,10 @@ describe('My exam terms (e2e)', () => {
     const returned = await termsFor(actor);
 
     expect(
-      returned.map((term) => [term.course.code, term.registrationAvailability.blockedReason]),
+      returned.map((term) => [term.course.code, term.registrationAvailability.reason]),
     ).toEqual([
       ['INF/ALG/22', 'registered'],
-      ['INF/DB/22', null],
+      ['INF/DB/22', 'open'],
       ['INF/ALG/22', 'other_term_registered'],
     ]);
     expect(returned[0]!.registrationAvailability.canCancel).toBe(true);
@@ -445,7 +445,7 @@ describe('My exam terms (e2e)', () => {
 
     const [returned] = await termsFor(actor);
 
-    expect(returned!.registrationAvailability.blockedReason).toBe('full');
+    expect(returned!.registrationAvailability.reason).toBe('full');
   });
 
   it('refuses a caller with no role in the institution', async () => {

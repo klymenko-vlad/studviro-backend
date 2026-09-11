@@ -5397,9 +5397,9 @@
           "canCancel": {
             "type": "boolean"
           },
-          "blockedReason": {
-            "nullable": true,
+          "reason": {
             "enum": [
+              "open",
               "teaching",
               "registered",
               "cancelled",
@@ -5414,7 +5414,7 @@
         "required": [
           "canRegister",
           "canCancel",
-          "blockedReason"
+          "reason"
         ]
       },
       "MyExamRegistrationDto": {

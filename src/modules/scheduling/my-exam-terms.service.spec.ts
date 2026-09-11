@@ -277,7 +277,7 @@ describe('registration availability', () => {
     expect(await availability()).toEqual({
       canRegister: true,
       canCancel: false,
-      blockedReason: null,
+      reason: 'open',
     });
   });
 
@@ -285,7 +285,7 @@ describe('registration availability', () => {
     expect(await availability({ teaching: true })).toEqual({
       canRegister: false,
       canCancel: false,
-      blockedReason: 'teaching',
+      reason: 'teaching',
     });
   });
 
@@ -296,7 +296,7 @@ describe('registration availability', () => {
         registrationStatus: 'registered',
         registeredAt: new Date('2026-05-13T09:00:00.000Z'),
       }),
-    ).toEqual({ canRegister: false, canCancel: true, blockedReason: 'registered' });
+    ).toEqual({ canRegister: false, canCancel: true, reason: 'registered' });
   });
 
   it('keeps the cancellation open on a term the registrar cancelled, whatever the window says', async () => {
@@ -309,7 +309,7 @@ describe('registration availability', () => {
         },
         new Date('2026-06-01T09:00:00.000Z'),
       ),
-    ).toEqual({ canRegister: false, canCancel: true, blockedReason: 'registered' });
+    ).toEqual({ canRegister: false, canCancel: true, reason: 'registered' });
   });
 
   it('withdraws the cancellation once the window has closed', async () => {
@@ -318,22 +318,22 @@ describe('registration availability', () => {
         { registrationId: 'registration-1', registrationStatus: 'registered' },
         new Date('2026-06-01T09:00:00.000Z'),
       ),
-    ).toEqual({ canRegister: false, canCancel: false, blockedReason: 'registered' });
+    ).toEqual({ canRegister: false, canCancel: false, reason: 'registered' });
   });
 
   it('blocks a cancelled term the student never held a seat on', async () => {
     expect(await availability({ cancelledAt: new Date('2026-05-15T09:00:00.000Z') })).toEqual({
       canRegister: false,
       canCancel: false,
-      blockedReason: 'cancelled',
+      reason: 'cancelled',
     });
   });
 
   it('names the window when it has not opened and when it has closed', async () => {
-    expect((await availability({}, new Date('2026-05-01T09:00:00.000Z'))).blockedReason).toBe(
+    expect((await availability({}, new Date('2026-05-01T09:00:00.000Z'))).reason).toBe(
       'not_open',
     );
-    expect((await availability({}, new Date('2026-06-01T09:00:00.000Z'))).blockedReason).toBe(
+    expect((await availability({}, new Date('2026-06-01T09:00:00.000Z'))).reason).toBe(
       'closed',
     );
   });
@@ -342,15 +342,15 @@ describe('registration availability', () => {
     expect(await availability({ otherLiveRegistrationForOffering: true })).toEqual({
       canRegister: false,
       canCancel: false,
-      blockedReason: 'other_term_registered',
+      reason: 'other_term_registered',
     });
   });
 
   it('blocks a full term last, so a closed window is reported before a missing seat', async () => {
-    expect((await availability({ registeredCount: 30 })).blockedReason).toBe('full');
+    expect((await availability({ registeredCount: 30 })).reason).toBe('full');
     expect(
       (await availability({ registeredCount: 30 }, new Date('2026-06-01T09:00:00.000Z')))
-        .blockedReason,
+        .reason,
     ).toBe('closed');
   });
 
@@ -367,6 +367,6 @@ describe('registration availability', () => {
         registrationStatus: 'cancelled',
         registrationCancelledAt: new Date('2026-05-14T09:00:00.000Z'),
       }),
-    ).toEqual({ canRegister: true, canCancel: false, blockedReason: null });
+    ).toEqual({ canRegister: true, canCancel: false, reason: 'open' });
   });
 });

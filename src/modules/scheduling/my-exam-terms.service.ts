@@ -20,7 +20,8 @@ export type ExamAttendance = (typeof EXAM_ATTENDANCES)[number];
 export const EXAM_REGISTRATION_STATES = ['not_open', 'open', 'closed'] as const;
 export type ExamRegistrationState = (typeof EXAM_REGISTRATION_STATES)[number];
 
-export const EXAM_REGISTRATION_BLOCKED_REASONS = [
+export const EXAM_REGISTRATION_REASONS = [
+  'open',
   'teaching',
   'registered',
   'cancelled',
@@ -29,12 +30,12 @@ export const EXAM_REGISTRATION_BLOCKED_REASONS = [
   'other_term_registered',
   'full',
 ] as const;
-export type ExamRegistrationBlockedReason = (typeof EXAM_REGISTRATION_BLOCKED_REASONS)[number];
+export type ExamRegistrationReason = (typeof EXAM_REGISTRATION_REASONS)[number];
 
 export interface ExamRegistrationAvailability {
   canRegister: boolean;
   canCancel: boolean;
-  blockedReason: ExamRegistrationBlockedReason | null;
+  reason: ExamRegistrationReason;
 }
 
 export interface MyExamTerm {
@@ -164,10 +165,10 @@ function registrationAvailability(
   seatsRemaining: number | null,
   now: Date,
 ): ExamRegistrationAvailability {
-  const blocked = (blockedReason: ExamRegistrationBlockedReason) => ({
+  const blocked = (reason: ExamRegistrationReason) => ({
     canRegister: false,
     canCancel: false,
-    blockedReason,
+    reason,
   });
 
   if (row.teaching) return blocked('teaching');
@@ -176,7 +177,7 @@ function registrationAvailability(
     return {
       canRegister: false,
       canCancel: isCancellable(row, now),
-      blockedReason: 'registered',
+      reason: 'registered',
     };
   }
 
@@ -189,7 +190,7 @@ function registrationAvailability(
   if (row.otherLiveRegistrationForOffering) return blocked('other_term_registered');
   if (seatsRemaining === 0) return blocked('full');
 
-  return { canRegister: true, canCancel: false, blockedReason: null };
+  return { canRegister: true, canCancel: false, reason: 'open' };
 }
 
 function isCancellable(row: MyExamTermRow, now: Date): boolean {
