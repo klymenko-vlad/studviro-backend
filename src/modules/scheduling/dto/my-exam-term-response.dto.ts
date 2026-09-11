@@ -13,8 +13,10 @@ import {
 } from '../../../database/schema';
 import {
   EXAM_ATTENDANCES,
+  EXAM_REGISTRATION_BLOCKED_REASONS,
   EXAM_REGISTRATION_STATES,
   type ExamAttendance,
+  type ExamRegistrationBlockedReason,
   type ExamRegistrationState,
   type MyExamTerm,
 } from '../my-exam-terms.service';
@@ -48,6 +50,16 @@ export class MyExamRegistrationDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   cancelledAt!: Date | null;
+}
+
+@Exclude()
+export class ExamRegistrationAvailabilityDto {
+  @Expose() @ApiProperty() canRegister!: boolean;
+  @Expose() @ApiProperty() canCancel!: boolean;
+
+  @Expose()
+  @ApiProperty({ enum: EXAM_REGISTRATION_BLOCKED_REASONS, nullable: true })
+  blockedReason!: ExamRegistrationBlockedReason | null;
 }
 
 @Exclude()
@@ -127,6 +139,11 @@ export class MyExamTermResponseDto {
   @Expose()
   @ApiProperty({ enum: EXAM_REGISTRATION_STATES })
   registrationState!: ExamRegistrationState;
+
+  @Expose()
+  @Type(() => ExamRegistrationAvailabilityDto)
+  @ApiProperty()
+  registrationAvailability!: ExamRegistrationAvailabilityDto;
 
   @Expose()
   @Type(() => MyExamRegistrationDto)

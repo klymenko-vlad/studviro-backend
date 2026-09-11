@@ -5388,6 +5388,35 @@
           "provenance"
         ]
       },
+      "ExamRegistrationAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "canRegister": {
+            "type": "boolean"
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "blockedReason": {
+            "nullable": true,
+            "enum": [
+              "teaching",
+              "registered",
+              "cancelled",
+              "not_open",
+              "closed",
+              "other_term_registered",
+              "full"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "canRegister",
+          "canCancel",
+          "blockedReason"
+        ]
+      },
       "MyExamRegistrationDto": {
         "type": "object",
         "properties": {
@@ -5632,6 +5661,9 @@
             ],
             "type": "string"
           },
+          "registrationAvailability": {
+            "$ref": "#/components/schemas/ExamRegistrationAvailabilityDto"
+          },
           "myRegistration": {
             "nullable": true,
             "type": "object",
@@ -5687,6 +5719,7 @@
           "registrationOpensAt",
           "registrationClosesAt",
           "registrationState",
+          "registrationAvailability",
           "myRegistration",
           "room",
           "examiner",

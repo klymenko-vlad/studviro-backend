@@ -29,6 +29,7 @@ export interface MyExamTermRow {
   cancelledAt: Date | null;
   teaching: boolean;
   registeredCount: number;
+  otherLiveRegistrationForOffering: boolean;
   roomId: string | null;
   roomCode: string | null;
   roomName: string | null;
@@ -96,6 +97,8 @@ export class MyExamTermsRepository {
         cancelledAt: examTerms.cancelledAt,
         teaching: sql<boolean>`${teaches}`.mapWith(Boolean),
         registeredCount: this.registeredCount(),
+        otherLiveRegistrationForOffering:
+          sql<boolean>`${this.registeredElsewhere(userId)}`.mapWith(Boolean),
         roomId: rooms.id,
         roomCode: rooms.code,
         roomName: rooms.name,
@@ -144,6 +147,24 @@ export class MyExamTermsRepository {
         and ${examRegistrations.status} = 'registered'
         and ${examRegistrations.deletedAt} is null
     )`.mapWith(Number);
+  }
+
+  /**
+   * A student may hold only one live registration per course offering, so a free seat on
+   * a sibling term is still unreachable. Nothing in the window, the capacity or the
+   * caller's own registration on *this* term says so — only this does.
+   */
+  private registeredElsewhere(userId: string): SQL {
+    return sql`exists (
+      select 1 from ${examRegistrations}
+      inner join ${examTerms} as sibling on sibling.id = ${examRegistrations.examTermId}
+      where ${examRegistrations.userId} = ${userId}
+        and ${examRegistrations.status} = 'registered'
+        and ${examRegistrations.deletedAt} is null
+        and sibling.deleted_at is null
+        and sibling.course_offering_id = ${courseOfferings.id}
+        and sibling.id <> ${examTerms.id}
+    )`;
   }
 
   private attends(userId: string): SQL {

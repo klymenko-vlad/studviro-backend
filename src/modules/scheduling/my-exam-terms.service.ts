@@ -20,6 +20,23 @@ export type ExamAttendance = (typeof EXAM_ATTENDANCES)[number];
 export const EXAM_REGISTRATION_STATES = ['not_open', 'open', 'closed'] as const;
 export type ExamRegistrationState = (typeof EXAM_REGISTRATION_STATES)[number];
 
+export const EXAM_REGISTRATION_BLOCKED_REASONS = [
+  'teaching',
+  'registered',
+  'cancelled',
+  'not_open',
+  'closed',
+  'other_term_registered',
+  'full',
+] as const;
+export type ExamRegistrationBlockedReason = (typeof EXAM_REGISTRATION_BLOCKED_REASONS)[number];
+
+export interface ExamRegistrationAvailability {
+  canRegister: boolean;
+  canCancel: boolean;
+  blockedReason: ExamRegistrationBlockedReason | null;
+}
+
 export interface MyExamTerm {
   id: string;
   kind: ExamTermKind;
@@ -35,6 +52,7 @@ export interface MyExamTerm {
   registrationOpensAt: Date | null;
   registrationClosesAt: Date | null;
   registrationState: ExamRegistrationState;
+  registrationAvailability: ExamRegistrationAvailability;
   myRegistration: {
     id: string;
     status: ExamRegistrationStatus;
@@ -91,6 +109,7 @@ export class MyExamTermsService {
       registrationOpensAt: row.registrationOpensAt,
       registrationClosesAt: row.registrationClosesAt,
       registrationState: registrationState(row, now),
+      registrationAvailability: registrationAvailability(row, seatsRemaining, now),
       myRegistration:
         row.registrationId === null || row.registrationStatus === null
           ? null
@@ -133,6 +152,50 @@ function registrationState(row: MyExamTermRow, now: Date): ExamRegistrationState
   if (row.registrationClosesAt !== null && now >= row.registrationClosesAt) return 'closed';
 
   return 'open';
+}
+
+/**
+ * The same rules `MyExamRegistrationsService` enforces on the write, answered on the read
+ * so the client never keeps a second copy of them — and so it can say *why* a seat is out
+ * of reach rather than leaving the reader to infer it from the window beside the button.
+ */
+function registrationAvailability(
+  row: MyExamTermRow,
+  seatsRemaining: number | null,
+  now: Date,
+): ExamRegistrationAvailability {
+  const blocked = (blockedReason: ExamRegistrationBlockedReason) => ({
+    canRegister: false,
+    canCancel: false,
+    blockedReason,
+  });
+
+  if (row.teaching) return blocked('teaching');
+
+  if (row.registrationStatus === 'registered') {
+    return {
+      canRegister: false,
+      canCancel: isCancellable(row, now),
+      blockedReason: 'registered',
+    };
+  }
+
+  if (row.cancelledAt !== null) return blocked('cancelled');
+
+  const state = registrationState(row, now);
+
+  if (state !== 'open') return blocked(state === 'not_open' ? 'not_open' : 'closed');
+
+  if (row.otherLiveRegistrationForOffering) return blocked('other_term_registered');
+  if (seatsRemaining === 0) return blocked('full');
+
+  return { canRegister: true, canCancel: false, blockedReason: null };
+}
+
+function isCancellable(row: MyExamTermRow, now: Date): boolean {
+  if (row.cancelledAt !== null) return true;
+
+  return row.registrationClosesAt === null || now < row.registrationClosesAt;
 }
 
 function assertRange({ from, to }: MyExamTermFilter): void {

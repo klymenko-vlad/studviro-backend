@@ -16,6 +16,7 @@ const row = (overrides: Partial<MyExamTermRow> = {}): MyExamTermRow => ({
   cancelledAt: null,
   teaching: false,
   registeredCount: 12,
+  otherLiveRegistrationForOffering: false,
   roomId: 'room-1',
   roomCode: 'P1',
   roomName: 'Lecture hall',
@@ -248,5 +249,124 @@ describe(MyExamTermsService.name, () => {
     await listMine({ from: new Date('2026-06-01T00:00:00.000Z') });
 
     expect(findMyExamTerms).toHaveBeenCalledOnce();
+  });
+});
+
+describe('registration availability', () => {
+  const findMyExamTerms = vi.fn();
+  const repository = { findMyExamTerms } as unknown as MyExamTermsRepository;
+  let service: MyExamTermsService;
+
+  const availability = async (
+    overrides: Partial<MyExamTermRow> = {},
+    now = DURING_REGISTRATION,
+  ) => {
+    findMyExamTerms.mockResolvedValue([row(overrides)]);
+
+    const [term] = await service.listMine('institution-1', 'student-1', {}, now);
+
+    return term!.registrationAvailability;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new MyExamTermsService(repository);
+  });
+
+  it('lets an enrolled student take a free seat while the window is open', async () => {
+    expect(await availability()).toEqual({
+      canRegister: true,
+      canCancel: false,
+      blockedReason: null,
+    });
+  });
+
+  it('offers neither action to someone who teaches the course', async () => {
+    expect(await availability({ teaching: true })).toEqual({
+      canRegister: false,
+      canCancel: false,
+      blockedReason: 'teaching',
+    });
+  });
+
+  it('offers a registered student the cancellation rather than the registration', async () => {
+    expect(
+      await availability({
+        registrationId: 'registration-1',
+        registrationStatus: 'registered',
+        registeredAt: new Date('2026-05-13T09:00:00.000Z'),
+      }),
+    ).toEqual({ canRegister: false, canCancel: true, blockedReason: 'registered' });
+  });
+
+  it('keeps the cancellation open on a term the registrar cancelled, whatever the window says', async () => {
+    expect(
+      await availability(
+        {
+          registrationId: 'registration-1',
+          registrationStatus: 'registered',
+          cancelledAt: new Date('2026-05-25T09:00:00.000Z'),
+        },
+        new Date('2026-06-01T09:00:00.000Z'),
+      ),
+    ).toEqual({ canRegister: false, canCancel: true, blockedReason: 'registered' });
+  });
+
+  it('withdraws the cancellation once the window has closed', async () => {
+    expect(
+      await availability(
+        { registrationId: 'registration-1', registrationStatus: 'registered' },
+        new Date('2026-06-01T09:00:00.000Z'),
+      ),
+    ).toEqual({ canRegister: false, canCancel: false, blockedReason: 'registered' });
+  });
+
+  it('blocks a cancelled term the student never held a seat on', async () => {
+    expect(await availability({ cancelledAt: new Date('2026-05-15T09:00:00.000Z') })).toEqual({
+      canRegister: false,
+      canCancel: false,
+      blockedReason: 'cancelled',
+    });
+  });
+
+  it('names the window when it has not opened and when it has closed', async () => {
+    expect((await availability({}, new Date('2026-05-01T09:00:00.000Z'))).blockedReason).toBe(
+      'not_open',
+    );
+    expect((await availability({}, new Date('2026-06-01T09:00:00.000Z'))).blockedReason).toBe(
+      'closed',
+    );
+  });
+
+  it('names the live registration on a sibling term, which the window alone never explains', async () => {
+    expect(await availability({ otherLiveRegistrationForOffering: true })).toEqual({
+      canRegister: false,
+      canCancel: false,
+      blockedReason: 'other_term_registered',
+    });
+  });
+
+  it('blocks a full term last, so a closed window is reported before a missing seat', async () => {
+    expect((await availability({ registeredCount: 30 })).blockedReason).toBe('full');
+    expect(
+      (await availability({ registeredCount: 30 }, new Date('2026-06-01T09:00:00.000Z')))
+        .blockedReason,
+    ).toBe('closed');
+  });
+
+  it('leaves a term with no capacity registrable however many have registered', async () => {
+    expect((await availability({ capacity: null, registeredCount: 500 })).canRegister).toBe(
+      true,
+    );
+  });
+
+  it('ignores a cancelled registration of the caller when offering the seat back', async () => {
+    expect(
+      await availability({
+        registrationId: 'registration-1',
+        registrationStatus: 'cancelled',
+        registrationCancelledAt: new Date('2026-05-14T09:00:00.000Z'),
+      }),
+    ).toEqual({ canRegister: true, canCancel: false, blockedReason: null });
   });
 });

@@ -28,6 +28,11 @@ interface ExamTermBody {
   seatsRemaining: number | null;
   isFull: boolean;
   registrationState: 'not_open' | 'open' | 'closed';
+  registrationAvailability: {
+    canRegister: boolean;
+    canCancel: boolean;
+    blockedReason: string | null;
+  };
   myRegistration: { status: ExamRegistrationStatus } | null;
   examiner: { displayName: string } | null;
   room: { code: string } | null;
@@ -357,6 +362,90 @@ describe('My exam terms (e2e)', () => {
     );
 
     expect(response.statusCode).toBe(400);
+  });
+
+  it('offers the seat to an enrolled student and neither action to the teacher', async () => {
+    const student = await actingAs('student');
+    await enrol(student.user.id, algorithmsOfferingId);
+    const teacher = await actingAs('teacher');
+    await teach(teacher.user.id, algorithmsOfferingId);
+    await examTerm();
+
+    const [asStudent] = await termsFor(student);
+    const [asTeacher] = await termsFor(teacher);
+
+    expect(asStudent!.registrationAvailability).toEqual({
+      canRegister: true,
+      canCancel: false,
+      blockedReason: null,
+    });
+    expect(asTeacher!.registrationAvailability).toEqual({
+      canRegister: false,
+      canCancel: false,
+      blockedReason: 'teaching',
+    });
+  });
+
+  it('blocks a sibling term while a live registration on the offering stands', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, algorithmsOfferingId);
+    await enrol(actor.user.id, databasesOfferingId);
+    const held = await examTerm();
+    await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
+    await examTerm({
+      courseOfferingId: databasesOfferingId,
+      startsAt: new Date('2026-06-10T09:00:00.000Z'),
+    });
+    await register(held, actor.user.id);
+
+    const returned = await termsFor(actor);
+
+    expect(
+      returned.map((term) => [term.course.code, term.registrationAvailability.blockedReason]),
+    ).toEqual([
+      ['INF/ALG/22', 'registered'],
+      ['INF/DB/22', null],
+      ['INF/ALG/22', 'other_term_registered'],
+    ]);
+    expect(returned[0]!.registrationAvailability.canCancel).toBe(true);
+  });
+
+  it('does not let another student’s registration block the caller’s sibling term', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, algorithmsOfferingId);
+    const other = await examTerm();
+    await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
+    await register(other, examinerId);
+
+    const returned = await termsFor(actor);
+
+    expect(returned[1]!.registrationAvailability.canRegister).toBe(true);
+  });
+
+  it('lets a cancelled registration of the caller’s own stop blocking the sibling term', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, algorithmsOfferingId);
+    const abandoned = await examTerm();
+    await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
+    await register(abandoned, actor.user.id, 'cancelled');
+
+    const returned = await termsFor(actor);
+
+    expect(returned.map((term) => term.registrationAvailability.canRegister)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('blocks a full term the caller could otherwise take', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, algorithmsOfferingId);
+    const id = await examTerm({ capacity: 1 });
+    await register(id, examinerId);
+
+    const [returned] = await termsFor(actor);
+
+    expect(returned!.registrationAvailability.blockedReason).toBe('full');
   });
 
   it('refuses a caller with no role in the institution', async () => {
