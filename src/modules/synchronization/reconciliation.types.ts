@@ -45,7 +45,8 @@ export type ReconciliationDomainStatus = (typeof RECONCILIATION_DOMAIN_STATUSES)
 
 export interface Discrepancy {
   readonly kind: DiscrepancyKind;
-  readonly externalId: string;
+  /** Null when the platform row claims this source but carries no external identifier. */
+  readonly externalId: string | null;
   readonly canonicalId: string | null;
   readonly sourceUpdatedAt: Date | null;
   readonly platformUpdatedAt: Date | null;

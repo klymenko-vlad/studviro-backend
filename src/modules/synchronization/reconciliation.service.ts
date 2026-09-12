@@ -100,7 +100,10 @@ export class ReconciliationService {
   ): DomainReconciliation {
     const live = records.filter((record) => !record.deleted);
     const bySource = new Map(live.map((record) => [record.externalId, record]));
-    const byPlatform = new Map(rows.map((row) => [row.externalId, row]));
+    const byPlatform = new Map<string, ProvenanceSnapshot>();
+    for (const row of rows) {
+      if (row.externalId !== null) byPlatform.set(row.externalId, row);
+    }
     const discrepancies: Discrepancy[] = [];
     let matched = 0;
 
@@ -145,6 +148,22 @@ export class ReconciliationService {
     }
 
     for (const row of rows) {
+      // A row that claims this source but carries no external identifier cannot be
+      // matched against anything, and the next import will neither update nor
+      // tombstone it. That is a conflict, not a record the source dropped.
+      if (row.externalId === null) {
+        discrepancies.push({
+          kind: 'conflict',
+          externalId: null,
+          canonicalId: row.id,
+          sourceUpdatedAt: null,
+          platformUpdatedAt: row.sourceUpdatedAt,
+          detail:
+            'The row claims this source but carries no external identifier, so no import can ever match it.',
+        });
+        continue;
+      }
+
       if (bySource.has(row.externalId)) continue;
 
       discrepancies.push({

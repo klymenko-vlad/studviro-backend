@@ -3664,7 +3664,9 @@
             "type": "string"
           },
           "externalId": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "Null when the platform row carries no external identifier."
           },
           "canonicalId": {
             "type": "string",

@@ -18,7 +18,13 @@ const RECONCILED_DOMAINS = Object.keys(RECONCILED_TABLES) as ReconciledDomain[];
 @Exclude()
 export class DiscrepancyResponseDto {
   @Expose() @ApiProperty({ enum: DISCREPANCY_KINDS }) kind!: DiscrepancyKind;
-  @Expose() @ApiProperty() externalId!: string;
+  @Expose()
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Null when the platform row carries no external identifier.',
+  })
+  externalId!: string | null;
 
   @Expose()
   @ApiProperty({

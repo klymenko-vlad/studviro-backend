@@ -41,7 +41,8 @@ export interface AppliedRecord<TRow> extends AppliedChange<TRow> {
 /** What reconciliation needs of a canonical row: identity and provenance, no payload. */
 export interface ProvenanceSnapshot {
   readonly id: string;
-  readonly externalId: string;
+  /** Nullable: the column is shared with platform-authored rows. */
+  readonly externalId: string | null;
   readonly sourceUpdatedAt: Date | null;
   readonly lastSynchronizedAt: Date | null;
   readonly synchronizationStatus: string | null;
@@ -79,14 +80,12 @@ export class ProvenanceRepository<
       consistent: true,
     })) as unknown as {
       id: string;
-      externalId: string;
+      externalId: string | null;
       sourceUpdatedAt: Date | null;
       lastSynchronizedAt: Date | null;
       synchronizationStatus: string | null;
     }[];
 
-    // A row this source owns always carries an external id; the column is
-    // nullable only because platform-authored rows share the table.
     return rows.map((row) => ({
       id: row.id,
       externalId: row.externalId,

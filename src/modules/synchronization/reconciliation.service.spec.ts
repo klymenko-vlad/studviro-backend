@@ -25,7 +25,7 @@ function record(externalId: string, overrides: Partial<ConnectorRecord<unknown>>
   } satisfies ConnectorRecord<unknown>;
 }
 
-function row(externalId: string, overrides: Partial<ProvenanceSnapshot> = {}) {
+function row(externalId: string | null, overrides: Partial<ProvenanceSnapshot> = {}) {
   return {
     id: `id-${externalId}`,
     externalId,
@@ -115,6 +115,38 @@ describe('ReconciliationService', () => {
       externalId: 'C-9',
       canonicalId: 'id-C-9',
     });
+  });
+
+  it('reports a source-owned row with no external identifier as a conflict', async () => {
+    const { service } = serviceWith({
+      records: [record('C-1')],
+      rows: [row('C-1'), row(null, { id: 'id-orphan' })],
+    });
+
+    const report = await service.report(INSTITUTION);
+
+    expect(report.domains[0]?.matched).toBe(1);
+    expect(report.domains[0]?.discrepancies).toHaveLength(1);
+    expect(report.domains[0]?.discrepancies[0]).toMatchObject({
+      kind: 'conflict',
+      externalId: null,
+      canonicalId: 'id-orphan',
+    });
+  });
+
+  it('never matches a source record against a row with no external identifier', async () => {
+    const { service } = serviceWith({
+      records: [record('C-1')],
+      rows: [row(null, { id: 'id-orphan' })],
+    });
+
+    const report = await service.report(INSTITUTION);
+
+    expect(report.domains[0]?.matched).toBe(0);
+    expect(report.domains[0]?.discrepancies.map((one) => one.kind).sort()).toEqual([
+      'conflict',
+      'missing_in_platform',
+    ]);
   });
 
   it('reports a row whose source has moved on as stale', async () => {
