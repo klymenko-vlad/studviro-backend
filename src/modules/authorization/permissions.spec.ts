@@ -49,6 +49,14 @@ describe('permissions', () => {
     expect(grants('org_unit_manager', 'role:assign')).toBe(true);
   });
 
+  it('reserves connector configuration for the institution admin', () => {
+    for (const role of CANONICAL_ROLES) {
+      if (role === 'institution_admin') continue;
+
+      expect(grants(role, 'connector:configure')).toBe(false);
+    }
+  });
+
   it('unions the permissions of several roles', () => {
     const combined = permissionsForRoles(['student', 'teaching_assistant']);
 

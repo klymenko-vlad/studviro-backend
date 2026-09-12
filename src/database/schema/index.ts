@@ -1,6 +1,7 @@
 export * from './_relations';
 export * from './_shared';
 export * from './academic-structure';
+export * from './connector-credentials';
 export * from './course-results';
 export * from './enrollments';
 export * from './external-identities';

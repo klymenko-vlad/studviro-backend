@@ -22,6 +22,7 @@ import type {
 } from '../academic-system.records';
 import {
   changedSince,
+  type ConnectorCredentialField,
   type ConnectorHealth,
   type ConnectorQuery,
   type ConnectorRecord,
@@ -34,6 +35,17 @@ const WRITE_CAPABILITIES = new Set<string>([
   'examRegistration.write',
   'courseRegistration.write',
 ]);
+
+const CREDENTIAL_FIELDS: readonly ConnectorCredentialField[] = [
+  {
+    key: 'apiToken',
+    label: 'API token',
+    description:
+      'The mock connector accepts any value; the field exists so credential storage can be exercised end to end.',
+    secret: true,
+    required: false,
+  },
+];
 
 @Injectable()
 export class MockSisConnector implements AcademicSystemConnector {
@@ -56,6 +68,10 @@ export class MockSisConnector implements AcademicSystemConnector {
         !WRITE_CAPABILITIES.has(capability),
       ]),
     ) as AcademicSystemCapabilities;
+  }
+
+  credentialFields(): readonly ConnectorCredentialField[] {
+    return CREDENTIAL_FIELDS;
   }
 
   get dataset(): MockSisDataset {

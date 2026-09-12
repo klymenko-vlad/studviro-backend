@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ## What this is
 
@@ -32,6 +32,12 @@ the BFF. Decisions live in `docs/adr/`.
   resolving over platform defaults through a guarded configuration API and settings screen; connector
   contracts, deterministic `mock-sis`, registry health/capabilities, ordered imports, provenance
   upserts, stale-write guards, tombstones, child pruning, watermarks and a locked run state machine.
+- **Connector credentials** (step 46) — a connector declares the fields it needs via
+  `credentialFields()`, and the settings screen renders that declaration rather than a connector-shaped
+  form. `GET`/`PUT institutions/:id/connectors/:kind/credentials` and `DELETE .../:fieldKey` sit behind
+  the new `connector:configure`, held by `institution_admin` alone. Values are AES-256-GCM encrypted in
+  `connector_credentials` under `CONNECTOR_CREDENTIAL_SECRET`; the API answers whether a field is set and
+  when it last changed, never the value and never a masked stand-in. See ADR 0014.
 - **Course reads, grades, dashboard, sync monitoring** (steps 38, 40, 41, 47) — term-grouped
   courses and a 360° course page; `me/course-results` behind `grade:read` with the
   calculated/proposed/official stages and their provenance; a dashboard composing them; and
@@ -41,16 +47,12 @@ the BFF. Decisions live in `docs/adr/`.
   `/institutions/:id/calendar` renders the week in the institution's display timezone, filtered by
   course and type on the server, with exam terms interleaved as a second fetched layer that the
   reader can switch off. An exam term is never synthesized into a timetable event — see ADR 0013.
-- **Exam terms and registration** (steps 42–43) — `GET institutions/:id/me/exam-terms` behind
-  `schedule:read` returns every term of an offering the caller attends or teaches, with the caller's
-  own registration and never another student's. `POST`/`DELETE .../me/exam-registrations` behind
-  `exam:register` take and give up a seat, enforcing the window, the cancellation, free capacity and
-  one live registration per course. The read answers `registrationAvailability` — `canRegister`,
-  `canCancel` and a `reason` — from those same rules, so the client keeps no second copy of them, the
-  exams screen can show only the terms a student may act on, and every card says why a seat is out of
-  reach: most usefully when a seat is already held on another term of the same course, which the
-  registration window alone could never explain. `/institutions/:id/exams` filters by course and kind
-  on the server. See ADR 0011 and ADR 0013.
+- **Exam terms and registration** (steps 42–43) — `me/exam-terms` behind `schedule:read` returns every
+  term of an offering the caller attends or teaches, with the caller's own registration and never
+  another student's. `POST`/`DELETE .../me/exam-registrations` behind `exam:register` enforce the
+  window, the cancellation, free capacity and one live registration per course. The read answers
+  `registrationAvailability` from those same rules, so the client keeps no second copy of them and every
+  card says why a seat is out of reach. `/institutions/:id/exams` filters on the server. ADR 0011, 0013.
 - **Teaching and rosters** (step 45) — `me/teaching-offerings` behind `offering:read`, and an
   offering roster behind `enrollment:read` that additionally demands the caller teach the offering
   or hold `offering:manage` — `enrollment:read` alone is held by every student and must never open
@@ -89,6 +91,13 @@ the BFF. Decisions live in `docs/adr/`.
   started by hand. No Moodle or AIS2 connector — both need institutional access. Institution
   configuration is read from PostgreSQL on every call. The legacy flat `RolesGuard` still governs the
   old user endpoints and should retire as canonical routes replace them.
+- Nothing consumes a stored credential yet: `ConnectorCredentialsService.valuesFor` exists and is tested,
+  but `mock-sis` ignores the field it declares, so the first real reader arrives with the first real
+  connector. There is no key rotation — the `v1.` prefix reserves room for one, and changing the secret
+  invalidates every stored value. Field mapping (the other half of step 46's original wording) is not
+  built and is now tracked as its own `Planned` row in `Feature Status.md`. The card's `Complete` badge
+  reads oddly against a connector whose only field is optional — it is true and unhelpful at once, and
+  wants either a third state or no badge when nothing is required.
 - Only exam terms emit notifications; grades, enrolments and timetable events detect changes the emitter
   could take unchanged, and staff are notified of nothing. The inbox is per institution with no unread
   badge in the app header, is never pruned, has no preferences and no channel but itself.
@@ -101,33 +110,30 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — admin connector configuration, step 46
+## Next task — mapping, conflict and reconciliation UI, step 48
 
-- The tracker's step 46 is _Admin connector configuration_, and it is the oldest `In progress` row in the
-  delivery band: connector selection, health and capabilities ship on the settings screen; credentials and
-  field mapping do not. (The previous _Next task_ called the calendar and exam filtering "step 46"; that was
-  a mis-numbering — that work was a refinement of steps 39 and 42/43 and is now recorded against them.)
-- Decide first where a connector credential lives. It must not sit in `institution_settings` beside the
-  terminology and flags, which every configuration read returns in full to anyone with the settings
-  permission. Prefer a separate table with its own permission, values encrypted at rest and never echoed
-  back — the API returns whether a credential is set, not what it is. Record the decision as an ADR.
-- `mock-sis` needs no credential, so the step needs a connector that does, or an explicit contract on
-  `AcademicSystemConnector` describing the fields a connector declares and the platform collects. Prefer
-  the second: a declared field descriptor list is what makes the screen generic instead of Moodle-shaped.
-- Stop and ask before inventing a real credential value or a hosted endpoint.
+- Step 48 is the oldest unstarted row in the delivery band and now has both its dependencies: step 46's
+  connector configuration shipped, and the synchronization engine already records provenance,
+  `synchronization_status` and stale-write outcomes per row. Step 37 (reconciliation) is the sibling;
+  read both entries in `Tasks Plan.md` and decide which half is the backend of the other.
+- The substance is what an administrator does when two systems disagree about the same canonical row.
+  Today a conflict is only a `synchronization_status` value nobody can see or act on. Decide first
+  whether resolution writes a platform-authored override that survives the next import, or merely marks
+  a winner — the two produce different tables, and the answer belongs in an ADR.
+- The sync screen at `/institutions/:id/sync` is where this lands; it already shows freshness, run
+  counts and errors, and has no per-row view to drill into.
 
 ## Caveats
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 435.2 kB gzipped against the 455 kB guard — the schedule filters cost 4.9 kB.
-  `pnpm size` is green with under 20 kB of headroom left; take the Radix Select swap before raising the
+- The client bundle measures 438.1 kB gzipped against the 455 kB guard — the credentials form cost 2.8 kB.
+  `pnpm size` is green with under 17 kB of headroom left; take the Radix Select swap before raising the
   guard, not before spending what remains.
 - Local development needs uncommitted `.env` files, with the backend's ports matching what
   `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
-  demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run.
-  Every walk so far has had to hand-edit that data to reach its screen — teaching weeks moved into the
-  current week, registration windows widened, a lecturer assignment added, a watermark cleared. This
-  walk needed a sibling exam term's window opened to reach `other_term_registered` at all. A seed that
-  produces a signed-in user with a plausible student _and_ teacher life would pay for itself.
+  demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run. Every
+  walk so far has had to hand-edit that data to reach its screen. A seed producing a signed-in user with
+  a plausible student _and_ teacher life would pay for itself — this is now the longest-standing tax on
+  the loop.

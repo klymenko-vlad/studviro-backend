@@ -1,5 +1,6 @@
 import type {
   Capabilities,
+  ConnectorCredentialField,
   ConnectorHealth,
   ConnectorQuery,
   ConnectorRecord,
@@ -44,6 +45,7 @@ export interface LearningSystemConnector {
 
   healthCheck(): Promise<ConnectorHealth>;
   capabilities(): LearningSystemCapabilities;
+  credentialFields(): readonly ConnectorCredentialField[];
 
   getCourses(query?: ConnectorQuery): Promise<ConnectorRecord<LmsCourse>[]>;
   getEnrollments(query?: ConnectorQuery): Promise<ConnectorRecord<LmsEnrollment>[]>;

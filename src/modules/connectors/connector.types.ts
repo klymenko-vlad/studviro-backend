@@ -18,8 +18,18 @@ export interface ConnectorHealth {
 
 export type Capabilities<TCapability extends string> = Readonly<Record<TCapability, boolean>>;
 
-export const CONNECTOR_KINDS = ['academic', 'learning'] as const;
-export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
+export {
+  CONNECTOR_KINDS,
+  type ConnectorKind,
+} from '../../database/schema/connector-credentials';
+
+export interface ConnectorCredentialField {
+  readonly key: string;
+  readonly label: string;
+  readonly description: string | null;
+  readonly secret: boolean;
+  readonly required: boolean;
+}
 
 export function changedSince<TData>(
   records: readonly ConnectorRecord<TData>[],

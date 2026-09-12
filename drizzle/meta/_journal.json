@@ -64,6 +64,13 @@
       "when": 1788022044889,
       "tag": "0008_wide_natasha_romanoff",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789199310625,
+      "tag": "0009_good_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

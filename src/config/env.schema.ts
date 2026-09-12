@@ -7,6 +7,8 @@ export const AppRole = z.enum(['api', 'worker', 'all']);
 export type AppRole = z.infer<typeof AppRole>;
 
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
+const DEV_CONNECTOR_CREDENTIAL_SECRET =
+  'dev-only-insecure-connector-credential-secret-do-not-use';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -71,6 +73,8 @@ export const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
 
+  CONNECTOR_CREDENTIAL_SECRET: z.string().min(32).default(DEV_CONNECTOR_CREDENTIAL_SECRET),
+
   METRICS_ENABLED: bool('true'),
   METRICS_TOKEN: z.string().min(32).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
@@ -129,6 +133,10 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
       'JWT_REFRESH_SECRET',
       'must differ from JWT_ACCESS_SECRET, or a stolen access token can be replayed as a refresh token',
     );
+  }
+
+  if (env.CONNECTOR_CREDENTIAL_SECRET === DEV_CONNECTOR_CREDENTIAL_SECRET) {
+    reject('CONNECTOR_CREDENTIAL_SECRET', 'must be set to a unique secret in production');
   }
 
   if (env.METRICS_ENABLED && !env.METRICS_TOKEN) {

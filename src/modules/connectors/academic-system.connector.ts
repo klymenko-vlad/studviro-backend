@@ -15,6 +15,7 @@ import type {
 } from './academic-system.records';
 import type {
   Capabilities,
+  ConnectorCredentialField,
   ConnectorHealth,
   ConnectorQuery,
   ConnectorRecord,
@@ -55,6 +56,7 @@ export interface AcademicSystemConnector {
 
   healthCheck(): Promise<ConnectorHealth>;
   capabilities(): AcademicSystemCapabilities;
+  credentialFields(): readonly ConnectorCredentialField[];
 
   getPersons(query?: ConnectorQuery): Promise<ConnectorRecord<SisPerson>[]>;
   getOrgUnits(query?: ConnectorQuery): Promise<ConnectorRecord<SisOrgUnit>[]>;

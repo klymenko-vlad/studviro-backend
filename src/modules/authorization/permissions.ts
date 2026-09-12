@@ -22,6 +22,7 @@ export const PERMISSIONS = [
   'institution:manage',
   'sync:read',
   'sync:run',
+  'connector:configure',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

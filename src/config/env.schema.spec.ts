@@ -14,6 +14,7 @@ const production = {
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
   METRICS_TOKEN: 'm'.repeat(32),
+  CONNECTOR_CREDENTIAL_SECRET: 'c'.repeat(32),
 };
 
 describe('validateEnv', () => {
@@ -73,6 +74,12 @@ describe('validateEnv', () => {
       expect(() =>
         validateEnv({ ...production, JWT_ACCESS_SECRET: shared, JWT_REFRESH_SECRET: shared }),
       ).toThrow(/JWT_REFRESH_SECRET/);
+    });
+
+    it('rejects the development connector credential secret', () => {
+      const { CONNECTOR_CREDENTIAL_SECRET: _omitted, ...withoutConnectorSecret } = production;
+
+      expect(() => validateEnv(withoutConnectorSecret)).toThrow(/CONNECTOR_CREDENTIAL_SECRET/);
     });
 
     it('requires a metrics token when metrics are enabled', () => {

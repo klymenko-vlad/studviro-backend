@@ -152,6 +152,10 @@ export class AppConfigService {
     };
   }
 
+  get connectorCredentialSecret(): string {
+    return this.config.get<string>('CONNECTOR_CREDENTIAL_SECRET');
+  }
+
   get cacheTtlMs(): number {
     return this.config.get<number>('CACHE_TTL_MS');
   }

@@ -25,6 +25,19 @@ describe('MockSisConnector', () => {
     expect(capabilities['courseRegistration.write']).toBe(false);
   });
 
+  it('declares the one credential field it accepts', () => {
+    expect(connector().credentialFields()).toEqual([
+      {
+        key: 'apiToken',
+        label: 'API token',
+        description:
+          'The mock connector accepts any value; the field exists so credential storage can be exercised end to end.',
+        secret: true,
+        required: false,
+      },
+    ]);
+  });
+
   it('does not implement the optional write operations it does not advertise', () => {
     const academic = connector() as unknown as Record<string, unknown>;
 

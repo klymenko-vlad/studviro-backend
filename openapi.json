@@ -418,6 +418,286 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/connectors/{kind}/credentials": {
+      "get": {
+        "operationId": "getInstitutionConnectorCredentials",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "academic",
+                "learning"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorCredentialsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Report which credential fields a connector needs and which are stored",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "put": {
+        "operationId": "setInstitutionConnectorCredentials",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "academic",
+                "learning"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetConnectorCredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorCredentialsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Store one or more connector credential values, encrypted at rest",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/connectors/{kind}/credentials/{fieldKey}": {
+      "delete": {
+        "operationId": "clearInstitutionConnectorCredential",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "academic",
+                "learning"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "fieldKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorCredentialsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Clear one stored connector credential value",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
     "/api/v1/institutions": {
       "get": {
         "operationId": "listMyInstitutions",
@@ -3413,6 +3693,92 @@
           "alternatives"
         ]
       },
+      "ConnectorCredentialFieldDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "secret": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "secret",
+          "required",
+          "configured",
+          "updatedAt"
+        ]
+      },
+      "ConnectorCredentialsResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "academic",
+              "learning"
+            ],
+            "type": "string"
+          },
+          "connectorName": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorCredentialFieldDto"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "connectorName",
+          "fields",
+          "complete"
+        ]
+      },
+      "SetConnectorCredentialsDto": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Credential field keys to their new values. An empty object is rejected.",
+            "example": {
+              "apiToken": "super-secret-value"
+            }
+          }
+        },
+        "required": [
+          "values"
+        ]
+      },
       "InstitutionResponseDto": {
         "type": "object",
         "properties": {
@@ -4073,7 +4439,8 @@
                 "institution:read",
                 "institution:manage",
                 "sync:read",
-                "sync:run"
+                "sync:run",
+                "connector:configure"
               ]
             }
           }
