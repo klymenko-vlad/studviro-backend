@@ -5,7 +5,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ## States
 
@@ -34,54 +34,67 @@ Last updated: 2026-09-11
 
 ## Student
 
-| Feature                  | Backend | Frontend | State     | Notes                                                                                                                                                |
-| ------------------------ | ------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unified dashboard        | —       | ✅       | `Live`    | `/institutions/[id]`; current-term courses, results and the rest of this week, each linking through                                                  |
-| My courses               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term                                                                                                     |
-| Unified calendar         | ✅      | ✅       | `Live`    | `/institutions/[id]/calendar`; the week's classes and its exam terms as two layers, filterable by course and type, plus a dashboard tile             |
-| Course 360° page         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                                                        |
-| Grades with provenance   | ✅      | ✅       | `Live`    | `/institutions/[id]/grades` and each course page; calculated, proposed and official values plus source and sync state                                |
-| Exam terms               | ✅      | ✅       | `Live`    | `/institutions/[id]/exams` and each course page; filterable by course, kind and whether you may act on it, with seats, window and examiner           |
-| Exam registration        | ✅      | ✅       | `Live`    | Register and cancel from any exam term card; the server says whether you may and why not — a closed window, a full room, a seat held on another term |
-| Aggregated notifications | ✅      | ✅       | `Partial` | `/institutions/[id]/notifications`; exam terms published, moved or cancelled reach enrolled students once per day per term. Nothing else emits yet   |
+| Feature                                  | Backend | Frontend | State     | Notes                                                                                                                                                         |
+| ---------------------------------------- | ------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unified dashboard                        | —       | ✅       | `Live`    | `/institutions/[id]`; current-term courses, results and the rest of this week, each linking through                                                           |
+| My courses                               | ✅      | ✅       | `Live`    | `/institutions/[id]/courses`; enrolments by term                                                                                                              |
+| Unified calendar                         | ✅      | ✅       | `Live`    | `/institutions/[id]/calendar`; the week's classes and its exam terms as two layers, filterable by course and type, plus a dashboard tile                      |
+| Course 360° page                         | ✅      | ✅       | `Live`    | `/institutions/[id]/courses/[offeringId]`; staff, own enrolment, study groups                                                                                 |
+| Grades with provenance                   | ✅      | ✅       | `Live`    | `/institutions/[id]/grades` and each course page; calculated, proposed and official values plus source and sync state                                         |
+| Exam terms                               | ✅      | ✅       | `Live`    | `/institutions/[id]/exams` and each course page; filterable by course, kind and whether you may act on it, with seats, window and examiner                    |
+| Exam registration                        | ✅      | ✅       | `Partial` | Register and cancel from any exam term card; the server says whether you may and why not. **The registration never leaves StudViro** — gap G1                 |
+| Aggregated notifications                 | ✅      | ✅       | `Partial` | `/institutions/[id]/notifications`; exam terms published, moved or cancelled reach enrolled students once per day per term. Nothing else emits yet            |
+| Browse the course catalogue              | ⬜      | ⬜       | `Planned` | Gap G4. `mock-sis` imports programmes and courses; courses are reachable only through your own enrolments and `program:read` / `course:read` have no endpoint |
+| Enrol in a course                        | ⬜      | ⬜       | `Planned` | Gap G5. The enrolment window, capacity and the `requested → provisioning → active` ladder are modelled; nothing requests one. Enrolment is imported fact only |
+| Exam registration reaches the university | ⬜      | —        | `Planned` | Gap G1. Registration is platform-local: no connector call, no cancel command, no outbox. See the caveat on the Exam registration row above                    |
+| Assignments and deadlines                | ⬜      | ⬜       | `Planned` | Gap G3, follows G2. `learning_activities.due_at` is indexed for this and nothing reads it                                                                     |
+| See my programme and study progress      | ⬜      | ⬜       | `Planned` | `program_memberships` is imported — study year, status, programme — and never shown                                                                           |
 
 ## Teacher
 
-| Feature                 | Backend | Frontend | State     | Notes                                                                                                                              |
-| ----------------------- | ------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| My teaching             | ✅      | ✅       | `Live`    | `/institutions/[id]/teaching`; the offerings you lead, by term, with your teaching role and how many students are enrolled         |
-| Course roster           | ✅      | ✅       | `Live`    | Roster panel on each course page; student, enrolment status, study groups and enrolment date, to whoever teaches or administers it |
-| Enter or propose grades | ⬜      | ⬜       | `Planned` | `grade:propose` exists but nothing writes a result yet                                                                             |
+| Feature                             | Backend | Frontend | State     | Notes                                                                                                                              |
+| ----------------------------------- | ------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| My teaching                         | ✅      | ✅       | `Live`    | `/institutions/[id]/teaching`; the offerings you lead, by term, with your teaching role and how many students are enrolled         |
+| Course roster                       | ✅      | ✅       | `Live`    | Roster panel on each course page; student, enrolment status, study groups and enrolment date, to whoever teaches or administers it |
+| Enter or propose grades             | ⬜      | ⬜       | `Planned` | Gap G8. `grade:propose` and `grade:publish` are granted and enforced nowhere; only the importer writes a `course_result`           |
+| Manage an offering or its timetable | ⬜      | ⬜       | `Planned` | Gap G4. `offering:manage` and `schedule:manage` are granted and enforced nowhere                                                   |
+| See my own teaching timetable       | ✅      | ✅       | `Live`    | The calendar scopes to offerings you teach as well as ones you attend                                                              |
 
 ## Administrator
 
-| Feature                              | Backend | Frontend | State     | Notes                                                                        |
-| ------------------------------------ | ------- | -------- | --------- | ---------------------------------------------------------------------------- |
-| Grant and revoke scoped roles        | ✅      | ✅       | `Live`    | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard` |
-| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned` | Grants name subject and scope by identifier; no directory or org-unit read   |
-| Institution settings and terminology | ✅      | ✅       | `Live`    | `/institutions/[id]/settings`; terminology overrides are label-only          |
-| Feature flags per institution        | ✅      | ✅       | `Live`    | Resolved against platform defaults; read from the database on every call     |
-| Choose a connector, see its health   | ✅      | ✅       | `Live`    | Selection, health and capabilities on `/institutions/[id]/settings`          |
-| Store connector credentials          | ✅      | ✅       | `Live`    | Declared fields per connector, encrypted at rest, never read back            |
-| Map connector fields                 | ⬜      | ⬜       | `Planned` | No field mapping; a connector takes the shape the importer expects           |
-| Trigger and inspect a sync run       | ✅      | ✅       | `Live`    | `/institutions/[id]/sync`; freshness, per-domain results, run history, retry |
-| Schedule syncs                       | ⬜      | ⬜       | `Planned` | Every run is hand-triggered today                                            |
-| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned` | Steps 37, 48                                                                 |
-| Read audit events                    | ⬜      | ⬜       | `Planned` | Step 49                                                                      |
+| Feature                              | Backend | Frontend | State      | Notes                                                                                   |
+| ------------------------------------ | ------- | -------- | ---------- | --------------------------------------------------------------------------------------- |
+| Grant and revoke scoped roles        | ✅      | ✅       | `Live`     | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard`            |
+| Create an institution                | ⬜      | ⬜       | `Planned`  | Gap G6. No `POST /institutions`; a tenant and its first admin grant exist only via SQL  |
+| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned`  | Gaps G6, G7. Grants name subject and scope by identifier; no directory or org-unit read |
+| Correct an enrolment                 | ⬜      | ⬜       | `Planned`  | Gap G4. `enrollment:manage` is granted and enforced nowhere                             |
+| Institution settings and terminology | ✅      | ✅       | `Live`     | `/institutions/[id]/settings`; terminology overrides are label-only                     |
+| Feature flags per institution        | ✅      | ✅       | `Live`     | Resolved against platform defaults; read from the database on every call                |
+| Choose a connector, see its health   | ✅      | ✅       | `Live`     | Selection, health and capabilities on `/institutions/[id]/settings`                     |
+| Store connector credentials          | ✅      | ✅       | `Live`     | Declared fields per connector, encrypted at rest, never read back                       |
+| Map connector fields                 | ⬜      | ⬜       | `Planned`  | No field mapping; a connector takes the shape the importer expects                      |
+| Trigger and inspect a sync run       | ✅      | ✅       | `Live`     | `/institutions/[id]/sync`; freshness, per-domain results, run history, retry            |
+| Schedule syncs                       | ⬜      | ⬜       | `Planned`  | Gap G10. `sync_run_trigger` has `scheduled` and the queue exists; nothing enqueues      |
+| Compare source against canonical     | ✅      | ⬜       | `API only` | Step 37's report is written but **uncommitted** (gap G11); step 48 is its screen        |
+| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned`  | Steps 37, 48                                                                            |
+| Read audit events                    | ⬜      | ⬜       | `Planned`  | Step 49                                                                                 |
 
 ## Platform
 
-| Capability                      | State     | Notes                                                                                        |
-| ------------------------------- | --------- | -------------------------------------------------------------------------------------------- |
-| Canonical academic model        | `Live`    | 25 tables, institution-scoped, full provenance, external IDs never primary keys              |
-| Mock SIS connector              | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                        |
-| Synchronization engine          | `Partial` | Imports the SIS into canonical tables; enrolments, offerings and course results are readable |
-| Retries, tombstones, watermarks | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures                 |
-| Reconciliation checks           | `Planned` | Step 37                                                                                      |
-| Moodle connector                | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance               |
-| AIS2 connector                  | `Blocked` | Blocked on documented institutional access (step 15)                                         |
-| Generated API contract          | `Live`    | `openapi.json` drift-checked; the client is generated from it                                |
-| Observability                   | `Partial` | Pino, health, Prometheus; sync freshness readable over the API, not a metric                 |
-| Containerized deployment        | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                        |
-| Backup and restore              | `Planned` | Step 55                                                                                      |
-| End-to-end and security tests   | `Planned` | Steps 59–62; unit and domain tests are continuous                                            |
+| Capability                                                          | State     | Notes                                                                                        |
+| ------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------- |
+| Canonical academic model                                            | `Live`    | 25 tables, institution-scoped, full provenance, external IDs never primary keys              |
+| Mock SIS connector                                                  | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                        |
+| Synchronization engine                                              | `Partial` | Imports the SIS into canonical tables; enrolments, offerings and course results are readable |
+| Retries, tombstones, watermarks                                     | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures                 |
+| Reconciliation checks                                               | `Planned` | Step 37                                                                                      |
+| Learning-system data (spaces, activities, assessments, submissions) | `Planned` | Gap G2. Six canonical tables with no importer, no sync domain, no read and no screen         |
+| Mock LMS connector                                                  | `Planned` | Gap G2. Not named by any of the 71 steps; the unblocker for everything Moodle gates          |
+| Write-back to source systems                                        | `Planned` | Gap G1. Two optional connector methods, no caller, no cancel, no outbox, no retry            |
+| Moodle connector                                                    | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance               |
+| AIS2 connector                                                      | `Blocked` | Blocked on documented institutional access (step 15)                                         |
+| Generated API contract                                              | `Live`    | `openapi.json` drift-checked; the client is generated from it                                |
+| Observability                                                       | `Partial` | Pino, health, Prometheus; sync freshness readable over the API, not a metric                 |
+| Containerized deployment                                            | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                        |
+| Backup and restore                                                  | `Planned` | Step 55                                                                                      |
+| End-to-end and security tests                                       | `Planned` | Steps 59–62; unit and domain tests are continuous                                            |

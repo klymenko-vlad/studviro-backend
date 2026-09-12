@@ -19,89 +19,64 @@ the BFF. Decisions live in `docs/adr/`.
 
 ## Done
 
+Detail lives in `docs/Task Tracker.md` (delivery) and `docs/Feature Status.md` (product); the
+reasoning lives in `docs/adr/`. In short:
+
 - **Foundation** — modular monolith (ADR 0002), `ROLE=api|worker|all`, validated env, graceful
   shutdown, request limits, Pino correlation logs, health, metrics, BullMQ, Redis locks, idempotency.
-- **Persistence and canonical model** — Drizzle migrations, transaction-mediated institution-scoped
-  repositories, keyset pagination, soft deletion, provenance, 25 academic tables (ADR 0009). External
-  identifiers are never primary keys.
-- **Authentication and authorization** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003),
-  linked-identity provisioning, canonical roles, scope ancestry, the permission catalogue,
-  `PermissionsGuard` / `@RequirePermission` and the role assignment UI. OIDC is blocked on
-  institutional registration.
-- **Institution setup, connectors and synchronization** — terminology, flags and connector selection
-  resolving over platform defaults through a guarded configuration API and settings screen; connector
-  contracts, deterministic `mock-sis`, registry health/capabilities, ordered imports, provenance
-  upserts, stale-write guards, tombstones, child pruning, watermarks and a locked run state machine.
-- **Connector credentials** (step 46) — a connector declares the fields it needs via
-  `credentialFields()`, and the settings screen renders that declaration rather than a connector-shaped
-  form. `GET`/`PUT institutions/:id/connectors/:kind/credentials` and `DELETE .../:fieldKey` sit behind
-  the new `connector:configure`, held by `institution_admin` alone. Values are AES-256-GCM encrypted in
-  `connector_credentials` under `CONNECTOR_CREDENTIAL_SECRET`; the API answers whether a field is set and
-  when it last changed, never the value and never a masked stand-in. See ADR 0014.
-- **Course reads, grades, dashboard, sync monitoring** (steps 38, 40, 41, 47) — term-grouped
-  courses and a 360° course page; `me/course-results` behind `grade:read` with the
-  calculated/proposed/official stages and their provenance; a dashboard composing them; and
-  `/institutions/:id/sync` showing freshness, run counts, errors and history behind `sync:run`.
-- **Unified calendar** (step 39) — `GET institutions/:id/me/timetable-events` behind
-  `schedule:read`, scoped to the offerings and groups the caller belongs to;
-  `/institutions/:id/calendar` renders the week in the institution's display timezone, filtered by
-  course and type on the server, with exam terms interleaved as a second fetched layer that the
-  reader can switch off. An exam term is never synthesized into a timetable event — see ADR 0013.
-- **Exam terms and registration** (steps 42–43) — `me/exam-terms` behind `schedule:read` returns every
-  term of an offering the caller attends or teaches, with the caller's own registration and never
-  another student's. `POST`/`DELETE .../me/exam-registrations` behind `exam:register` enforce the
-  window, the cancellation, free capacity and one live registration per course. The read answers
-  `registrationAvailability` from those same rules, so the client keeps no second copy of them and every
-  card says why a seat is out of reach. `/institutions/:id/exams` filters on the server. ADR 0011, 0013.
-- **Teaching and rosters** (step 45) — `me/teaching-offerings` behind `offering:read`, and an
-  offering roster behind `enrollment:read` that additionally demands the caller teach the offering
-  or hold `offering:manage` — `enrollment:read` alone is held by every student and must never open
-  a classmate list. `/institutions/:id/teaching`, plus a roster panel on each course page.
-- **Notifications** (step 44) — `notification_events` and `notification_deliveries` carry the first
-  push: the exam terms importer emits on publish, move and cancel, the dedupe key `type:subject:day`
-  folds repeats into one event with an `occurrence_count`, and a re-occurrence clears `read_at`. The
-  inbox and its two mark-read writes sit behind `notification:read`, scoped to the caller's own
-  deliveries, on `/institutions/:id/notifications`. See ADR 0012.
-- **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
-  typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
-- **Navigation and account creation** — `widgets/app-header` in the root layout,
-  `widgets/institution-nav` as a permission-gated tab bar on every `/institutions/:id` screen,
-  `/sign-up`, and `src/proxy.ts` protecting `/account` and `/institutions`.
-- **Deployment is migration-aware** — `pnpm db:migrate:prod` runs the compiled migrator
-  inside the pruned production image, and `/health/ready` now fails when
-  `drizzle.__drizzle_migrations` is behind the journal shipped in the image. See
-  `docs/Deployment.md`.
+- **Persistence** — Drizzle migrations, transaction-mediated institution-scoped repositories, keyset
+  pagination, soft deletion, provenance, 25 academic tables (ADR 0009). External identifiers are
+  never primary keys.
+- **Auth** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003), linked-identity
+  provisioning, canonical roles, scope ancestry, the permission catalogue, `PermissionsGuard` /
+  `@RequirePermission` and the role assignment UI. OIDC is blocked on institutional registration.
+- **Institution setup and synchronization** — terminology, flags and connector selection resolving
+  over platform defaults; connector contracts, deterministic `mock-sis`, registry health and
+  capabilities, ordered imports, provenance upserts, stale-write guards, tombstones, child pruning,
+  watermarks and a locked run state machine (ADR 0010).
+- **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
+  and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
+- **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
+  calculated/proposed/official stages and their provenance; a dashboard; the week calendar with exam
+  terms as a second layer (ADR 0013); exam terms and controlled registration with the server
+  answering why a seat is out of reach (ADR 0011); teaching offerings and rosters, where
+  `enrollment:read` alone never opens a classmate list; the notification inbox with
+  `type:subject:day` deduplication (ADR 0012); and sync monitoring behind `sync:run`.
+- **API, CI, navigation, deployment** — generated drift-checked `openapi.json`; lint, typecheck,
+  coverage, build and security gates in both repositories; the app header, permission-gated
+  institution tab bar, `/sign-up` and route protection; and a migration-aware deploy whose
+  `/health/ready` fails when the database is behind the journal in the image.
 
-## Not done
+## Not done — reviewed against the code on 2026-09-12
 
-- Programs and the course catalogue still have no read API or screen, though `mock-sis`
-  imports both. Courses are reachable only through the caller's enrolments; no search exists.
-- `mock-sis` imports no exam registrations, so an imported term shows `myRegistration: null`
-  until a student registers by hand. Nothing reconciles a registration back to a source system.
-- The calendar's course picker lists only the courses that have an event in the week on screen, so a
-  course with no class that week cannot be selected. Neither screen remembers a filter in the URL, so
-  a filtered view cannot be linked or survive a reload.
-- The account screen's institution card links every section but Calendar, Exams and Teaching; only
-  the institution tab bar reaches those three.
-- The teaching screen has no term filter and no per-offering action beyond opening the course page. The
-  roster is a flat list naming every enrolment including withdrawn and rejected ones, with no filter by
-  group or status. Role grants still need raw identifiers because there is no directory — the roster is
-  the obvious source for a picker.
-- Synchronization has no schedule (step 37 is reconciliation, step 53 the freshness gauges); runs are
-  started by hand. No Moodle or AIS2 connector — both need institutional access. Institution
-  configuration is read from PostgreSQL on every call. The legacy flat `RolesGuard` still governs the
-  old user endpoints and should retire as canonical routes replace them.
-- Nothing consumes a stored credential yet: `ConnectorCredentialsService.valuesFor` exists and is tested,
-  but `mock-sis` ignores the field it declares, so the first real reader arrives with the first real
-  connector. There is no key rotation — the `v1.` prefix reserves room for one, and changing the secret
-  invalidates every stored value. Field mapping (the other half of step 46's original wording) is not
-  built and is now tracked as its own `Planned` row in `Feature Status.md`. The card's `Complete` badge
-  reads oddly against a connector whose only field is optional — it is true and unhelpful at once, and
-  wants either a third state or no badge when nothing is required.
-- Only exam terms emit notifications; grades, enrolments and timetable events detect changes the emitter
-  could take unchanged, and staff are notified of nothing. The inbox is per institution with no unread
-  badge in the app header, is never pruned, has no preferences and no channel but itself.
-- Theses, transcripts and audit are intentionally absent from the model.
+The twelve gaps below are recorded in full, with evidence, in `docs/Task Tracker.md` under
+_Gaps found outside the backlog_. `Tasks Plan.md` names none of G1, G2, G5 or G6.
+
+- **G1 — nothing is written back.** `registerForExam` / `registerForCourse` are optional on the
+  connector interface, nothing calls them, `mock-sis` implements neither, and no cancel command
+  exists. A student who registers for an exam in StudViro is not registered at the university.
+  `exam_registrations` is not a sync domain, so the source side is never read either. This wants an
+  ADR — is the platform a read-only mirror or a system of engagement? — before 43 or 48 close.
+- **G2 — the LMS half of the model is dead.** Six canonical tables (spaces, activities, assessments,
+  results, completions, submissions) have no importer, no sync domain, no read and no screen. Steps
+  31–33 are all gated on a Moodle instance nobody has, and nothing in the backlog plays the part
+  `mock-sis` played for the SIS half. **G3** follows: deadlines never reach a calendar.
+- **G4 — eight of twenty-two permissions have no endpoint** (`program:*`, `course:*`,
+  `offering:manage`, `enrollment:manage`, `schedule:manage`, `grade:propose`, `grade:publish`). No
+  catalogue, no course search, no grade entry (**G8**), no enrolment correction, no timetable edit.
+- **G5 — no self-service enrolment**, though the window, the capacity and the
+  `requested → provisioning → active` ladder are all modelled. **G6 — no institution onboarding**:
+  no `POST /institutions`, no org-unit read, so a tenant exists only if someone writes SQL — which
+  is also why every walkthrough hand-edits data. **G7 — no person directory.**
+- **G9** notifications emit for exam terms and nothing else; **G10** sync has no schedule, though
+  `sync_run_trigger` already has `scheduled`; **G12** GDPR (19), threat model (20), audit (49) and
+  export (50) are all unstarted while personal data is already imported and served.
+- Smaller, already known: the calendar's course picker only lists courses with an event that week
+  and neither filter survives a reload; the account card does not link Calendar, Exams or Teaching;
+  the roster is unfiltered and names withdrawn and rejected enrolments; no key rotation for
+  connector credentials; institution configuration is read from PostgreSQL on every call; the legacy
+  flat `RolesGuard` still governs the old user endpoints; theses, transcripts and audit are
+  intentionally absent from the model.
 
 ## Deployment caveat — act on this first
 
@@ -110,18 +85,24 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — mapping, conflict and reconciliation UI, step 48
+## Next task — land step 37, then step 48
 
-- Step 48 is the oldest unstarted row in the delivery band and now has both its dependencies: step 46's
-  connector configuration shipped, and the synchronization engine already records provenance,
-  `synchronization_status` and stale-write outcomes per row. Step 37 (reconciliation) is the sibling;
-  read both entries in `Tasks Plan.md` and decide which half is the backend of the other.
-- The substance is what an administrator does when two systems disagree about the same canonical row.
-  Today a conflict is only a `synchronization_status` value nobody can see or act on. Decide first
-  whether resolution writes a platform-authored override that survives the next import, or merely marks
-  a winner — the two produce different tables, and the answer belongs in an ADR.
-- The sync screen at `/institutions/:id/sync` is where this lands; it already shows freshness, run
-  counts and errors, and has no per-row view to drill into.
+**First, deal with G11: the reconciliation backend is written and uncommitted on `dev`.**
+`reconciliation.service.ts`, `reconciliation.types.ts`, its spec and its response DTO are
+untracked; `synchronization.controller.ts`, `.module.ts`, `provenance.repository.ts` and the
+sync e2e spec are modified. `GET institutions/:id/synchronization/reconciliation` reads both
+sides live and reports `missing_in_platform`, `missing_in_source`, `stale` and `conflict` per
+domain, resolving nothing. Run `pnpm verify`, then commit it as step 37's backend half.
+
+**Then step 48 is its screen** — the sibling question in `STATUS.md` is now answered: step 37 is
+the backend of step 48. Before building it, decide in an ADR whether resolving a discrepancy
+writes a platform-authored override that survives the next import, or merely marks a winner; the
+two produce different tables. The drill-down lands on `/institutions/:id/sync`, which already
+shows freshness, run counts and errors and has no per-row view.
+
+**After that, the recommended order** is G2 (a `mock-lms` connector and the learning-domain
+importers — it unblocks G3 and the product's central claim), then G6 plus a real demo seed, then
+G1's write-back ADR, then G4/G8 (grade entry).
 
 ## Caveats
 
