@@ -47,6 +47,11 @@ reasoning lives in `docs/adr/`. In short:
   answering why a seat is out of reach (ADR 0011); teaching offerings and rosters, where
   `enrollment:read` alone never opens a classmate list; the notification inbox with
   `type:subject:day` deduplication (ADR 0012); and sync monitoring behind `sync:run`.
+- **Enrolment status is enforced** (B3) — `ENROLLMENT_PARTICIPATING_STATUSES` and
+  `ENROLLMENT_RECORDED_STATUSES` sit beside the enum and are the only copies of the rule. Withdrawn,
+  rejected and requested students no longer appear in _My courses_, the course page, the calendar,
+  the roster or the teacher's count, and can no longer take an exam seat. `completed` deliberately
+  still can, because that is the retake ladder.
 - **API, CI, navigation, deployment** — generated drift-checked `openapi.json`; lint, typecheck,
   coverage, build and security gates in both repositories; the app header, permission-gated
   institution tab bar, `/sign-up` and route protection; and a migration-aware deploy whose
@@ -66,10 +71,6 @@ turned out not to be. Read those before starting; the headlines:
   first admin needs SQL — so a new account lands on `/account` with nowhere to go and an import
   yields permission-less accounts (**B2**, with G6, G7); `role:assign` is checked at the wrong
   scope (**B13**).
-- **Enrolment status is never enforced** (**B3**). A withdrawn, rejected or finished student may
-  register for an exam, and withdrawn enrolments appear in _My courses_, the course page, the
-  calendar and the teacher's enrolment count. The notification emitter is the only code that
-  filters on status, so the two halves of the exam flow disagree.
 - **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
   columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
   attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
@@ -126,9 +127,8 @@ than a second copy of the rule.
 
 **Then, in order:** (c) institution creation, the org-unit read and the person directory (**G6**,
 **G7**), which also retires the hand-edited demo data; (d) invitations, accept-and-claim, merge
-and password reset, which closes B1. Then **B3** — decide which enrolment statuses count as
-participation, put it in one predicate, apply it to all five surfaces
-(`NOTIFIABLE_ENROLLMENT_STATUSES` is the seed). Then **step 48's resolution half** behind an ADR
+and password reset, which closes B1.
+Then **step 48's resolution half** behind an ADR
 on override-vs-winner; **G2**, a `mock-lms` connector and the learning-domain importers, which no
 numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
 (grade entry); and B6 (make the flags mean something).
@@ -137,6 +137,13 @@ numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycl
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
+- **B10 got sharper, not smaller.** The notification audience is still
+  `ENROLLMENT_PARTICIPATING_STATUSES`, so a `completed` student who legitimately registers for a
+  resit is never told when that term moves — the exam flow still disagrees with itself, now only
+  for retakes. Fold this into the B10 fix.
+- The roster's "{enrolled} enrolled of {total} listed" copy is now near-redundant: the server no
+  longer sends rows that fail the count, so the two numbers match except against a stale cache.
+  Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
 - The client bundle measures 440.9 kB gzipped against the 455 kB guard — the reconciliation table cost
   2.8 kB. `pnpm size` is green with about 14 kB of headroom left; take the Radix Select swap before
