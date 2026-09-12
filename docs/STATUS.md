@@ -52,9 +52,10 @@ reasoning lives in `docs/adr/`. In short:
   rejected and requested students no longer appear in _My courses_, the course page, the calendar,
   the roster or the teacher's count, and can no longer take an exam seat. `completed` deliberately
   still can, because that is the retake ladder.
-- **Public surface** — `POST /api/v1/demo-requests`, unauthenticated and metered on the credential
-  budget, storing a lead under a hashed caller address and answering a constant `accepted`. The
-  marketing pages that will call it are still to build; see _Carried work_.
+- **Public surface** — a home page, three audience landings and `/contact` over
+  `POST /api/v1/demo-requests`: unauthenticated, metered on its own site-wide budget, storing a lead
+  under a hashed caller address and answering a constant `accepted`. Copy is written from the `Live`
+  rows of `Feature Status.md`; nothing planned is claimed as shipped.
 - **API, CI, navigation, deployment** — generated drift-checked `openapi.json`; lint, typecheck,
   coverage, build and security gates in both repositories; the app header, permission-gated
   institution tab bar, `/sign-up` and route protection; and a migration-aware deploy whose
