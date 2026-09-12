@@ -49,34 +49,42 @@ reasoning lives in `docs/adr/`. In short:
 
 ## Not done — reviewed against the code on 2026-09-12
 
-The twelve gaps below are recorded in full, with evidence, in `docs/Task Tracker.md` under
-_Gaps found outside the backlog_. `Tasks Plan.md` names none of G1, G2, G5 or G6.
+Two reviews, recorded in full with their evidence in `docs/Task Tracker.md`: _Gaps found outside
+the backlog_ (G1–G12, things not built) and _Business-logic and user-flow defects_ (B1–B12, things
+built to a rule the model does not enforce). `Feature Status.md` is corrected where a `Live` row
+turned out not to be. Read those before starting; the headlines:
 
-- **G1 — nothing is written back.** `registerForExam` / `registerForCourse` are optional on the
-  connector interface, nothing calls them, `mock-sis` implements neither, and no cancel command
-  exists. A student who registers for an exam in StudViro is not registered at the university.
-  `exam_registrations` is not a sync domain, so the source side is never read either. This wants an
-  ADR — is the platform a read-only mirror or a system of engagement? — before 43 or 48 close.
-- **G2 — the LMS half of the model is dead.** Six canonical tables (spaces, activities, assessments,
-  results, completions, submissions) have no importer, no sync domain, no read and no screen. Steps
-  31–33 are all gated on a Moodle instance nobody has, and nothing in the backlog plays the part
-  `mock-sis` played for the SIS half. **G3** follows: deadlines never reach a calendar.
-- **G4 — eight of twenty-two permissions have no endpoint** (`program:*`, `course:*`,
-  `offering:manage`, `enrollment:manage`, `schedule:manage`, `grade:propose`, `grade:publish`). No
-  catalogue, no course search, no grade entry (**G8**), no enrolment correction, no timetable edit.
-- **G5 — no self-service enrolment**, though the window, the capacity and the
-  `requested → provisioning → active` ladder are all modelled. **G6 — no institution onboarding**:
-  no `POST /institutions`, no org-unit read, so a tenant exists only if someone writes SQL — which
-  is also why every walkthrough hand-edits data. **G7 — no person directory.**
-- **G9** notifications emit for exam terms and nothing else; **G10** sync has no schedule, though
-  `sync_run_trigger` already has `scheduled`; **G12** GDPR (19), threat model (20), audit (49) and
-  export (50) are all unstarted while personal data is already imported and served.
-- Smaller, already known: the calendar's course picker only lists courses with an event that week
-  and neither filter survives a reload; the account card does not link Calendar, Exams or Teaching;
-  the roster is unfiltered and names withdrawn and rejected enrolments; no key rotation for
-  connector credentials; institution configuration is read from PostgreSQL on every call; the legacy
-  flat `RolesGuard` still governs the old user endpoints; theses, transcripts and audit are
-  intentionally absent from the model.
+- **Onboarding is the largest hole.** An imported person's password is a hash of two random UUIDs
+  and there is no reset, verification or claim flow, so they can never sign in; if they self-register
+  first, `IDENTITY_EMAIL_CONFLICT` fails that record on every run and holds the `persons` watermark
+  back for ever, with nothing able to resolve it (**B1**). Membership _is_ a role assignment, only
+  the admin screen creates one, and the first admin needs SQL — so a new account lands on `/account`
+  with nowhere to go and an import yields permission-less accounts (**B2**, with G6, G7).
+- **Enrolment status is never enforced** (**B3**). A withdrawn, rejected or finished student may
+  register for an exam, and withdrawn enrolments appear in _My courses_, the course page, the
+  calendar and the teacher's enrolment count. The notification emitter is the only code that
+  filters on status, so the two halves of the exam flow disagree.
+- **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
+  columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
+  attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
+  `annulled` result still shows its grade (**B5**). All seven feature flags gate nothing (**B6**)
+  and terminology overrides are never rendered (**B7**).
+- **Flows that end badly.** A cancelled exam term leaves its registrations live, so the
+  one-registration rule blocks the replacement by naming a term that no longer exists (**B9**);
+  notifications reach everyone enrolled rather than everyone holding a seat, and never the examiner
+  (**B10**); a cancellation is soft-deleted so nobody can see it happened (**B11**); your own
+  registration is never confirmed (**B12**).
+- **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); the LMS
+  half of the model is dead and no backlog step plays the part `mock-sis` played for the SIS half
+  (**G2**, **G3**); eight of twenty-two permissions have no endpoint — no catalogue, no grade entry,
+  no enrolment correction (**G4**, **G8**); no self-service enrolment (**G5**); no onboarding,
+  directory or org-unit read (**G6**, **G7**); one notification family (**G9**); no sync schedule
+  (**G10**); step 37's backend uncommitted (**G11**); GDPR, threat model, audit and export unstarted
+  while personal data is already served (**G12**).
+- Smaller, known: the calendar's course picker lists only courses with an event that week and no
+  filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
+  rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` still
+  governs the old user endpoints; theses and transcripts are intentionally out of the model.
 
 ## Deployment caveat — act on this first
 
@@ -85,24 +93,35 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — land step 37, then step 48
+## Next task — land step 37, then close the enrolment-status hole
 
-**First, deal with G11: the reconciliation backend is written and uncommitted on `dev`.**
-`reconciliation.service.ts`, `reconciliation.types.ts`, its spec and its response DTO are
-untracked; `synchronization.controller.ts`, `.module.ts`, `provenance.repository.ts` and the
-sync e2e spec are modified. `GET institutions/:id/synchronization/reconciliation` reads both
-sides live and reports `missing_in_platform`, `missing_in_source`, `stale` and `conflict` per
-domain, resolving nothing. Run `pnpm verify`, then commit it as step 37's backend half.
+**First, G11: step 37's backend is written and uncommitted on `dev`.** `reconciliation.service.ts`,
+`reconciliation.types.ts`, its spec and its response DTO are untracked; the controller, module,
+`provenance.repository.ts` and the sync e2e spec are modified.
+`GET institutions/:id/synchronization/reconciliation` reads both sides live and reports
+`missing_in_platform`, `missing_in_source`, `stale` and `conflict` per domain, resolving nothing.
+Run `pnpm verify`, then commit it as step 37's backend half — nothing else should start on top of
+an uncommitted tree.
 
-**Then step 48 is its screen** — the sibling question in `STATUS.md` is now answered: step 37 is
-the backend of step 48. Before building it, decide in an ADR whether resolving a discrepancy
-writes a platform-authored override that survives the next import, or merely marks a winner; the
-two produce different tables. The drill-down lands on `/institutions/:id/sync`, which already
-shows freshness, run counts and errors and has no per-row view.
+**Then take B3 as the next step.** It is contained, it is a correctness defect rather than a
+feature, and it touches five surfaces at once: decide which enrolment statuses count as
+participation, put that decision in one predicate, and apply it to exam registration, _My
+courses_, the course page, the calendar and the teacher's enrolment count. The notification
+emitter's `NOTIFIABLE_ENROLLMENT_STATUSES` is the existing precedent and the obvious seed.
 
-**After that, the recommended order** is G2 (a `mock-lms` connector and the learning-domain
-importers — it unblocks G3 and the product's central claim), then G6 plus a real demo seed, then
-G1's write-back ADR, then G4/G8 (grade entry).
+**Then the recommended order:**
+
+1. **B1 + B2 — onboarding**, with G6 and G7. Institution creation, a seed that produces a signed-in
+   student and teacher, roles derived from canonical data rather than typed UUIDs, and a way for a
+   real person to claim their imported identity. This also retires the longest-standing tax on the
+   loop, the hand-edited demo data.
+2. **Step 48**, the screen over the reconciliation read. The sibling question is now answered:
+   step 37 is the backend of step 48. Decide in an ADR first whether resolving a discrepancy writes
+   a platform-authored override that survives the next import or merely marks a winner.
+3. **G2 — a `mock-lms` connector and the learning-domain importers.** It unblocks G3 and the
+   product's central claim, and no numbered step covers it.
+4. **G1's write-back ADR**, then B4/B5/B9/B11 together as the exam-lifecycle step, then G4/G8
+   (grade entry), then B6 (make the flags mean something).
 
 ## Caveats
 
