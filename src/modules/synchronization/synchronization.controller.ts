@@ -22,10 +22,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 
 import { ListSyncRunsQueryDto } from './dto/list-sync-runs-query.dto';
+import { ReconciliationReportResponseDto } from './dto/reconciliation-report-response.dto';
 import { StartSyncRunDto } from './dto/start-sync-run.dto';
 import { SyncRunDetailResponseDto } from './dto/sync-run-detail-response.dto';
 import { SyncRunResponseDto } from './dto/sync-run-response.dto';
 import { SyncWatermarkResponseDto } from './dto/sync-watermark-response.dto';
+import { ReconciliationService } from './reconciliation.service';
 import { SynchronizationService } from './synchronization.service';
 
 const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as const;
@@ -34,7 +36,10 @@ const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as con
 @ApiBearerAuth('access-token')
 @Controller({ path: 'institutions/:institutionId/synchronization', version: '1' })
 export class SynchronizationController {
-  constructor(private readonly synchronization: SynchronizationService) {}
+  constructor(
+    private readonly synchronization: SynchronizationService,
+    private readonly reconciliation: ReconciliationService,
+  ) {}
 
   @Post('runs')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -92,6 +97,24 @@ export class SynchronizationController {
   ): Promise<SyncRunDetailResponseDto> {
     return SyncRunDetailResponseDto.fromDetail(
       await this.synchronization.findRun(institutionId, runId),
+    );
+  }
+
+  @Get('reconciliation')
+  @RequirePermission('sync:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'getSynchronizationReconciliation',
+    summary: 'Compare the source population against the canonical one',
+    description:
+      'Reads both sides live and reports where they disagree. It resolves nothing and writes nothing.',
+  })
+  @ApiOkResponse({ type: ReconciliationReportResponseDto })
+  @ApiErrorResponses({ notFound: true })
+  async findReconciliation(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+  ): Promise<ReconciliationReportResponseDto> {
+    return ReconciliationReportResponseDto.from(
+      await this.reconciliation.report(institutionId),
     );
   }
 

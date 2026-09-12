@@ -40,6 +40,19 @@ const SMALL_UNIVERSITY: Partial<MockSisOptions> = {
   teachingWeeks: 1,
 };
 
+interface ReconciliationBody {
+  connectorName: string;
+  discrepancyCount: number;
+  domains: {
+    domain: string;
+    status: string;
+    sourceCount: number;
+    platformCount: number;
+    matched: number;
+    discrepancies: { kind: string; externalId: string }[];
+  }[];
+}
+
 describe('Academic synchronization (e2e)', () => {
   let harness: TestHarness;
   let sync: AcademicSyncService;
@@ -231,6 +244,87 @@ describe('Academic synchronization (e2e)', () => {
     expect(body.domains.every((domain) => domain.status === 'succeeded')).toBe(true);
   });
 
+  it('reports a clean reconciliation right after a run', async () => {
+    const queued = await startRun();
+    await sync.execute(queued.id);
+    const actor = await actingAs('institution_admin');
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation`,
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json<ReconciliationBody>();
+
+    expect(body.connectorName).toBe('mock-sis');
+    expect(body.discrepancyCount).toBe(0);
+
+    const courseDomain = body.domains.find((domain) => domain.domain === 'courses');
+    expect(courseDomain).toMatchObject({ status: 'checked' });
+    expect(courseDomain!.matched).toBe(courseDomain!.sourceCount);
+    expect(courseDomain!.sourceCount).toBeGreaterThan(0);
+  });
+
+  it('sees a canonical row the platform has fallen behind on', async () => {
+    const queued = await startRun();
+    await sync.execute(queued.id);
+
+    const [course] = await harness.db.select().from(courses).limit(1);
+    await harness.db
+      .update(courses)
+      .set({ sourceUpdatedAt: new Date('2000-01-01T00:00:00.000Z') })
+      .where(eq(courses.id, course!.id));
+
+    const actor = await actingAs('institution_admin');
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation`,
+      headers: actor.headers,
+    });
+
+    const body = response.json<ReconciliationBody>();
+    const courseDomain = body.domains.find((domain) => domain.domain === 'courses');
+
+    expect(body.discrepancyCount).toBeGreaterThan(0);
+    expect(courseDomain!.discrepancies).toContainEqual(
+      expect.objectContaining({ kind: 'stale', externalId: course!.externalId }),
+    );
+  });
+
+  it('sees a canonical row the source never offered', async () => {
+    const queued = await startRun();
+    await sync.execute(queued.id);
+
+    const [orgUnit] = await harness.db.select().from(orgUnits).limit(1);
+    await harness.db.insert(courses).values({
+      institutionId,
+      orgUnitId: orgUnit!.id,
+      code: 'GHOST-1',
+      title: 'A course no source knows about',
+      credits: '5',
+      sourceSystem: 'sis',
+      externalId: 'ghost-course',
+      lastSynchronizedAt: new Date(),
+    });
+
+    const actor = await actingAs('institution_admin');
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation`,
+      headers: actor.headers,
+    });
+
+    const courseDomain = response
+      .json<ReconciliationBody>()
+      .domains.find((domain) => domain.domain === 'courses');
+
+    expect(courseDomain!.discrepancies).toContainEqual(
+      expect.objectContaining({ kind: 'missing_in_source', externalId: 'ghost-course' }),
+    );
+  });
+
   it('refuses to queue a run for an institution with no connector configured', async () => {
     await harness.db
       .update(institutionSettings)
@@ -263,8 +357,14 @@ describe('Academic synchronization (e2e)', () => {
       url: `/api/v1/institutions/${institutionId}/synchronization/state`,
       headers: student.headers,
     });
+    const reconciliation = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation`,
+      headers: student.headers,
+    });
 
     expect(start.statusCode).toBe(403);
     expect(state.statusCode).toBe(403);
+    expect(reconciliation.statusCode).toBe(403);
   });
 });

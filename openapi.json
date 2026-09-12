@@ -260,6 +260,83 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/synchronization/reconciliation": {
+      "get": {
+        "description": "Reads both sides live and reports where they disagree. It resolves nothing and writes nothing.",
+        "operationId": "getSynchronizationReconciliation",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Compare the source population against the canonical one",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/synchronization/state": {
       "get": {
         "operationId": "getSynchronizationState",
@@ -3571,6 +3648,143 @@
         },
         "required": [
           "run",
+          "domains"
+        ]
+      },
+      "DiscrepancyResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "missing_in_platform",
+              "missing_in_source",
+              "stale",
+              "conflict"
+            ],
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string"
+          },
+          "canonicalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The canonical row, when one exists."
+          },
+          "sourceUpdatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "platformUpdatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "externalId",
+          "canonicalId",
+          "sourceUpdatedAt",
+          "platformUpdatedAt",
+          "detail"
+        ]
+      },
+      "DomainReconciliationResponseDto": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "enum": [
+              "orgUnits",
+              "academicTerms",
+              "rooms",
+              "programs",
+              "courses",
+              "courseOfferings",
+              "programMemberships",
+              "studyGroups",
+              "enrollments",
+              "timetableEvents",
+              "examTerms",
+              "officialResults"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "checked",
+              "skipped",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "sourceCount": {
+            "type": "number"
+          },
+          "platformCount": {
+            "type": "number"
+          },
+          "matched": {
+            "type": "number"
+          },
+          "discrepancyCount": {
+            "type": "number"
+          },
+          "discrepancies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscrepancyResponseDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More discrepancies exist than the report lists."
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "domain",
+          "status",
+          "sourceCount",
+          "platformCount",
+          "matched",
+          "discrepancyCount",
+          "discrepancies",
+          "truncated",
+          "errorMessage"
+        ]
+      },
+      "ReconciliationReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "connectorName": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "discrepancyCount": {
+            "type": "number"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DomainReconciliationResponseDto"
+            }
+          }
+        },
+        "required": [
+          "connectorName",
+          "checkedAt",
+          "discrepancyCount",
           "domains"
         ]
       },

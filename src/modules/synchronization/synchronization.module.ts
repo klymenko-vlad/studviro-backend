@@ -14,6 +14,7 @@ import {
   ACADEMIC_IMPORTER_CLASSES,
   academicImportersProvider,
 } from './importers/academic-importers.provider';
+import { ReconciliationService } from './reconciliation.service';
 import { SyncDomainResultRepository } from './sync-domain-result.repository';
 import { SyncRunRepository } from './sync-run.repository';
 import { SyncRunService } from './sync-run.service';
@@ -38,6 +39,7 @@ import { SynchronizationService } from './synchronization.service';
     DomainSynchronizer,
     AcademicSyncService,
     SynchronizationService,
+    ReconciliationService,
     SyncRunService,
     SyncRunRepository,
     SyncDomainResultRepository,

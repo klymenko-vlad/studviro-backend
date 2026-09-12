@@ -38,6 +38,15 @@ export interface AppliedRecord<TRow> extends AppliedChange<TRow> {
   readonly id: string | null;
 }
 
+/** What reconciliation needs of a canonical row: identity and provenance, no payload. */
+export interface ProvenanceSnapshot {
+  readonly id: string;
+  readonly externalId: string;
+  readonly sourceUpdatedAt: Date | null;
+  readonly lastSynchronizedAt: Date | null;
+  readonly synchronizationStatus: string | null;
+}
+
 export class ProvenanceRepository<
   TTable extends ProvenancedTable,
 > extends InstitutionScopedRepository<TTable> {
@@ -59,6 +68,32 @@ export class ProvenanceRepository<
       ),
       { consistent: true },
     );
+  }
+
+  /** Every live row this source owns in the institution, provenance only. */
+  async listProvenance(target: SyncTarget): Promise<ProvenanceSnapshot[]> {
+    const rows = (await this.findManyIn(target.institutionId, {
+      where: eq(this.table.sourceSystem, target.sourceSystem),
+      orderBy: this.table.externalId,
+      order: 'asc',
+      consistent: true,
+    })) as unknown as {
+      id: string;
+      externalId: string;
+      sourceUpdatedAt: Date | null;
+      lastSynchronizedAt: Date | null;
+      synchronizationStatus: string | null;
+    }[];
+
+    // A row this source owns always carries an external id; the column is
+    // nullable only because platform-authored rows share the table.
+    return rows.map((row) => ({
+      id: row.id,
+      externalId: row.externalId,
+      sourceUpdatedAt: row.sourceUpdatedAt,
+      lastSynchronizedAt: row.lastSynchronizedAt,
+      synchronizationStatus: row.synchronizationStatus,
+    }));
   }
 
   tombstoneMissing(
