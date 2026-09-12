@@ -20,4 +20,9 @@ ALTER TABLE "user_emails" ADD CONSTRAINT "user_emails_institution_id_institution
 CREATE UNIQUE INDEX "user_emails_verified_address_unique_idx" ON "user_emails" USING btree ("address") WHERE "user_emails"."deleted_at" is null and "user_emails"."verified_at" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "user_emails_user_address_unique_idx" ON "user_emails" USING btree ("user_id","address") WHERE "user_emails"."deleted_at" is null;--> statement-breakpoint
 CREATE INDEX "user_emails_user_id_idx" ON "user_emails" USING btree ("user_id") WHERE "user_emails"."deleted_at" is null;--> statement-breakpoint
-CREATE UNIQUE INDEX "users_email_unique_idx" ON "users" USING btree ("email") WHERE "users"."deleted_at" is null and "users"."status" <> 'invited';
+CREATE UNIQUE INDEX "users_email_unique_idx" ON "users" USING btree ("email") WHERE "users"."deleted_at" is null and "users"."status" <> 'invited';--> statement-breakpoint
+UPDATE "users" SET "status" = 'invited', "password_hash" = NULL
+WHERE "id" IN (
+  SELECT "user_id" FROM "external_identities" WHERE "source_system" <> 'platform'
+)
+AND "id" NOT IN (SELECT "user_id" FROM "refresh_tokens");

@@ -19,20 +19,20 @@ Last updated: 2026-09-12
 
 ## Everyone
 
-| Feature                      | Backend | Frontend | State     | Notes                                                                                                                                                                                                     |
-| ---------------------------- | ------- | -------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create an account            | ✅      | ✅       | `Partial` | Defect B2. `/sign-up` signs you in and lands on `/account` with no institution and no way to join one — membership is a role assignment only an admin can grant                                           |
-| Sign in with a password      | ✅      | ✅       | `Partial` | argon2, 15-min access JWT, rotating refresh token, reuse detection. Defect B1: no reset and no email verification, so an imported account can never be signed into                                        |
-| Find my way around the app   | —       | ✅       | `Live`    | Header on every page; per-institution nav gated on the server's permission answer                                                                                                                         |
-| Sign in with a university ID | ⬜      | ⬜       | `Blocked` | OIDC strategy blocked on institutional client registration                                                                                                                                                |
-| See my roles and identities  | ✅      | ✅       | `Live`    | `/account`                                                                                                                                                                                                |
-| Link an external account     | ⬜      | ⬜       | `Planned` | Defect B1. `users/me/identities` is read-only; nothing implements the deliberate linking `IDENTITY_EMAIL_CONFLICT` demands, and the record then fails on every run and holds the `persons` watermark back |
-| Slovak and English UI        | —       | ✅       | `Partial` | `NEXT_LOCALE` cookie, no locale route segment; strings are keyed as they are built but Slovak translation is a deferred pass                                                                              |
-| Accessible interface (AA)    | —       | ⬜       | `Planned` | Step 52; no audit pass yet                                                                                                                                                                                |
-| Search my data               | ⬜      | ⬜       | `Planned` | Step 51                                                                                                                                                                                                   |
-| Recover a forgotten password | ⬜      | ⬜       | `Planned` | Defect B1. No reset, no email verification; a locked-out account stays locked out                                                                                                                         |
-| Join an institution          | ⬜      | ⬜       | `Planned` | Defect B2. No invitation, no request-to-join, no role derived from an active programme membership. Designed in ADR 0015 and 0016                                                                          |
-| Export my personal data      | ⬜      | ⬜       | `Planned` | Step 50                                                                                                                                                                                                   |
+| Feature                      | Backend | Frontend | State     | Notes                                                                                                                                                                                                                                            |
+| ---------------------------- | ------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Create an account            | ✅      | ✅       | `Partial` | Defect B2. `/sign-up` signs you in and lands on `/account` with no institution and no way to join one — membership is a role assignment only an admin can grant                                                                                  |
+| Sign in with a password      | ✅      | ✅       | `Partial` | argon2, 15-min access JWT, rotating refresh token, reuse detection. Defect B1 narrowed: an imported person is now an `invited` record with no credential, but reset, verification and claim are still missing, so they still cannot sign in      |
+| Find my way around the app   | —       | ✅       | `Live`    | Header on every page; per-institution nav gated on the server's permission answer                                                                                                                                                                |
+| Sign in with a university ID | ⬜      | ⬜       | `Blocked` | OIDC strategy blocked on institutional client registration                                                                                                                                                                                       |
+| See my roles and identities  | ✅      | ✅       | `Live`    | `/account`                                                                                                                                                                                                                                       |
+| Link an external account     | ⬜      | ⬜       | `Planned` | Defect B1 narrowed. `users/me/identities` is still read-only, but the import no longer throws `IDENTITY_EMAIL_CONFLICT` and no longer holds the `persons` watermark back; signing in at the institution's provider now claims the invited record |
+| Slovak and English UI        | —       | ✅       | `Partial` | `NEXT_LOCALE` cookie, no locale route segment; strings are keyed as they are built but Slovak translation is a deferred pass                                                                                                                     |
+| Accessible interface (AA)    | —       | ⬜       | `Planned` | Step 52; no audit pass yet                                                                                                                                                                                                                       |
+| Search my data               | ⬜      | ⬜       | `Planned` | Step 51                                                                                                                                                                                                                                          |
+| Recover a forgotten password | ⬜      | ⬜       | `Planned` | Defect B1. No reset, no email verification; a locked-out account stays locked out                                                                                                                                                                |
+| Join an institution          | ⬜      | ⬜       | `Planned` | Defect B2. No invitation, no request-to-join, no role derived from an active programme membership. Designed in ADR 0015 and 0016                                                                                                                 |
+| Export my personal data      | ⬜      | ⬜       | `Planned` | Step 50                                                                                                                                                                                                                                          |
 
 ## Student
 
@@ -64,22 +64,22 @@ Last updated: 2026-09-12
 
 ## Administrator
 
-| Feature                              | Backend | Frontend | State      | Notes                                                                                                    |
-| ------------------------------------ | ------- | -------- | ---------- | -------------------------------------------------------------------------------------------------------- |
-| Grant and revoke scoped roles        | ✅      | ✅       | `Live`     | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard`                             |
-| Create an institution                | ⬜      | ⬜       | `Planned`  | Gap G6. No `POST /institutions`; a tenant and its first admin grant exist only via SQL                   |
-| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned`  | Gaps G6, G7. Grants name subject and scope by identifier; no directory or org-unit read                  |
-| Correct an enrolment                 | ⬜      | ⬜       | `Planned`  | Gap G4. `enrollment:manage` is granted and enforced nowhere                                              |
-| Institution settings and terminology | ✅      | ✅       | `Partial`  | Defect B7. `/institutions/[id]/settings` stores terminology overrides; no label anywhere renders one     |
-| Feature flags per institution        | ✅      | ✅       | `Partial`  | Defect B6. Stored, validated, resolved and edited — and no endpoint, guard, nav item or screen reads one |
-| Choose a connector, see its health   | ✅      | ✅       | `Live`     | Selection, health and capabilities on `/institutions/[id]/settings`                                      |
-| Store connector credentials          | ✅      | ✅       | `Live`     | Declared fields per connector, encrypted at rest, never read back                                        |
-| Map connector fields                 | ⬜      | ⬜       | `Planned`  | No field mapping; a connector takes the shape the importer expects                                       |
-| Trigger and inspect a sync run       | ✅      | ✅       | `Live`     | `/institutions/[id]/sync`; freshness, per-domain results, run history, retry                             |
-| Schedule syncs                       | ⬜      | ⬜       | `Planned`  | Gap G10. `sync_run_trigger` has `scheduled` and the queue exists; nothing enqueues                       |
-| Compare source against canonical     | ✅      | ⬜       | `API only` | Step 37's report is written but **uncommitted** (gap G11); step 48 is its screen                         |
-| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned`  | Steps 37, 48                                                                                             |
-| Read audit events                    | ⬜      | ⬜       | `Planned`  | Step 49                                                                                                  |
+| Feature                              | Backend | Frontend | State     | Notes                                                                                                                   |
+| ------------------------------------ | ------- | -------- | --------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Grant and revoke scoped roles        | ✅      | ✅       | `Live`    | `/institutions/[id]/roles`; permissions, scope hierarchy, `PermissionsGuard`                                            |
+| Create an institution                | ⬜      | ⬜       | `Planned` | Gap G6. No `POST /institutions`; a tenant and its first admin grant exist only via SQL                                  |
+| Find a person or scope for a grant   | ⬜      | ⬜       | `Planned` | Gaps G6, G7. Grants name subject and scope by identifier; no directory or org-unit read                                 |
+| Correct an enrolment                 | ⬜      | ⬜       | `Planned` | Gap G4. `enrollment:manage` is granted and enforced nowhere                                                             |
+| Institution settings and terminology | ✅      | ✅       | `Partial` | Defect B7. `/institutions/[id]/settings` stores terminology overrides; no label anywhere renders one                    |
+| Feature flags per institution        | ✅      | ✅       | `Partial` | Defect B6. Stored, validated, resolved and edited — and no endpoint, guard, nav item or screen reads one                |
+| Choose a connector, see its health   | ✅      | ✅       | `Live`    | Selection, health and capabilities on `/institutions/[id]/settings`                                                     |
+| Store connector credentials          | ✅      | ✅       | `Live`    | Declared fields per connector, encrypted at rest, never read back                                                       |
+| Map connector fields                 | ⬜      | ⬜       | `Planned` | No field mapping; a connector takes the shape the importer expects                                                      |
+| Trigger and inspect a sync run       | ✅      | ✅       | `Live`    | `/institutions/[id]/sync`; freshness, per-domain results, run history, retry                                            |
+| Schedule syncs                       | ⬜      | ⬜       | `Planned` | Gap G10. `sync_run_trigger` has `scheduled` and the queue exists; nothing enqueues                                      |
+| Compare source against canonical     | ✅      | ✅       | `Live`    | `/institutions/[id]/sync` reports missing, stale and conflicting records per domain on demand; resolving one is step 48 |
+| Resolve mapping conflicts            | ⬜      | ⬜       | `Planned` | Steps 37, 48                                                                                                            |
+| Read audit events                    | ⬜      | ⬜       | `Planned` | Step 49                                                                                                                 |
 
 ## Platform
 
@@ -89,7 +89,7 @@ Last updated: 2026-09-12
 | Mock SIS connector                                                  | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                        |
 | Synchronization engine                                              | `Partial` | Imports the SIS into canonical tables; enrolments, offerings and course results are readable |
 | Retries, tombstones, watermarks                                     | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures                 |
-| Reconciliation checks                                               | `Planned` | Step 37                                                                                      |
+| Reconciliation checks                                               | `Live`    | Step 37; read-only — nothing resolves a discrepancy yet                                      |
 | Learning-system data (spaces, activities, assessments, submissions) | `Planned` | Gap G2. Six canonical tables with no importer, no sync domain, no read and no screen         |
 | Mock LMS connector                                                  | `Planned` | Gap G2. Not named by any of the 71 steps; the unblocker for everything Moodle gates          |
 | Write-back to source systems                                        | `Planned` | Gap G1. Two optional connector methods, no caller, no cancel, no outbox, no retry            |
