@@ -4,6 +4,7 @@ import { PermissionDeniedError } from '../../common/errors/domain.error';
 import type { RoleAssignment } from '../../database/schema';
 
 import { AuthorizationService } from './authorization.service';
+import type { DerivedRole, DerivedRolesRepository } from './derived-roles.repository';
 import type { RoleAssignmentsRepository } from './role-assignments.repository';
 import type { ResolvedScope, ScopeHierarchyService } from './scope-hierarchy.service';
 
@@ -32,16 +33,23 @@ const offeringScope: ResolvedScope = {
   ]),
 };
 
-function serviceWith(resolved: ResolvedScope | undefined, assignments: RoleAssignment[]) {
+function serviceWith(
+  resolved: ResolvedScope | undefined,
+  assignments: RoleAssignment[],
+  derived: DerivedRole[] = [],
+) {
   const hierarchy = { resolve: vi.fn().mockResolvedValue(resolved) };
   const repository = { findActiveForUser: vi.fn().mockResolvedValue(assignments) };
+  const derivedRoles = { findFor: vi.fn().mockResolvedValue(derived) };
 
   return {
     hierarchy,
     repository,
+    derivedRoles,
     service: new AuthorizationService(
       repository as unknown as RoleAssignmentsRepository,
       hierarchy as unknown as ScopeHierarchyService,
+      derivedRoles as unknown as DerivedRolesRepository,
     ),
   };
 }
@@ -137,5 +145,69 @@ describe('AuthorizationService', () => {
     const { service } = serviceWith(offeringScope, []);
 
     await expect(service.assert(request)).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  describe('derived roles', () => {
+    it('derives student permissions from an active programme membership', async () => {
+      const { service } = serviceWith(
+        offeringScope,
+        [],
+        [{ role: 'student', scope: { type: 'institution', id: INSTITUTION } }],
+      );
+
+      await expect(service.can({ ...request, permission: 'exam:register' })).resolves.toBe(
+        true,
+      );
+    });
+
+    it('derives teacher permissions from a teaching assignment at the offering', async () => {
+      const { service } = serviceWith(
+        offeringScope,
+        [],
+        [{ role: 'teacher', scope: { type: 'course_offering', id: OFFERING } }],
+      );
+
+      await expect(service.can(request)).resolves.toBe(true);
+    });
+
+    it('derives teaching_assistant rather than teacher for an assistant assignment', async () => {
+      const { service } = serviceWith(
+        offeringScope,
+        [],
+        [{ role: 'teaching_assistant', scope: { type: 'course_offering', id: OFFERING } }],
+      );
+
+      await expect(service.can(request)).resolves.toBe(false);
+      await expect(service.can({ ...request, permission: 'grade:propose' })).resolves.toBe(
+        true,
+      );
+    });
+
+    it('ignores a derived role at a scope outside the request', async () => {
+      const { service } = serviceWith(
+        offeringScope,
+        [],
+        [
+          {
+            role: 'teacher',
+            scope: { type: 'course_offering', id: '55555555-5555-5555-5555-555555555555' },
+          },
+        ],
+      );
+
+      await expect(service.can(request)).resolves.toBe(false);
+    });
+
+    it('unions a derived role with a granted one', async () => {
+      const { service } = serviceWith(
+        offeringScope,
+        [assignment({ role: 'course_coordinator' })],
+        [{ role: 'teacher', scope: { type: 'course_offering', id: OFFERING } }],
+      );
+
+      const roles = await service.rolesIn(USER, request.scope);
+
+      expect(roles).toEqual(expect.arrayContaining(['teacher', 'course_coordinator']));
+    });
   });
 });

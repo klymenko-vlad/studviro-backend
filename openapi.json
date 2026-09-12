@@ -2334,7 +2334,7 @@
             "access-token": []
           }
         ],
-        "summary": "Grant a role in a scope",
+        "summary": "Grant a role in a scope, checked against the scope granted on",
         "tags": [
           "role-assignments"
         ]
@@ -2411,7 +2411,7 @@
             "access-token": []
           }
         ],
-        "summary": "Revoke a role assignment",
+        "summary": "Revoke a role assignment, checked against the assignment scope",
         "tags": [
           "role-assignments"
         ]
@@ -4568,6 +4568,7 @@
         "properties": {
           "id": {
             "type": "string",
+            "nullable": true,
             "format": "uuid"
           },
           "institutionId": {
@@ -4614,14 +4615,25 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "source": {
+            "enum": [
+              "granted",
+              "derived"
+            ],
+            "type": "string"
+          },
+          "revocable": {
+            "type": "boolean"
           }
         },
         "required": [
-          "id",
           "institutionId",
           "userId",
           "role",
-          "scopeType"
+          "scopeType",
+          "source",
+          "revocable"
         ]
       },
       "GrantRoleDto": {
@@ -4633,9 +4645,6 @@
           },
           "role": {
             "enum": [
-              "student",
-              "teacher",
-              "teaching_assistant",
               "course_coordinator",
               "program_coordinator",
               "registrar",

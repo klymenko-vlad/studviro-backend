@@ -5,13 +5,17 @@ import {
   ConflictError,
   EntityNotFoundError,
   InvalidInputError,
+  PermissionDeniedError,
 } from '../../common/errors/domain.error';
 import { roleAssignments, type NewRoleAssignment } from '../../database/schema';
 import { UsersRepository } from '../users/users.repository';
 
 import type { ScopeRef } from './authorization.constants';
+import { AuthorizationService } from './authorization.service';
+import { DerivedRolesRepository } from './derived-roles.repository';
 import { GrantRoleDto } from './dto/grant-role.dto';
 import { RoleAssignmentResponseDto } from './dto/role-assignment-response.dto';
+import { isGrantable } from './permissions';
 import { RoleAssignmentsRepository } from './role-assignments.repository';
 import { ScopeHierarchyService } from './scope-hierarchy.service';
 
@@ -21,6 +25,8 @@ export class RoleAssignmentsService {
     private readonly assignments: RoleAssignmentsRepository,
     private readonly users: UsersRepository,
     private readonly hierarchy: ScopeHierarchyService,
+    private readonly authorization: AuthorizationService,
+    private readonly derivedRoles: DerivedRolesRepository,
   ) {}
 
   async listForInstitution(
@@ -32,16 +38,42 @@ export class RoleAssignmentsService {
       orderBy: roleAssignments.createdAt,
     });
 
-    return found.map((assignment) => RoleAssignmentResponseDto.fromEntity(assignment));
+    const granted = found.map((assignment) => RoleAssignmentResponseDto.fromEntity(assignment));
+    if (!userId) return granted;
+
+    const derived = await this.derivedRoles.findFor(institutionId, userId);
+
+    return [
+      ...granted,
+      ...derived.map((entry) =>
+        RoleAssignmentResponseDto.fromDerived(institutionId, userId, entry),
+      ),
+    ];
   }
 
   async listForUser(userId: string): Promise<RoleAssignmentResponseDto[]> {
     const found = await this.assignments.findActiveForUserAnywhere(userId);
+    const granted = found.map((assignment) => RoleAssignmentResponseDto.fromEntity(assignment));
 
-    return found.map((assignment) => RoleAssignmentResponseDto.fromEntity(assignment));
+    const institutionIds = await this.derivedRoles.institutionsFor(userId);
+    const derivedByInstitution = await Promise.all(
+      institutionIds.map(async (institutionId) => {
+        const derived = await this.derivedRoles.findFor(institutionId, userId);
+
+        return derived.map((entry) =>
+          RoleAssignmentResponseDto.fromDerived(institutionId, userId, entry),
+        );
+      }),
+    );
+
+    return [...granted, ...derivedByInstitution.flat()];
   }
 
-  async grant(institutionId: string, dto: GrantRoleDto): Promise<RoleAssignmentResponseDto> {
+  async grant(
+    institutionId: string,
+    dto: GrantRoleDto,
+    granterId: string,
+  ): Promise<RoleAssignmentResponseDto> {
     const scope = this.scopeOf(institutionId, dto);
     this.assertValidityWindow(dto);
 
@@ -55,6 +87,8 @@ export class RoleAssignmentsService {
       );
     }
 
+    await this.assertMayGrant(granterId, scope, dto.role);
+
     if (!(await this.users.existsById(dto.userId))) {
       throw new EntityNotFoundError('user', dto.userId);
     }
@@ -66,9 +100,63 @@ export class RoleAssignmentsService {
     return RoleAssignmentResponseDto.fromEntity(created);
   }
 
-  async revoke(institutionId: string, id: string): Promise<void> {
-    await this.assignments.findByIdInOrFail(institutionId, id);
+  async revoke(institutionId: string, id: string, revokerId: string): Promise<void> {
+    const assignment = await this.assignments.findByIdInOrFail(institutionId, id);
+    const scope = this.scopeOfAssignment(
+      institutionId,
+      assignment.scopeType,
+      assignment.scopeId,
+    );
+
+    if (
+      !(await this.authorization.can({ userId: revokerId, permission: 'role:assign', scope }))
+    ) {
+      throw new PermissionDeniedError(
+        'ROLE_ASSIGN_SCOPE_DENIED',
+        'You do not hold role:assign at this scope',
+      );
+    }
+
+    if (assignment.role === 'institution_admin') {
+      const active = await this.assignments.findActiveByRole(
+        institutionId,
+        'institution_admin',
+      );
+      const remaining = active.filter((row) => row.id !== assignment.id);
+      if (remaining.length === 0) {
+        throw new ConflictError(
+          'LAST_INSTITUTION_ADMIN',
+          'An institution must always keep at least one institution administrator',
+        );
+      }
+    }
+
     await this.assignments.softDelete(id);
+  }
+
+  private async assertMayGrant(
+    granterId: string,
+    scope: ScopeRef,
+    role: GrantRoleDto['role'],
+  ): Promise<void> {
+    const [mayAssign, granterPermissions] = await Promise.all([
+      this.authorization.can({ userId: granterId, permission: 'role:assign', scope }),
+      this.authorization.permissionsIn(granterId, scope),
+    ]);
+
+    if (!mayAssign) {
+      throw new PermissionDeniedError(
+        'ROLE_ASSIGN_SCOPE_DENIED',
+        'You do not hold role:assign at this scope',
+      );
+    }
+
+    if (!isGrantable(new Set(granterPermissions), role)) {
+      throw new PermissionDeniedError(
+        'ROLE_NOT_HELD_BY_GRANTER',
+        'You cannot grant a role you do not hold yourself',
+      );
+    }
   }
 
   private scopeOf(institutionId: string, dto: GrantRoleDto): ScopeRef {
@@ -91,6 +179,16 @@ export class RoleAssignmentsService {
     }
 
     return { type: dto.scopeType, id: dto.scopeId };
+  }
+
+  private scopeOfAssignment(
+    institutionId: string,
+    scopeType: ScopeRef['type'],
+    scopeId: string | null,
+  ): ScopeRef {
+    return scopeType === 'institution' || scopeId === null
+      ? { type: 'institution', id: institutionId }
+      : { type: scopeType, id: scopeId };
   }
 
   private assertValidityWindow(dto: GrantRoleDto): void {

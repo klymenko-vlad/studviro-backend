@@ -3,19 +3,19 @@ import { Type } from 'class-transformer';
 import { IsDate, IsIn, IsOptional, IsUUID } from 'class-validator';
 
 import {
-  CANONICAL_ROLES,
   ROLE_SCOPE_TYPES,
   type CanonicalRole,
   type RoleScopeType,
 } from '../../../database/schema';
+import { GRANTABLE_ROLES } from '../authorization.constants';
 
 export class GrantRoleDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   userId!: string;
 
-  @ApiProperty({ enum: CANONICAL_ROLES })
-  @IsIn(CANONICAL_ROLES)
+  @ApiProperty({ enum: GRANTABLE_ROLES })
+  @IsIn(GRANTABLE_ROLES)
   role!: CanonicalRole;
 
   @ApiProperty({ enum: ROLE_SCOPE_TYPES })

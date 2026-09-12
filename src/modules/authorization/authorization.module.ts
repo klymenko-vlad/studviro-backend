@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from '../users/users.module';
 
 import { AuthorizationService } from './authorization.service';
+import { DerivedRolesRepository } from './derived-roles.repository';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { MyPermissionsController } from './my-permissions.controller';
 import { MyRolesController } from './my-roles.controller';
@@ -21,6 +22,7 @@ import { ScopeHierarchyService } from './scope-hierarchy.service';
     RoleAssignmentsService,
     ScopeHierarchyService,
     RoleAssignmentsRepository,
+    DerivedRolesRepository,
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
   exports: [AuthorizationService, RoleAssignmentsRepository],

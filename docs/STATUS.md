@@ -39,6 +39,13 @@ reasoning lives in `docs/adr/`. In short:
   credential, and no longer throws `IDENTITY_EMAIL_CONFLICT` when the human self-registered first.
   `user_emails` separates an asserted address from a proven one; only a verified address is
   globally unique, and signing in at the institution's provider claims the record. ADR 0015 step (a).
+- **Derived roles and the grant rules** (B13; narrows B2) — `student` derives from an active
+  `program_membership` and `teacher`/`teaching_assistant` from a `teaching_assignments` row, so an
+  imported person has permission the moment their academic record exists; neither is revocable
+  through the grant screen. The grant screen offers only the five roles an academic record cannot
+  express. `role:assign` is checked at the scope being granted or revoked on, not the institution;
+  a caller may not hand out a role whose permissions exceed their own, and an institution's last
+  `institution_admin` cannot be revoked. ADR 0016.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -68,13 +75,13 @@ the backlog_ (G1–G12, things not built) and _Business-logic and user-flow defe
 built to a rule the model does not enforce). `Feature Status.md` is corrected where a `Live` row
 turned out not to be. Read those before starting; the headlines:
 
-- **Onboarding is still the largest hole**, though narrower. Step (a) closed the watermark poisoning
-  and gave imported people a claimable `invited` record, but there is still no invitation, no
-  accept-and-claim, no merge and no password reset, so an imported person cannot sign in with a
-  password (**B1**). Membership _is_ a role assignment, only the admin screen creates one, and the
-  first admin needs SQL — so a new account lands on `/account` with nowhere to go and an import
-  yields permission-less accounts (**B2**, with G6, G7); `role:assign` is checked at the wrong
-  scope (**B13**).
+- **Onboarding is still the largest hole**, though narrower still. Steps (a) and (b) closed the
+  watermark poisoning and gave imported people permission the moment their academic record exists,
+  but there is still no invitation, no accept-and-claim, no merge and no password reset, so an
+  imported person cannot sign in with a password (**B1**). The first `institution_admin` needs SQL,
+  there is no institution creation, org-unit read or person directory, so a fresh account still has
+  nowhere to go and an administrative role still has to be granted by typing a UUID
+  (**B2** narrowed, **G6**, **G7**).
 - **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
   columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
   attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
@@ -107,35 +114,31 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — onboarding step (b): derived roles and the grant rules
+## Next task — onboarding step (c): institution creation, org-unit read, person directory
 
 Read `adr/0015-accounts-and-institutional-membership.md` and
-`adr/0016-administrative-authority.md` first; step (a), the identity schema, landed on
-2026-09-12 and the sequence continues from there.
+`adr/0016-administrative-authority.md` first; steps (a) the identity schema and (b) derived roles
+and the grant rules both landed 2026-09-12 and the sequence continues from there.
 
-**Take step (b).** Today membership is a role assignment and nothing but the admin grant screen
-creates one, so an import yields thousands of permission-less accounts (**B2**) — and the grant
-screen itself is wrong at the scope (**B13**): every role-assignment route requires
-`role:assign` at `INSTITUTION_SCOPE`, so a faculty-scoped `org_unit_manager` can grant nothing
-while an institution-scoped one can grant `institution_admin` to themselves. Step (b) is:
+**Take step (c)** (**G6**, **G7**). Today a tenant, its org units and its first `institution_admin`
+grant exist only by hand-writing SQL, and a grant names its subject and scope by raw UUID because
+there is no directory to look either up in. Build:
 
-1. Derive `student` from an active `program_membership` and `teacher` from a teaching
-   assignment, instead of a typed-in UUID grant, so an imported person has the permissions their
-   academic life implies the moment they claim their record.
-2. Check `role:assign` at the scope being granted on, not at the institution.
-3. Refuse to grant a role the caller does not themselves hold, and refuse to revoke the last
-   `institution_admin` of an institution.
+1. `POST /institutions` behind the platform-operator `RolesGuard` tier (ADR 0016), creating the
+   institution and its first `institution_admin` invitation target.
+2. Org-unit read: list and fetch org units within an institution, so a grant's scope field can be
+   chosen rather than typed.
+3. A person directory: list people within an institution (name, status, derived roles) behind
+   `role:read` or a similar read permission, so a grant's subject can be chosen rather than typed.
 
-It is backend-heavy; the frontend half is the grant screen honouring the narrower answer rather
-than a second copy of the rule.
+This also retires the hand-edited demo data this loop has repeatedly needed to reach a screen —
+worth fixing as part of this step if it falls out naturally, but do not let it become the step.
 
-**Then, in order:** (c) institution creation, the org-unit read and the person directory (**G6**,
-**G7**), which also retires the hand-edited demo data; (d) invitations, accept-and-claim, merge
-and password reset, which closes B1.
-Then **step 48's resolution half** behind an ADR
-on override-vs-winner; **G2**, a `mock-lms` connector and the learning-domain importers, which no
-numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
-(grade entry); and B6 (make the flags mean something).
+**Then, in order:** (d) invitations, accept-and-claim, merge and password reset, which closes B1.
+Then **step 48's resolution half** behind an ADR on override-vs-winner; **G2**, a `mock-lms`
+connector and the learning-domain importers, which no numbered step covers; **G1's write-back
+ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the flags
+mean something).
 
 ## Caveats
 
@@ -149,9 +152,12 @@ numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycl
   longer sends rows that fail the count, so the two numbers match except against a stale cache.
   Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 440.9 kB gzipped against the 455 kB guard — the reconciliation table cost
-  2.8 kB. `pnpm size` is green with about 14 kB of headroom left; take the Radix Select swap before
-  raising the guard, not before spending what remains.
+- The client bundle measures 444.8 kB gzipped against the 455 kB guard — step (b)'s derived-role
+  badge and narrower grant form cost 3.9 kB. `pnpm size` is green with about 10 kB of headroom left;
+  take the Radix Select swap before raising the guard, not before spending what remains.
+- Listing derived roles is per person (`GET .../role-assignments?userId=`), not institution-wide:
+  enumerating every derived membership across an institution needs a directory query this step did
+  not build. Step (c)'s person directory is the natural place to add it.
 - Local development needs uncommitted `.env` files, with the backend's ports matching what
   `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
   demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run. Every

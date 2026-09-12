@@ -3,7 +3,11 @@ import { and, eq, gt, isNull, lte, or, type SQL } from 'drizzle-orm';
 
 import type { Transaction } from '../../database/database.tokens';
 import { InstitutionScopedRepository } from '../../database/repository/institution-scoped.repository';
-import { roleAssignments, type RoleAssignment } from '../../database/schema';
+import {
+  roleAssignments,
+  type CanonicalRole,
+  type RoleAssignment,
+} from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 @Injectable()
@@ -44,6 +48,22 @@ export class RoleAssignmentsRepository extends InstitutionScopedRepository<
       institutionId,
       {
         where: and(eq(roleAssignments.userId, userId), activeAt(at)),
+        consistent: true,
+      },
+      tx,
+    );
+  }
+
+  findActiveByRole(
+    institutionId: string,
+    role: CanonicalRole,
+    at: Date = new Date(),
+    tx?: Transaction,
+  ): Promise<RoleAssignment[]> {
+    return this.findManyIn(
+      institutionId,
+      {
+        where: and(eq(roleAssignments.role, role), activeAt(at)),
         consistent: true,
       },
       tx,

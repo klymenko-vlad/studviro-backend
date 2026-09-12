@@ -1,6 +1,13 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { institutions, orgUnits, roleAssignments } from '../../src/database/schema';
+import {
+  institutions,
+  orgUnits,
+  programMemberships,
+  programs,
+  roleAssignments,
+} from '../../src/database/schema';
 import { createTestHarness, type ActingUser, type TestHarness } from '../setup/app-harness';
 
 const only = <T>(rows: T[]): T => {
@@ -19,13 +26,16 @@ describe('Role assignments (e2e)', () => {
   const grantInDatabase = async (
     userId: string,
     role: 'institution_admin' | 'registrar' | 'student',
+    scope: { scopeType: 'institution' | 'org_unit'; scopeId?: string } = {
+      scopeType: 'institution',
+    },
   ): Promise<void> => {
     await harness.db.insert(roleAssignments).values({
       institutionId,
       userId,
       role,
-      scopeType: 'institution',
-      scopeId: null,
+      scopeType: scope.scopeType,
+      scopeId: scope.scopeId ?? null,
     });
   };
 
@@ -84,7 +94,12 @@ describe('Role assignments (e2e)', () => {
       method: 'POST',
       url: path(),
       headers: actor.headers,
-      payload: { userId: subject.user.id, role: 'teacher', scopeType: 'org_unit' },
+      payload: {
+        userId: subject.user.id,
+        role: 'registrar',
+        scopeType: 'org_unit',
+        scopeId: facultyId,
+      },
     });
 
     expect(response.statusCode).toBe(403);
@@ -100,7 +115,7 @@ describe('Role assignments (e2e)', () => {
       headers: actor.headers,
       payload: {
         userId: subject.user.id,
-        role: 'teacher',
+        role: 'registrar',
         scopeType: 'org_unit',
         scopeId: facultyId,
       },
@@ -109,7 +124,7 @@ describe('Role assignments (e2e)', () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({
       userId: subject.user.id,
-      role: 'teacher',
+      role: 'registrar',
       scopeType: 'org_unit',
       scopeId: facultyId,
     });
@@ -135,7 +150,7 @@ describe('Role assignments (e2e)', () => {
       headers: actor.headers,
       payload: {
         userId: subject.user.id,
-        role: 'teacher',
+        role: 'registrar',
         scopeType: 'org_unit',
         scopeId: foreignUnit.id,
       },
@@ -151,7 +166,7 @@ describe('Role assignments (e2e)', () => {
 
     const payload = {
       userId: subject.user.id,
-      role: 'teacher',
+      role: 'registrar',
       scopeType: 'org_unit',
       scopeId: facultyId,
     };
@@ -178,7 +193,7 @@ describe('Role assignments (e2e)', () => {
       headers: actor.headers,
       payload: {
         userId: subject.user.id,
-        role: 'teacher',
+        role: 'registrar',
         scopeType: 'org_unit',
         scopeId: facultyId,
       },
@@ -264,5 +279,141 @@ describe('Role assignments (e2e)', () => {
     });
 
     expect(response.json()).toHaveLength(0);
+  });
+
+  it('lets a faculty-scoped org_unit_manager grant within their own faculty (B13)', async () => {
+    const actor = await harness.actingAs();
+    await harness.db.insert(roleAssignments).values({
+      institutionId,
+      userId: actor.user.id,
+      role: 'org_unit_manager',
+      scopeType: 'org_unit',
+      scopeId: facultyId,
+    });
+
+    const response = await harness.inject({
+      method: 'POST',
+      url: path(),
+      headers: actor.headers,
+      payload: {
+        userId: subject.user.id,
+        role: 'registrar',
+        scopeType: 'org_unit',
+        scopeId: facultyId,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('never lets an institution-scoped org_unit_manager grant institution_admin to themselves (B13)', async () => {
+    const actor = await harness.actingAs();
+    await harness.db.insert(roleAssignments).values({
+      institutionId,
+      userId: actor.user.id,
+      role: 'org_unit_manager',
+      scopeType: 'institution',
+      scopeId: null,
+    });
+
+    const response = await harness.inject({
+      method: 'POST',
+      url: path(),
+      headers: actor.headers,
+      payload: { userId: actor.user.id, role: 'institution_admin', scopeType: 'institution' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: 'ROLE_NOT_HELD_BY_GRANTER' });
+  });
+
+  it('refuses to grant a role the caller does not themselves hold', async () => {
+    const actor = await harness.actingAs();
+    await harness.db.insert(roleAssignments).values({
+      institutionId,
+      userId: actor.user.id,
+      role: 'org_unit_manager',
+      scopeType: 'institution',
+      scopeId: null,
+    });
+
+    const response = await harness.inject({
+      method: 'POST',
+      url: path(),
+      headers: actor.headers,
+      payload: { userId: subject.user.id, role: 'institution_admin', scopeType: 'institution' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: 'ROLE_NOT_HELD_BY_GRANTER' });
+  });
+
+  it('refuses to revoke the last institution_admin of an institution', async () => {
+    const actor = await harness.actingAs();
+    await grantInDatabase(actor.user.id, 'institution_admin');
+    const [assignment] = await harness.db
+      .select({ id: roleAssignments.id })
+      .from(roleAssignments)
+      .where(eq(roleAssignments.userId, actor.user.id));
+
+    const response = await harness.inject({
+      method: 'DELETE',
+      url: path(`/${assignment?.id}`),
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'LAST_INSTITUTION_ADMIN' });
+  });
+
+  it('allows revoking an institution_admin when another one remains', async () => {
+    const actor = await harness.actingAs();
+    await grantInDatabase(actor.user.id, 'institution_admin');
+    await grantInDatabase(subject.user.id, 'institution_admin');
+    const [assignment] = await harness.db
+      .select({ id: roleAssignments.id })
+      .from(roleAssignments)
+      .where(eq(roleAssignments.userId, actor.user.id));
+
+    const response = await harness.inject({
+      method: 'DELETE',
+      url: path(`/${assignment?.id}`),
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it('derives student from an active programme membership rather than a grant', async () => {
+    const actor = await harness.actingAs();
+    await grantInDatabase(actor.user.id, 'institution_admin');
+
+    const program = only(
+      await harness.db
+        .insert(programs)
+        .values({ institutionId, orgUnitId: facultyId, code: 'INF-BC', name: 'Informatics' })
+        .returning(),
+    );
+    await harness.db.insert(programMemberships).values({
+      institutionId,
+      programId: program.id,
+      userId: subject.user.id,
+      status: 'active',
+    });
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: path(`?userId=${subject.user.id}`),
+      headers: actor.headers,
+    });
+
+    expect(response.json()).toContainEqual(
+      expect.objectContaining({
+        role: 'student',
+        source: 'derived',
+        revocable: false,
+        id: null,
+      }),
+    );
   });
 });

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { CANONICAL_ROLES } from '../../database/schema';
 
-import { grants, permissionsForRoles, PERMISSIONS, ROLE_PERMISSIONS } from './permissions';
+import {
+  grants,
+  isGrantable,
+  permissionsForRoles,
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+} from './permissions';
 
 describe('permissions', () => {
   it('defines a permission set for every canonical role', () => {
@@ -67,5 +73,25 @@ describe('permissions', () => {
 
   it('grants nothing for an empty role set', () => {
     expect(permissionsForRoles([]).size).toBe(0);
+  });
+
+  describe('isGrantable', () => {
+    it('lets a caller grant a role whose permissions are a subset of their own', () => {
+      const orgUnitManager = new Set(ROLE_PERMISSIONS.org_unit_manager);
+
+      expect(isGrantable(orgUnitManager, 'registrar')).toBe(true);
+    });
+
+    it('refuses a role that exceeds the caller own permissions', () => {
+      const orgUnitManager = new Set(ROLE_PERMISSIONS.org_unit_manager);
+
+      expect(isGrantable(orgUnitManager, 'institution_admin')).toBe(false);
+    });
+
+    it('is the fixed point that may grant itself', () => {
+      const institutionAdmin = new Set(ROLE_PERMISSIONS.institution_admin);
+
+      expect(isGrantable(institutionAdmin, 'institution_admin')).toBe(true);
+    });
   });
 });

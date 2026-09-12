@@ -87,3 +87,10 @@ export function permissionsForRoles(roles: Iterable<CanonicalRole>): ReadonlySet
 
   return granted;
 }
+
+export function isGrantable(
+  granterPermissions: ReadonlySet<Permission>,
+  role: CanonicalRole,
+): boolean {
+  return ROLE_PERMISSIONS[role].every((permission) => granterPermissions.has(permission));
+}
