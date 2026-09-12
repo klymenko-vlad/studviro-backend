@@ -62,7 +62,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensDto> {
-    const user = await this.usersRepository.findByEmail(dto.email, { consistent: true });
+    const user = await this.usersRepository.findSignInCandidate(dto.email, {
+      consistent: true,
+    });
 
     const passwordMatches = await this.passwords.verify(
       user?.passwordHash ?? ABSENT_USER_DIGEST,
@@ -71,7 +73,7 @@ export class AuthService {
 
     // One error for "no such email" and for "wrong password". Distinguishing
     // them tells an attacker which half of the guess was right.
-    if (!user || !passwordMatches) throw invalidCredentials();
+    if (!user?.passwordHash || !passwordMatches) throw invalidCredentials();
 
     const fresh = this.passwords.needsRehash(user.passwordHash)
       ? await this.usersRepository.update(user.id, {

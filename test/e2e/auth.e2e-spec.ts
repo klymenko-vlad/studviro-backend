@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { users } from '../../src/database/schema';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
 describe('Auth (e2e)', () => {
@@ -89,6 +90,38 @@ describe('Auth (e2e)', () => {
       // which email addresses hold accounts.
       expect(unknown.statusCode).toBe(wrong.statusCode);
       expect(unknown.json().code).toBe(wrong.json().code);
+    });
+
+    it('refuses an account that has been suspended', async () => {
+      await harness.db.update(users).set({ status: 'suspended' });
+
+      const response = await login();
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().code).toBe('INVALID_CREDENTIALS');
+    });
+
+    it('ignores an invited record sharing the address with a real account', async () => {
+      await harness.db.insert(users).values({
+        email: credentials.email,
+        displayName: 'Imported Ada',
+        status: 'invited',
+      });
+
+      expect((await login()).statusCode).toBe(200);
+    });
+  });
+
+  describe('suspension', () => {
+    it('stops an outstanding access token the moment the account is suspended', async () => {
+      const session = (await register()).json();
+
+      await harness.db.update(users).set({ status: 'suspended' });
+
+      const response = await me(session.accessToken);
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().code).toBe('TOKEN_REVOKED');
     });
   });
 

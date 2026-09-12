@@ -1,4 +1,4 @@
-import { eq, inArray, isNull, like } from 'drizzle-orm';
+import { eq, inArray, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -10,6 +10,8 @@ import { users } from '../../src/database/schema';
 import { TransactionHost } from '../../src/database/transaction.host';
 import { UsersRepository } from '../../src/modules/users/users.repository';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
+
+const LIVE_ACCOUNT = sql`${users.deletedAt} is null and ${users.status} <> 'invited'`;
 
 describe('BaseRepository — bulk, upsert, cursor and transactions (e2e)', () => {
   let harness: TestHarness;
@@ -80,7 +82,7 @@ describe('BaseRepository — bulk, upsert, cursor and transactions (e2e)', () =>
       // same predicate or Postgres cannot match an arbiter index.
       const row = await repo.upsert(make(1), {
         target: users.email,
-        targetWhere: isNull(users.deletedAt),
+        targetWhere: LIVE_ACCOUNT,
       });
 
       expect(row?.displayName).toBe('User 1');
@@ -92,7 +94,7 @@ describe('BaseRepository — bulk, upsert, cursor and transactions (e2e)', () =>
 
       const row = await repo.upsert(
         { ...make(1), displayName: 'Renamed' },
-        { target: users.email, targetWhere: isNull(users.deletedAt) },
+        { target: users.email, targetWhere: LIVE_ACCOUNT },
       );
 
       expect(row?.id).toBe(created.id);
@@ -107,7 +109,7 @@ describe('BaseRepository — bulk, upsert, cursor and transactions (e2e)', () =>
         { ...make(1), displayName: 'Renamed' },
         {
           target: users.email,
-          targetWhere: isNull(users.deletedAt),
+          targetWhere: LIVE_ACCOUNT,
           setWhere: eq(users.displayName, 'Never matches'),
         },
       );

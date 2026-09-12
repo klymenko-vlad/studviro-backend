@@ -20,15 +20,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   /**
-   * A valid signature is not sufficient. The token version is re-read on every
-   * request so that signing out everywhere, a password change, or a deleted
-   * account take effect immediately rather than after the access TTL lapses —
-   * which is the entire reason `users.token_version` exists.
+   * A valid signature is not sufficient. The token version and the account
+   * status are re-read on every request so that signing out everywhere, a
+   * password change, a suspension or a deleted account take effect immediately
+   * rather than after the access TTL lapses — which is the entire reason
+   * `users.token_version` exists.
    */
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
     const user = await this.users.findById(payload.sub, { consistent: true });
 
-    if (user?.tokenVersion !== payload.tv) {
+    if (user?.tokenVersion !== payload.tv || user.status !== 'active') {
       throw new UnauthorizedException({
         code: 'TOKEN_REVOKED',
         message: 'This session is no longer valid',

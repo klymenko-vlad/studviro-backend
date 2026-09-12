@@ -7,11 +7,17 @@ import { ExternalIdentitiesRepository } from './external-identities.repository';
 import { ExternalIdentitiesService } from './external-identities.service';
 import { IdentityLinkingService } from './identity-linking.service';
 import { MyIdentitiesController } from './my-identities.controller';
+import { UserEmailsRepository } from './user-emails.repository';
 
 @Module({
   imports: [UsersModule, CryptoModule],
   controllers: [MyIdentitiesController],
-  providers: [IdentityLinkingService, ExternalIdentitiesService, ExternalIdentitiesRepository],
-  exports: [IdentityLinkingService, ExternalIdentitiesRepository],
+  providers: [
+    IdentityLinkingService,
+    ExternalIdentitiesService,
+    ExternalIdentitiesRepository,
+    UserEmailsRepository,
+  ],
+  exports: [IdentityLinkingService, ExternalIdentitiesRepository, UserEmailsRepository],
 })
 export class IdentityModule {}

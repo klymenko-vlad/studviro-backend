@@ -29,10 +29,12 @@ import { refreshTokens } from './refresh-tokens';
 import { roleAssignments } from './role-assignments';
 import { examRegistrations, examTerms, rooms, timetableEvents } from './scheduling';
 import { syncDomainResults, syncRuns, syncWatermarks } from './synchronization';
+import { userEmails } from './user-emails';
 import { users } from './users';
 
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
+  emails: many(userEmails),
   externalIdentities: many(externalIdentities),
   roleAssignments: many(roleAssignments),
   programMemberships: many(programMemberships),
@@ -43,6 +45,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   assessmentResults: many(assessmentResults, { relationName: 'assessmentResultSubject' }),
   activityCompletions: many(activityCompletions),
   submissionRefs: many(submissionRefs),
+}));
+
+export const userEmailsRelations = relations(userEmails, ({ one }) => ({
+  user: one(users, { fields: [userEmails.userId], references: [users.id] }),
+  institution: one(institutions, {
+    fields: [userEmails.institutionId],
+    references: [institutions.id],
+  }),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({

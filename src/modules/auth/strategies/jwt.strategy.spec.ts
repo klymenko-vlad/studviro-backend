@@ -29,6 +29,7 @@ describe('JwtStrategy', () => {
       email: 'ada@example.com',
       locale: 'en',
       role: 'user',
+      status: 'active',
       tokenVersion: 4,
     });
 
@@ -44,7 +45,21 @@ describe('JwtStrategy', () => {
   });
 
   it('rejects a stale token version', async () => {
-    users.findById.mockResolvedValue({ tokenVersion: 5 });
+    users.findById.mockResolvedValue({ status: 'active', tokenVersion: 5 });
+
+    await expect(
+      strategy.validate({
+        sub: 'user-1',
+        email: 'ada@example.com',
+        locale: 'en',
+        role: 'user',
+        tv: 4,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects a session whose account is no longer active', async () => {
+    users.findById.mockResolvedValue({ status: 'suspended', tokenVersion: 4 });
 
     await expect(
       strategy.validate({

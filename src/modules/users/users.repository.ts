@@ -30,12 +30,30 @@ export class UsersRepository extends BaseRepository<typeof users> {
   }
 
   /**
+   * An `invited` row may share an address with a real account, so a sign-in
+   * lookup that ignored status could answer with a person record instead.
+   */
+  findSignInCandidate(
+    email: string,
+    options: FindOneOptions = {},
+    tx?: Transaction,
+  ): Promise<User | undefined> {
+    return this.findOne(
+      sql`${users.email} = ${email} and ${users.status} = 'active'`,
+      options,
+      tx,
+    );
+  }
+
+  /**
    * A pre-flight check only — two concurrent signups can both see `false`. The
    * partial unique index is the real guarantee, so callers must still handle
    * the violation.
    */
   emailTaken(email: string): Promise<boolean> {
-    return this.exists(eq(users.email, email), { consistent: true });
+    return this.exists(sql`${users.email} = ${email} and ${users.status} <> 'invited'`, {
+      consistent: true,
+    });
   }
 
   /**

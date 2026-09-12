@@ -17,6 +17,7 @@ export const externalIdentities = pgTable(
     issuer: text('issuer').notNull(),
     subject: text('subject').notNull(),
     externalUsername: text('external_username'),
+    assertedEmail: text('asserted_email'),
     lastAuthenticatedAt: timestampColumn('last_authenticated_at'),
     lastSynchronizedAt: timestampColumn('last_synchronized_at'),
     deletedAt,

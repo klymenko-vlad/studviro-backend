@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { externalIdentities, institutions, users } from '../../src/database/schema';
+import { externalIdentities, institutions, userEmails, users } from '../../src/database/schema';
 import {
   IdentityLinkingService,
   type ProviderIdentity,
@@ -137,6 +137,34 @@ describe('Identity linking (e2e)', () => {
     });
 
     expect(response.json()).toHaveLength(0);
+  });
+
+  it('activates an invited person record the first time they authenticate', async () => {
+    const [invited] = await harness.db
+      .insert(users)
+      .values({ email: 'jana@upjs.sk', displayName: 'Jana Nováková', status: 'invited' })
+      .returning();
+
+    await harness.db.insert(externalIdentities).values({
+      institutionId,
+      userId: invited!.id,
+      sourceSystem: 'sis',
+      issuer: 'https://login.upjs.sk',
+      subject: 'subject-123',
+      assertedEmail: 'jana@upjs.sk',
+    });
+
+    const user = await linking.resolveUser(provider());
+
+    expect(user.id).toBe(invited!.id);
+    expect(user.status).toBe('active');
+
+    const [address] = await harness.db
+      .select()
+      .from(userEmails)
+      .where(eq(userEmails.userId, invited!.id));
+
+    expect(address!.verifiedAt).toBeInstanceOf(Date);
   });
 
   it('leaves no user behind when linking fails', async () => {

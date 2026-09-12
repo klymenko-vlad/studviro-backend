@@ -20,6 +20,7 @@ const USER = {
   passwordHash: '$argon2id$stored',
   locale: 'en',
   role: 'user' as const,
+  status: 'active' as const,
   tokenVersion: 0,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
@@ -48,6 +49,7 @@ describe('AuthService', () => {
 
   const usersRepository = {
     findByEmail: vi.fn(),
+    findSignInCandidate: vi.fn(),
     findById: vi.fn(),
     findByIdOrFail: vi.fn(),
     update: vi.fn(),
@@ -122,7 +124,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('issues a token pair and records the session', async () => {
-      usersRepository.findByEmail.mockResolvedValue(USER);
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
       passwords.verify.mockResolvedValue(true);
 
       const result = await service.login(credentials, { ipAddress: '203.0.113.1' });
@@ -133,13 +135,13 @@ describe('AuthService', () => {
         expect.objectContaining({ userId: USER.id, tokenHash: 'hash:next-refresh' }),
         undefined,
       );
-      expect(usersRepository.findByEmail).toHaveBeenCalledWith(credentials.email, {
+      expect(usersRepository.findSignInCandidate).toHaveBeenCalledWith(credentials.email, {
         consistent: true,
       });
     });
 
     it('never stores the refresh token itself, only its hash', async () => {
-      usersRepository.findByEmail.mockResolvedValue(USER);
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
       passwords.verify.mockResolvedValue(true);
 
       await service.login(credentials, {});
@@ -150,7 +152,7 @@ describe('AuthService', () => {
     });
 
     it('verifies a password even when the email is unknown, so timing cannot enumerate accounts', async () => {
-      usersRepository.findByEmail.mockResolvedValue(undefined);
+      usersRepository.findSignInCandidate.mockResolvedValue(undefined);
       passwords.verify.mockResolvedValue(false);
 
       await expect(service.login(credentials, {})).rejects.toThrow(UnauthenticatedError);
@@ -158,13 +160,13 @@ describe('AuthService', () => {
     });
 
     it('reports the same error for an unknown email and a wrong password', async () => {
-      usersRepository.findByEmail.mockResolvedValue(undefined);
+      usersRepository.findSignInCandidate.mockResolvedValue(undefined);
       passwords.verify.mockResolvedValue(false);
       const unknownEmail = await service
         .login(credentials, {})
         .catch((error: unknown) => error);
 
-      usersRepository.findByEmail.mockResolvedValue(USER);
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
       passwords.verify.mockResolvedValue(false);
       const wrongPassword = await service
         .login(credentials, {})
@@ -177,7 +179,7 @@ describe('AuthService', () => {
     });
 
     it('upgrades a stale password digest on a successful sign-in', async () => {
-      usersRepository.findByEmail.mockResolvedValue(USER);
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
       passwords.verify.mockResolvedValue(true);
       passwords.needsRehash.mockReturnValueOnce(true);
       passwords.hash.mockResolvedValue('$argon2id$stronger');
