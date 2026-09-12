@@ -3,6 +3,7 @@ export * from './_shared';
 export * from './academic-structure';
 export * from './connector-credentials';
 export * from './course-results';
+export * from './demo-requests';
 export * from './enrollments';
 export * from './external-identities';
 export * from './institution-settings';

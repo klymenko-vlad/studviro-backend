@@ -52,6 +52,34 @@ describe('rate limiting', () => {
     expect(statuses.slice(AUTH_LIMIT)).toEqual([429, 429]);
   });
 
+  it('meters the public demo form on the credential budget, not the global one', async () => {
+    const statuses: number[] = [];
+
+    for (let attempt = 0; attempt < AUTH_LIMIT + 2; attempt++) {
+      statuses.push(
+        (
+          await harness.inject({
+            method: 'POST',
+            url: '/api/v1/demo-requests',
+            payload: {
+              institutionName: 'Comenius University',
+              contactName: 'Ada Lovelace',
+              // A distinct address each time, so deduplication cannot be what
+              // stops the run.
+              email: `dean-${attempt}@university.edu`,
+              role: 'Vice-dean for study affairs',
+            },
+          })
+        ).statusCode,
+      );
+    }
+
+    expect(statuses.slice(0, AUTH_LIMIT)).toEqual(
+      Array.from({ length: AUTH_LIMIT }, () => 202),
+    );
+    expect(statuses.slice(AUTH_LIMIT)).toEqual([429, 429]);
+  });
+
   it('does not spend the credential budget on ordinary routes', async () => {
     const actor = await harness.actingAs();
 
