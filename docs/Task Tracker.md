@@ -238,6 +238,16 @@ already-active account. `POST /institutions` gained `firstAdminEmail` alongside
 collision between the shadow's row and one the survivor already holds fails the whole accept
 rather than resolving it).
 
+**Step (d)'s password-reset screen shipped 2026-09-12**, closing the gap the step itself had
+left. `/forgot-password` and `/reset-password`, linked from `/sign-in`'s "Forgot password?" and
+reached by nobody who can already sign in, cover the backend built alongside invitations: a
+neutral confirmation regardless of whether the address exists, and one failure message for an
+expired, consumed or malformed token — the same non-enumeration shape ADR 0018 chose for accept.
+Recovering the bundle headroom to fit it meant swapping `shared/ui`'s `Select` from
+`@radix-ui/react-select` to a native `<select>` across all six call sites, dropping the measured
+total from 453.45 kB to 425.84 kB before the new screens spent 5.63 kB of it back down to
+431.47 kB — comfortably under the 455 kB guard, which was not raised.
+
 ### Rules modelled but not enforced
 
 | ID  | Defect                                                 | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |

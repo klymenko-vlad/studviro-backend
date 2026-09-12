@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-12 (step (d))
+Last updated: 2026-09-12 (password-reset screen)
 
 ## What this is
 
@@ -52,15 +52,18 @@ reasoning lives in `docs/adr/`. In short:
   `/institutions/new`; `role:read` gates a browsable org-unit tree and a person directory merging
   granted and institution-wide derived roles. No more hand-written `INSERT` to reach a screen.
   ADR 0017.
-- **Invitations, accept-and-claim, merge, password reset** (step (d); **closes B1**, narrows B2
-  further) — an institution admin invites an address behind `role:assign` at `/institutions/[id]/roles`;
-  the single-use, 7-day, SHA-256-hashed token is accepted at `/sign-up?invitation=<token>`, which
-  either promotes an `invited` shadow in place, attaches the grant to an already-active account, or
-  merges the two in one transaction when both exist under the same address, repointing every table
-  that owns a `user_id`. `POST /institutions` accepts `firstAdminEmail` alongside `firstAdminUserId`,
-  issuing an invitation instead of an immediate grant. ADR 0018. Password reset is built and tested
-  (`POST /auth/password-reset/request` and `.../{token}/confirm`) but has no screen yet — cut to fit
-  the client bundle budget, see _Caveats_.
+- **Invitations, accept-and-claim, merge, self-service password reset** (step (d); **closes B1**,
+  narrows B2 further) — an institution admin invites an address behind `role:assign` at
+  `/institutions/[id]/roles`; the single-use, 7-day, SHA-256-hashed token is accepted at
+  `/sign-up?invitation=<token>`, which either promotes an `invited` shadow in place, attaches the
+  grant to an already-active account, or merges the two in one transaction when both exist under
+  the same address, repointing every table that owns a `user_id`. `POST /institutions` accepts
+  `firstAdminEmail` alongside `firstAdminUserId`, issuing an invitation instead of an immediate
+  grant (ADR 0018). `/forgot-password` (linked from `/sign-in`) and `/reset-password` cover the
+  reset side with the same non-enumeration shape and one message for an expired, consumed or
+  malformed token; neither route requires a session. Fitting it meant swapping `shared/ui`'s
+  `Select` from `@radix-ui/react-select` to a native `<select>`, recovering 27.61 kB of the client
+  bundle before the new screens spent 5.63 kB of it back — see _Caveats_.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -95,7 +98,6 @@ turned out not to be. Read those before starting; the headlines:
   platform operator create an institution without SQL, and let an invited or self-registered
   person actually sign in (**B1** closed). What remains of **B2**: nobody can reach an institution
   without an invitation or a platform operator naming them — there is still no request-to-join.
-  Password reset has no screen yet (backend only).
 - **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
   columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
   attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
@@ -127,16 +129,9 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — a password-reset screen, then step 48's resolution half
+## Next task — step 48's resolution half
 
-**First, the small one left over from step (d):** `POST /auth/password-reset/request` and
-`.../{token}/confirm` are built and tested but have no UI. Add a "forgot password" screen (request
-by email, confirm with the token) reusing the same pattern as `AcceptInvitationForm`. This was cut
-from step (d) itself only to fit the client bundle budget (see _Caveats_) — measure the bundle
-before adding anything else to it, and prefer trimming an existing screen (the Radix Select swap,
-below) over raising the guard.
-
-**Then take step 48's resolution half**, behind an ADR on override-vs-winner: the read half already
+**Take step 48's resolution half**, behind an ADR on override-vs-winner: the read half already
 ships (step 37, the sync monitor's discrepancy report); this step adds the write that resolves a
 discrepancy, either by platform override or by marking one side the winner, and the drill-down that
 acts on one from the report.
@@ -159,12 +154,16 @@ screen is next touched.
   longer sends rows that fail the count, so the two numbers match except against a stale cache.
   Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 453.45 kB gzipped against the 455 kB guard — 1.55 kB of headroom.**
-  Step (d) needed the invite and accept-and-claim screens for B1 and only just fit after cutting
-  the password-reset UI (see _Not done_) and folding accept-and-claim into `/sign-up?invitation=`
-  rather than a dedicated route. The Radix Select swap (native `<select>` across the four
-  screens still using it) is the next lever and is now due before anything else touches this
-  budget, not optional.
+- **The client bundle is at 431.47 kB gzipped against the 455 kB guard — 23.53 kB of headroom.**
+  The native-`<select>` swap freed 27.61 kB; the password-reset screens spent 5.63 kB back. The
+  swap touched six call sites and their tests (role granting, invite-person, the schedule filters,
+  the two institution-settings field groups, the sync mode picker) — worth remembering when a
+  future `shared/ui` primitive is chosen: a Radix control pulls in floating-ui, focus-scope,
+  dismissable-layer and the collection helpers, and a plain HTML element sometimes covers the
+  same behaviour for less.
+- Signing in as `admin@studviro.local` during this step's browser walk exercised the reset flow
+  for real: its password on this machine's dev database is now `newpassword123`, not the seed
+  default. `pnpm db:seed` does not reset an existing user's password.
 - `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
   institutions importing the same address before either invites it would contend for one shadow
   row. Not reachable with the current single-tenant seed; see ADR 0018.
