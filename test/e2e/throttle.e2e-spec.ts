@@ -18,6 +18,7 @@ import { createTestHarness, type TestHarness } from '../setup/app-harness';
  * hardcoded default instead.
  */
 const AUTH_LIMIT = Number(process.env.AUTH_THROTTLE_LIMIT);
+const PUBLIC_FORM_LIMIT = Number(process.env.PUBLIC_FORM_THROTTLE_LIMIT);
 
 describe('rate limiting', () => {
   let harness: TestHarness;
@@ -52,10 +53,10 @@ describe('rate limiting', () => {
     expect(statuses.slice(AUTH_LIMIT)).toEqual([429, 429]);
   });
 
-  it('meters the public demo form on the credential budget, not the global one', async () => {
+  it('meters the public demo form on its own budget, not the credential one', async () => {
     const statuses: number[] = [];
 
-    for (let attempt = 0; attempt < AUTH_LIMIT + 2; attempt++) {
+    for (let attempt = 0; attempt < PUBLIC_FORM_LIMIT + 2; attempt++) {
       statuses.push(
         (
           await harness.inject({
@@ -74,10 +75,13 @@ describe('rate limiting', () => {
       );
     }
 
-    expect(statuses.slice(0, AUTH_LIMIT)).toEqual(
-      Array.from({ length: AUTH_LIMIT }, () => 202),
+    // Its own budget is larger than the credential one, so passing the smaller
+    // limit without a 429 is what proves the two are not shared.
+    expect(PUBLIC_FORM_LIMIT).toBeGreaterThan(AUTH_LIMIT);
+    expect(statuses.slice(0, PUBLIC_FORM_LIMIT)).toEqual(
+      Array.from({ length: PUBLIC_FORM_LIMIT }, () => 202),
     );
-    expect(statuses.slice(AUTH_LIMIT)).toEqual([429, 429]);
+    expect(statuses.slice(PUBLIC_FORM_LIMIT)).toEqual([429, 429]);
   });
 
   it('does not spend the credential budget on ordinary routes', async () => {

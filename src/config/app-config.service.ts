@@ -143,6 +143,14 @@ export class AppConfigService {
     };
   }
 
+  /** The site-wide budget applied to unauthenticated form submissions. */
+  get publicFormThrottle(): ThrottleConfig {
+    return {
+      ttlMs: this.config.get<number>('PUBLIC_FORM_THROTTLE_TTL_MS'),
+      limit: this.config.get<number>('PUBLIC_FORM_THROTTLE_LIMIT'),
+    };
+  }
+
   get jwt(): JwtConfig {
     return {
       accessSecret: this.config.get<string>('JWT_ACCESS_SECRET'),

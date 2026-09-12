@@ -65,6 +65,13 @@ export const envSchema = z.object({
   AUTH_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   AUTH_THROTTLE_LIMIT: z.coerce.number().int().positive().default(10),
 
+  // Unauthenticated form submissions. Reached through the BFF proxy they all
+  // arrive from one address, so this budget is effectively site-wide: small
+  // enough to blunt a script, large enough that one submitter cannot shut the
+  // form for everyone else.
+  PUBLIC_FORM_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
+  PUBLIC_FORM_THROTTLE_LIMIT: z.coerce.number().int().positive().default(60),
+
   CACHE_TTL_MS: z.coerce.number().int().positive().default(30_000),
   IDEMPOTENCY_TTL_MS: z.coerce.number().int().positive().default(86_400_000),
 

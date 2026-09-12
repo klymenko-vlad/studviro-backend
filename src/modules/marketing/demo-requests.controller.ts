@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/commo
 import { ApiAcceptedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
-import { CredentialThrottle } from '../auth/decorators/credential-throttle.decorator';
+import { PublicFormThrottle } from '../../common/throttling';
 import { Public } from '../auth/decorators/public.decorator';
 
 import { DemoRequestsService, type DemoRequestContext } from './demo-requests.service';
@@ -19,7 +19,7 @@ export class DemoRequestsController {
   @Public()
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  @CredentialThrottle()
+  @PublicFormThrottle()
   @ApiOperation({ summary: 'Ask for a demonstration of the platform' })
   @ApiAcceptedResponse({ type: DemoRequestAcceptedDto })
   @ApiErrorResponses()
