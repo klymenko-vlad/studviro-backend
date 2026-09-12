@@ -31,7 +31,7 @@ Last updated: 2026-09-12
 | Accessible interface (AA)    | —       | ⬜       | `Planned` | Step 52; no audit pass yet                                                                                                                                                                                |
 | Search my data               | ⬜      | ⬜       | `Planned` | Step 51                                                                                                                                                                                                   |
 | Recover a forgotten password | ⬜      | ⬜       | `Planned` | Defect B1. No reset, no email verification; a locked-out account stays locked out                                                                                                                         |
-| Join an institution          | ⬜      | ⬜       | `Planned` | Defect B2. No invitation, no request-to-join, no role derived from an active programme membership                                                                                                         |
+| Join an institution          | ⬜      | ⬜       | `Planned` | Defect B2. No invitation, no request-to-join, no role derived from an active programme membership. Designed in ADR 0015 and 0016                                                                          |
 | Export my personal data      | ⬜      | ⬜       | `Planned` | Step 50                                                                                                                                                                                                   |
 
 ## Student

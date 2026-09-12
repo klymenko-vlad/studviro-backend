@@ -111,10 +111,19 @@ emitter's `NOTIFIABLE_ENROLLMENT_STATUSES` is the existing precedent and the obv
 
 **Then the recommended order:**
 
-1. **B1 + B2 — onboarding**, with G6 and G7. Institution creation, a seed that produces a signed-in
-   student and teacher, roles derived from canonical data rather than typed UUIDs, and a way for a
-   real person to claim their imported identity. This also retires the longest-standing tax on the
-   loop, the hand-edited demo data.
+1. **B1 + B2 — onboarding**, with G6 and G7. Designed on 2026-09-12 in ADR 0015 (accounts and
+   institutional membership) and ADR 0016 (administrative authority) — read both first. One
+   account per human with many institutional identities; email proven, never asserted; an
+   `invited` person row that cannot sign in until claimed, and a merge when it is; invite-only
+   registration; a platform operator that holds no academic permission; `student` and `teacher`
+   derived from programme and teaching assignments instead of typed UUIDs. Deliver as four
+   steps, in order: **(a)** the identity schema — `user_emails`, `users.status`, nullable
+   password hash, `external_identities.asserted_email`, and the importer no longer throwing
+   `IDENTITY_EMAIL_CONFLICT`; **(b)** derived roles plus the two missing grant rules
+   (scope-capped `role:assign`, no granting above yourself, last-admin protection); **(c)**
+   institution creation under the platform operator, the org-unit read and the person directory
+   (G6, G7); **(d)** invitations, accept-and-claim, the merge service and password reset. This
+   also retires the longest-standing tax on the loop, the hand-edited demo data.
 2. **Step 48**, the screen over the reconciliation read. The sibling question is now answered:
    step 37 is the backend of step 48. Decide in an ADR first whether resolving a discrepancy writes
    a platform-authored override that survives the next import or merely marks a winner.
