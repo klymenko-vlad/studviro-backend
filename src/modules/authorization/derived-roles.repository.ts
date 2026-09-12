@@ -34,6 +34,54 @@ export class DerivedRolesRepository {
     return [...new Set([...memberships, ...teaching].map((row) => row.institutionId))];
   }
 
+  async findAllForInstitution(institutionId: string): Promise<Map<string, DerivedRole[]>> {
+    const [students, teaching] = await Promise.all([
+      this.reader
+        .selectDistinct({ userId: programMemberships.userId })
+        .from(programMemberships)
+        .where(
+          and(
+            eq(programMemberships.institutionId, institutionId),
+            eq(programMemberships.status, 'active'),
+            isNull(programMemberships.deletedAt),
+          ),
+        ),
+      this.reader
+        .select({
+          userId: teachingAssignments.userId,
+          courseOfferingId: teachingAssignments.courseOfferingId,
+          role: teachingAssignments.role,
+        })
+        .from(teachingAssignments)
+        .where(
+          and(
+            eq(teachingAssignments.institutionId, institutionId),
+            isNull(teachingAssignments.deletedAt),
+          ),
+        ),
+    ]);
+
+    const derivedByUser = new Map<string, DerivedRole[]>();
+    const push = (userId: string, role: DerivedRole): void => {
+      const existing = derivedByUser.get(userId);
+      if (existing) existing.push(role);
+      else derivedByUser.set(userId, [role]);
+    };
+
+    for (const { userId } of students) {
+      push(userId, { role: 'student', scope: { type: 'institution', id: institutionId } });
+    }
+
+    for (const row of teaching) {
+      push(row.userId, {
+        role: row.role === 'assistant' ? 'teaching_assistant' : 'teacher',
+        scope: { type: 'course_offering', id: row.courseOfferingId },
+      });
+    }
+
+    return derivedByUser;
+  }
+
   async findFor(institutionId: string, userId: string): Promise<DerivedRole[]> {
     const [hasActiveMembership, teaching] = await Promise.all([
       this.hasActiveProgramMembership(institutionId, userId),

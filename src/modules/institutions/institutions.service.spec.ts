@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Institution, RoleAssignment } from '../../database/schema';
 import type { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
+import type { UsersRepository } from '../users/users.repository';
 
 import type { InstitutionsRepository } from './institutions.repository';
 import { InstitutionsService } from './institutions.service';
@@ -16,21 +17,33 @@ const institution = (id: string, code: string): Institution =>
 const assignment = (institutionId: string): RoleAssignment =>
   ({ id: `a-${institutionId}`, institutionId, userId: USER }) as RoleAssignment;
 
-function serviceWith(assignments: RoleAssignment[], institutions: Institution[]) {
+function serviceWith(
+  assignments: RoleAssignment[],
+  institutions: Institution[],
+  options: { userExists?: boolean } = {},
+) {
   const roleAssignments = {
     findActiveForUserAnywhere: vi.fn().mockResolvedValue(assignments),
+    create: vi.fn().mockResolvedValue(assignment(institutions[0]?.id ?? UPJS)),
   };
   const repository = {
     findByIds: vi.fn().mockResolvedValue(institutions),
     findByIdOrFail: vi.fn().mockResolvedValue(institutions[0]),
+    create: vi.fn().mockResolvedValue(institutions[0] ?? institution(UPJS, 'upjs')),
+    transaction: vi.fn((fn: (tx: unknown) => unknown) => fn(undefined)),
+  };
+  const users = {
+    existsById: vi.fn().mockResolvedValue(options.userExists ?? true),
   };
 
   return {
     repository,
     roleAssignments,
+    users,
     service: new InstitutionsService(
       repository as unknown as InstitutionsRepository,
       roleAssignments as unknown as RoleAssignmentsRepository,
+      users as unknown as UsersRepository,
     ),
   };
 }
@@ -67,5 +80,53 @@ describe('InstitutionsService', () => {
     const { service } = serviceWith([], [institution(UPJS, 'upjs')]);
 
     await expect(service.findOne(UPJS)).resolves.toMatchObject({ id: UPJS, code: 'upjs' });
+  });
+
+  it('creates an institution and grants its first admin', async () => {
+    const { service, repository, roleAssignments } = serviceWith(
+      [],
+      [institution(UPJS, 'upjs')],
+    );
+
+    const created = await service.create({
+      code: 'upjs',
+      name: 'UPJŠ',
+      firstAdminUserId: USER,
+    });
+
+    expect(created.code).toBe('upjs');
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'upjs' }),
+      undefined,
+    );
+    expect(roleAssignments.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        institutionId: UPJS,
+        userId: USER,
+        role: 'institution_admin',
+        scopeType: 'institution',
+        scopeId: null,
+      }),
+      undefined,
+    );
+  });
+
+  it('refuses to create an institution for a user that does not exist', async () => {
+    const { service } = serviceWith([], [institution(UPJS, 'upjs')], { userExists: false });
+
+    await expect(
+      service.create({ code: 'upjs', name: 'UPJŠ', firstAdminUserId: USER }),
+    ).rejects.toMatchObject({ code: 'USER_NOT_FOUND' });
+  });
+
+  it('rejects a duplicate institution code as a conflict', async () => {
+    const { service, repository } = serviceWith([], [institution(UPJS, 'upjs')]);
+    repository.create.mockRejectedValueOnce(
+      Object.assign(new Error('duplicate'), { code: '23505' }),
+    );
+
+    await expect(
+      service.create({ code: 'upjs', name: 'UPJŠ', firstAdminUserId: USER }),
+    ).rejects.toMatchObject({ code: 'INSTITUTION_CODE_TAKEN' });
   });
 });

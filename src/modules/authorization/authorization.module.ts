@@ -25,6 +25,6 @@ import { ScopeHierarchyService } from './scope-hierarchy.service';
     DerivedRolesRepository,
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [AuthorizationService, RoleAssignmentsRepository],
+  exports: [AuthorizationService, RoleAssignmentsRepository, DerivedRolesRepository],
 })
 export class AuthorizationModule {}

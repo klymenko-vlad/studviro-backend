@@ -776,6 +776,91 @@
       }
     },
     "/api/v1/institutions": {
+      "post": {
+        "operationId": "createInstitution",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstitutionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create an institution and grant its first institution_admin, restricted to a platform operator",
+        "tags": [
+          "institutions"
+        ]
+      },
       "get": {
         "operationId": "listMyInstitutions",
         "parameters": [],
@@ -1071,10 +1156,19 @@
         ]
       }
     },
-    "/api/v1/users/me/identities": {
+    "/api/v1/institutions/{institutionId}/org-units": {
       "get": {
-        "operationId": "listMyIdentities",
-        "parameters": [],
+        "operationId": "listOrgUnits",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1083,7 +1177,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
+                    "$ref": "#/components/schemas/OrgUnitResponseDto"
                   }
                 }
               }
@@ -1125,9 +1219,162 @@
             "access-token": []
           }
         ],
-        "summary": "List the accounts linked to the current user",
+        "summary": "List the org units of an institution",
         "tags": [
-          "identities"
+          "org-units"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/org-units/{id}": {
+      "get": {
+        "operationId": "getOrgUnit",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgUnitResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get an org unit",
+        "tags": [
+          "org-units"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/people": {
+      "get": {
+        "operationId": "listPeople",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonDirectoryEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the people of an institution with their granted and derived roles",
+        "tags": [
+          "people"
         ]
       }
     },
@@ -1564,6 +1811,66 @@
         "summary": "Soft-delete a user",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/users/me/identities": {
+      "get": {
+        "operationId": "listMyIdentities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalIdentityResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the accounts linked to the current user",
+        "tags": [
+          "identities"
         ]
       }
     },
@@ -4061,6 +4368,45 @@
           "values"
         ]
       },
+      "CreateInstitutionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32,
+            "pattern": "^[a-z0-9-]+$",
+            "example": "upjs"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Pavol Jozef Šafárik University"
+          },
+          "defaultLocale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "sk"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Europe/Bratislava"
+          },
+          "firstAdminUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The existing account that becomes this institution’s first institution_admin."
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "firstAdminUserId"
+        ]
+      },
       "InstitutionResponseDto": {
         "type": "object",
         "properties": {
@@ -4226,7 +4572,7 @@
           }
         }
       },
-      "ExternalIdentityResponseDto": {
+      "OrgUnitResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -4237,32 +4583,143 @@
             "type": "string",
             "format": "uuid"
           },
-          "sourceSystem": {
+          "parentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "type": {
             "enum": [
-              "platform",
-              "sis",
-              "lms"
+              "university",
+              "faculty",
+              "department",
+              "institute",
+              "other"
             ],
             "type": "string"
           },
-          "issuer": {
+          "code": {
             "type": "string"
           },
-          "externalUsername": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastAuthenticatedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
+          "name": {
+            "type": "string"
           }
         },
         "required": [
           "id",
           "institutionId",
-          "sourceSystem",
-          "issuer"
+          "type",
+          "code",
+          "name"
+        ]
+      },
+      "RoleAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "student",
+              "teacher",
+              "teaching_assistant",
+              "course_coordinator",
+              "program_coordinator",
+              "registrar",
+              "org_unit_manager",
+              "institution_admin"
+            ],
+            "type": "string"
+          },
+          "scopeType": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "program",
+              "course_offering"
+            ],
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "source": {
+            "enum": [
+              "granted",
+              "derived"
+            ],
+            "type": "string"
+          },
+          "revocable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "institutionId",
+          "userId",
+          "role",
+          "scopeType",
+          "source",
+          "revocable"
+        ]
+      },
+      "PersonDirectoryEntryDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "invited",
+              "active",
+              "suspended"
+            ],
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleAssignmentResponseDto"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "status",
+          "roles"
         ]
       },
       "UserResponseDto": {
@@ -4406,6 +4863,45 @@
         "enum": [
           "asc",
           "desc"
+        ]
+      },
+      "ExternalIdentityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceSystem": {
+            "enum": [
+              "platform",
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "externalUsername": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastAuthenticatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "institutionId",
+          "sourceSystem",
+          "issuer"
         ]
       },
       "NotificationResponseDto": {
@@ -4561,79 +5057,6 @@
         },
         "required": [
           "refreshToken"
-        ]
-      },
-      "RoleAssignmentResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "institutionId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "student",
-              "teacher",
-              "teaching_assistant",
-              "course_coordinator",
-              "program_coordinator",
-              "registrar",
-              "org_unit_manager",
-              "institution_admin"
-            ],
-            "type": "string"
-          },
-          "scopeType": {
-            "enum": [
-              "institution",
-              "org_unit",
-              "program",
-              "course_offering"
-            ],
-            "type": "string"
-          },
-          "scopeId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "validFrom": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "validUntil": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "source": {
-            "enum": [
-              "granted",
-              "derived"
-            ],
-            "type": "string"
-          },
-          "revocable": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "institutionId",
-          "userId",
-          "role",
-          "scopeType",
-          "source",
-          "revocable"
         ]
       },
       "GrantRoleDto": {
