@@ -87,6 +87,9 @@ turned out not to be. Read those before starting; the headlines:
   directory or org-unit read (**G6**, **G7**); one notification family (**G9**); no sync schedule
   (**G10**); GDPR, threat model, audit and export unstarted while personal data is already
   served (**G12**).
+- Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
+  rather than a provenanced canonical row — but the screen says nothing about the omission, so
+  the largest imported domain is simply missing from a table that claims to compare both sides.
 - Smaller, known: the calendar's course picker lists only courses with an event that week and no
   filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
   rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` still
