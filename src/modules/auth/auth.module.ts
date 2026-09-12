@@ -9,6 +9,9 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { PasswordResetTokensRepository } from './password-reset/password-reset-tokens.repository';
+import { PasswordResetController } from './password-reset/password-reset.controller';
+import { PasswordResetService } from './password-reset/password-reset.service';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenService } from './token.service';
@@ -22,11 +25,13 @@ import { TokenService } from './token.service';
     // it far too easy to sign a refresh token with the access secret.
     JwtModule.register({}),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, PasswordResetController],
   providers: [
     AuthService,
     TokenService,
     RefreshTokensRepository,
+    PasswordResetService,
+    PasswordResetTokensRepository,
     JwtStrategy,
     // Order matters: authentication must resolve the principal before
     // authorisation can inspect its role.

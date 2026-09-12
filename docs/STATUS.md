@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-12
+Last updated: 2026-09-12 (step (d))
 
 ## What this is
 
@@ -52,6 +52,15 @@ reasoning lives in `docs/adr/`. In short:
   `/institutions/new`; `role:read` gates a browsable org-unit tree and a person directory merging
   granted and institution-wide derived roles. No more hand-written `INSERT` to reach a screen.
   ADR 0017.
+- **Invitations, accept-and-claim, merge, password reset** (step (d); **closes B1**, narrows B2
+  further) — an institution admin invites an address behind `role:assign` at `/institutions/[id]/roles`;
+  the single-use, 7-day, SHA-256-hashed token is accepted at `/sign-up?invitation=<token>`, which
+  either promotes an `invited` shadow in place, attaches the grant to an already-active account, or
+  merges the two in one transaction when both exist under the same address, repointing every table
+  that owns a `user_id`. `POST /institutions` accepts `firstAdminEmail` alongside `firstAdminUserId`,
+  issuing an invitation instead of an immediate grant. ADR 0018. Password reset is built and tested
+  (`POST /auth/password-reset/request` and `.../{token}/confirm`) but has no screen yet — cut to fit
+  the client bundle budget, see _Caveats_.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -81,12 +90,12 @@ the backlog_ (G1–G12, things not built) and _Business-logic and user-flow defe
 built to a rule the model does not enforce). `Feature Status.md` is corrected where a `Live` row
 turned out not to be. Read those before starting; the headlines:
 
-- **Onboarding is narrower still, but not closed.** Steps (a)–(c) closed the watermark poisoning,
-  gave imported people permission the moment their academic record exists, and let a platform
-  operator create an institution and its first administrator without SQL. What remains: no
-  invitation, no accept-and-claim, no merge and no password reset, so an imported person still
-  cannot sign in with a password (**B1**), and a fresh account still has no self-service path into
-  an institution — only a platform operator can put one there (**B2** narrowed).
+- **Onboarding is closed as far as this backlog runs it.** Steps (a)–(d) closed the watermark
+  poisoning, gave imported people permission the moment their academic record exists, let a
+  platform operator create an institution without SQL, and let an invited or self-registered
+  person actually sign in (**B1** closed). What remains of **B2**: nobody can reach an institution
+  without an invitation or a platform operator naming them — there is still no request-to-join.
+  Password reset has no screen yet (backend only).
 - **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
   columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
   attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
@@ -118,28 +127,25 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — onboarding step (d): invitations, accept-and-claim, merge, password reset
+## Next task — a password-reset screen, then step 48's resolution half
 
-Read `adr/0015-accounts-and-institutional-membership.md`,
-`adr/0016-administrative-authority.md` and `adr/0017-institution-self-service-creation.md`
-first; steps (a) the identity schema, (b) derived roles and the grant rules, and (c) institution
-creation, org-unit read and the person directory all landed 2026-09-12.
+**First, the small one left over from step (d):** `POST /auth/password-reset/request` and
+`.../{token}/confirm` are built and tested but have no UI. Add a "forgot password" screen (request
+by email, confirm with the token) reusing the same pattern as `AcceptInvitationForm`. This was cut
+from step (d) itself only to fit the client bundle budget (see _Caveats_) — measure the bundle
+before adding anything else to it, and prefer trimming an existing screen (the Radix Select swap,
+below) over raising the guard.
 
-**Take step (d)**, which closes **B1**. An imported person is a `users.status = 'invited'` row
-with no credential and no way to ever get one; a fresh account has no self-service path into an
-institution beyond a platform operator naming it directly (**B2**, narrowed as far as it goes
-without this step). Build the `invitations` table ADR 0016 already designs — institution,
-address, the `(role, scopeType, scopeId)` it grants, inviter, token digest, `expires_at`,
-`accepted_at`, `accepted_user_id` — the accept-and-claim flow that turns one into an ordinary
-`role_assignments` row, the merge for a person who already self-registered under the invited
-address, and password reset. `POST /institutions` should grow an email-based path once
-`invitations` exists (ADR 0017); `firstAdminUserId` stays as the faster case.
+**Then take step 48's resolution half**, behind an ADR on override-vs-winner: the read half already
+ships (step 37, the sync monitor's discrepancy report); this step adds the write that resolves a
+discrepancy, either by platform override or by marking one side the winner, and the drill-down that
+acts on one from the report.
 
-**Then, in order:** **step 48's resolution half** behind an ADR on override-vs-winner; **G2**, a
-`mock-lms` connector and the learning-domain importers, which no numbered step covers; **G1's
-write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the
-flags mean something). Wiring the person directory into the grant form as a picker (rather than
-a raw UUID field) is small and falls out naturally whenever that screen is next touched.
+**After that, in order:** **G2**, a `mock-lms` connector and the learning-domain importers, which no
+numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
+(grade entry); and B6 (make the flags mean something). Wiring the person directory into the grant
+form as a picker (rather than a raw UUID field) is small and falls out naturally whenever that
+screen is next touched.
 
 ## Caveats
 
@@ -153,12 +159,18 @@ a raw UUID field) is small and falls out naturally whenever that screen is next 
   longer sends rows that fail the count, so the two numbers match except against a stale cache.
   Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 451.31 kB gzipped against the 455 kB guard, about 3.7 kB of headroom
-  left after step (c)'s three new screens; the Radix Select swap is now due before the next screen
-  that adds meaningfully to the bundle, not optional.
-- `POST /institutions` needs an existing account's id, not an email, until step (d)'s invitations
-  exist (ADR 0017); the grant form still takes its subject as a raw UUID, with the person directory
-  this step built the natural source for a picker, not yet wired in.
+- **The client bundle is at 453.45 kB gzipped against the 455 kB guard — 1.55 kB of headroom.**
+  Step (d) needed the invite and accept-and-claim screens for B1 and only just fit after cutting
+  the password-reset UI (see _Not done_) and folding accept-and-claim into `/sign-up?invitation=`
+  rather than a dedicated route. The Radix Select swap (native `<select>` across the four
+  screens still using it) is the next lever and is now due before anything else touches this
+  budget, not optional.
+- `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
+  institutions importing the same address before either invites it would contend for one shadow
+  row. Not reachable with the current single-tenant seed; see ADR 0018.
+- A merge's unique-constraint collision (the survivor already holds the exact row the shadow held)
+  fails the whole accept transaction rather than resolving it — the safer failure, not the
+  friendliest. See ADR 0018.
 - The dev seed creates two users, one a platform operator (`admin@studviro.local`), and no
   institution; a walk now creates its own institution through the UI in seconds via that seeded
   operator. The remaining tax: no seeded institution has `academicSystemConnector: mock-sis` or a

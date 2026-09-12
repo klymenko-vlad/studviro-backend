@@ -46,6 +46,21 @@ export class UsersRepository extends BaseRepository<typeof users> {
   }
 
   /**
+   * The `invited` shadow an imported record left behind under this address, if
+   * any. Not scoped to a single institution: `users.email` uniqueness only
+   * excludes `invited` rows, so two institutions could in principle import the
+   * same address, in which case this returns whichever shadow sorts first —
+   * a known simplification, see `docs/adr/0018-invitations-and-account-merge.md`.
+   */
+  findInvitedByEmail(email: string, tx?: Transaction): Promise<User | undefined> {
+    return this.findOne(
+      sql`${users.email} = ${email} and ${users.status} = 'invited'`,
+      { consistent: true },
+      tx,
+    );
+  }
+
+  /**
    * A pre-flight check only — two concurrent signups can both see `false`. The
    * partial unique index is the real guarantee, so callers must still handle
    * the violation.

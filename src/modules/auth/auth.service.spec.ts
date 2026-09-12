@@ -22,6 +22,7 @@ const USER = {
   role: 'user' as const,
   status: 'active' as const,
   tokenVersion: 0,
+  mergedIntoUserId: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
   deletedAt: null,

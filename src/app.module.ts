@@ -25,6 +25,7 @@ import { CoursesModule } from './modules/courses/courses.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
@@ -141,6 +142,7 @@ function workerModules(): DynamicModule[] {
     GradesModule,
     IdentityModule,
     InstitutionsModule,
+    InvitationsModule,
     MarketingModule,
     NotificationsModule,
     SchedulingModule,

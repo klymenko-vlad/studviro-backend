@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Institution, RoleAssignment } from '../../database/schema';
 import type { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
+import type { InvitationsService } from '../invitations/invitations.service';
 import type { UsersRepository } from '../users/users.repository';
 
 import type { InstitutionsRepository } from './institutions.repository';
@@ -35,15 +36,23 @@ function serviceWith(
   const users = {
     existsById: vi.fn().mockResolvedValue(options.userExists ?? true),
   };
+  const invitations = {
+    createForNewInstitution: vi
+      .fn()
+      .mockResolvedValue({ invitationId: 'invitation-1', token: 'raw-token' }),
+    isDevToken: vi.fn().mockReturnValue(true),
+  };
 
   return {
     repository,
     roleAssignments,
     users,
+    invitations,
     service: new InstitutionsService(
       repository as unknown as InstitutionsRepository,
       roleAssignments as unknown as RoleAssignmentsRepository,
       users as unknown as UsersRepository,
+      invitations as unknown as InvitationsService,
     ),
   };
 }
@@ -128,5 +137,60 @@ describe('InstitutionsService', () => {
     await expect(
       service.create({ code: 'upjs', name: 'UPJŠ', firstAdminUserId: USER }),
     ).rejects.toMatchObject({ code: 'INSTITUTION_CODE_TAKEN' });
+  });
+
+  it('creates an institution_admin invitation instead when given an email', async () => {
+    const { service, invitations, roleAssignments } = serviceWith(
+      [],
+      [institution(UPJS, 'upjs')],
+    );
+
+    const created = await service.create({
+      code: 'upjs',
+      name: 'UPJŠ',
+      firstAdminEmail: 'admin@upjs.sk',
+    });
+
+    expect(invitations.createForNewInstitution).toHaveBeenCalledWith(
+      UPJS,
+      'admin@upjs.sk',
+      undefined,
+    );
+    expect(created.firstAdminInvitationDevToken).toBe('raw-token');
+    expect(roleAssignments.create).not.toHaveBeenCalled();
+  });
+
+  it('hides the invitation token outside development', async () => {
+    const { service, invitations } = serviceWith([], [institution(UPJS, 'upjs')]);
+    invitations.isDevToken.mockReturnValue(false);
+
+    const created = await service.create({
+      code: 'upjs',
+      name: 'UPJŠ',
+      firstAdminEmail: 'admin@upjs.sk',
+    });
+
+    expect(created.firstAdminInvitationDevToken).toBeUndefined();
+  });
+
+  it('rejects a request naming both firstAdminUserId and firstAdminEmail', async () => {
+    const { service } = serviceWith([], [institution(UPJS, 'upjs')]);
+
+    await expect(
+      service.create({
+        code: 'upjs',
+        name: 'UPJŠ',
+        firstAdminUserId: USER,
+        firstAdminEmail: 'admin@upjs.sk',
+      }),
+    ).rejects.toMatchObject({ code: 'FIRST_ADMIN_IDENTIFIER_REQUIRED' });
+  });
+
+  it('rejects a request naming neither firstAdminUserId nor firstAdminEmail', async () => {
+    const { service } = serviceWith([], [institution(UPJS, 'upjs')]);
+
+    await expect(service.create({ code: 'upjs', name: 'UPJŠ' })).rejects.toMatchObject({
+      code: 'FIRST_ADMIN_IDENTIFIER_REQUIRED',
+    });
   });
 });

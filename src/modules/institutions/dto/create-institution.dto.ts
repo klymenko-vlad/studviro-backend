@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsEmail,
   IsIn,
   IsOptional,
   IsString,
@@ -37,11 +38,24 @@ export class CreateInstitutionDto {
   @IsString()
   timezone?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     format: 'uuid',
     description:
-      'The existing account that becomes this institution’s first institution_admin.',
+      'An existing account that becomes this institution’s first institution_admin ' +
+      'immediately. Mutually exclusive with firstAdminEmail.',
   })
+  @IsOptional()
   @IsUUID()
-  firstAdminUserId!: string;
+  firstAdminUserId?: string;
+
+  @ApiPropertyOptional({
+    example: 'admin@upjs.sk',
+    description:
+      'An address that has not necessarily registered yet. Creates an ' +
+      'institution_admin invitation in the same transaction instead of granting ' +
+      'the role immediately. Mutually exclusive with firstAdminUserId.',
+  })
+  @IsOptional()
+  @IsEmail()
+  firstAdminEmail?: string;
 }

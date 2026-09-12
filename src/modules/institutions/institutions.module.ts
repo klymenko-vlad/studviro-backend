@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { InvitationsModule } from '../invitations/invitations.module';
 import { UsersModule } from '../users/users.module';
 
 import { InstitutionConfigurationController } from './configuration/institution-configuration.controller';
@@ -15,7 +16,7 @@ import { PeopleController } from './people.controller';
 import { PeopleService } from './people.service';
 
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, InvitationsModule],
   controllers: [
     InstitutionsController,
     InstitutionConfigurationController,

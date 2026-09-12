@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  type AnyPgColumn,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { deletedAt, timestamps } from './_shared';
 
@@ -39,6 +48,16 @@ export const users = pgTable(
      * short access TTL would have expired them anyway.
      */
     tokenVersion: integer('token_version').notNull().default(0),
+    /**
+     * Set when this row was the shadow side of a merge: a human proved control
+     * of the mailbox an imported record was invited under while already
+     * holding a self-registered account, and this row lost. Reads resolve it
+     * forward at the repository edge rather than 404 on an id that used to be
+     * valid.
+     */
+    mergedIntoUserId: uuid('merged_into_user_id').references((): AnyPgColumn => users.id, {
+      onDelete: 'set null',
+    }),
     deletedAt,
     ...timestamps,
   },
