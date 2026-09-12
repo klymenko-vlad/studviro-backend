@@ -4116,7 +4116,7 @@
             "type": "string",
             "enum": [
               "en",
-              "uk"
+              "sk"
             ]
           },
           "timezone": {
@@ -4215,7 +4215,7 @@
             "description": "The interface language this account is served in. It is part of the user\nrather than a client-side preference so it follows them across devices —\nthe browser cookie is a cache of this value, not the source of truth.",
             "enum": [
               "en",
-              "uk"
+              "sk"
             ]
           },
           "role": {
@@ -4251,7 +4251,7 @@
           "locale": {
             "enum": [
               "en",
-              "uk"
+              "sk"
             ],
             "type": "string"
           }

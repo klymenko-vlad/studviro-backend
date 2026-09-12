@@ -99,7 +99,7 @@ describe('Institution configuration (e2e)', () => {
         url: `/api/v1/institutions/${institutionId}/configuration`,
         headers: actor.headers,
         payload: {
-          defaultLocale: 'uk',
+          defaultLocale: 'sk',
           timezone: 'Europe/Prague',
           terminology: { faculty: 'School', course: 'Module' },
           features: { fees: true, examRegistration: false },
@@ -116,7 +116,7 @@ describe('Institution configuration (e2e)', () => {
       });
 
       expect(read.json()).toMatchObject({
-        defaultLocale: 'uk',
+        defaultLocale: 'sk',
         timezone: 'Europe/Prague',
         connectors: { academicSystem: 'mock-sis', learningSystem: null },
       });

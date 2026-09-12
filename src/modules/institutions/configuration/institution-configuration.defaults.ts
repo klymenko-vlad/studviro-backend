@@ -7,7 +7,7 @@ import {
 
 import type { ResolvedFeatures, ResolvedTerminology } from './institution-configuration.types';
 
-export const SUPPORTED_LOCALES = ['en', 'uk'] as const;
+export const SUPPORTED_LOCALES = ['en', 'sk'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_FEATURES: ResolvedFeatures = {

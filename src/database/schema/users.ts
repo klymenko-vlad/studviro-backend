@@ -13,7 +13,7 @@ export type UserRole = (typeof USER_ROLES)[number];
  *
  * Must stay in step with `LOCALES` in the frontend's `shared/config/i18n`.
  */
-export const SUPPORTED_LOCALES = ['en', 'uk'] as const;
+export const SUPPORTED_LOCALES = ['en', 'sk'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const userRole = pgEnum('user_role', USER_ROLES);
