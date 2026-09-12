@@ -235,14 +235,18 @@ describe('Teaching offerings and roster (e2e)', () => {
   });
 
   describe('GET /course-offerings/:offeringId/roster', () => {
-    it('gives the teacher the enrolled students and their study groups', async () => {
+    it('gives the teacher the participating students, never the withdrawn, with their study groups', async () => {
       const actor = await actingAs('teacher');
       await teach(actor.user.id, algorithmsOfferingId);
 
       const ada = await student('Ada Lovelace', 'ada@example.edu');
       const grace = await student('Grace Hopper', 'grace@example.edu');
+      const katherine = await student('Katherine Johnson', 'katherine@example.edu');
       await enrol(ada, algorithmsOfferingId);
+      // Withdrawn is not on the roster; completed is, because a finished offering's roster
+      // would otherwise be empty.
       await enrol(grace, algorithmsOfferingId, { status: 'withdrawn' });
+      await enrol(katherine, algorithmsOfferingId, { status: 'completed' });
 
       const [seminar] = await harness.db
         .insert(studyGroups)
@@ -265,10 +269,10 @@ describe('Teaching offerings and roster (e2e)', () => {
       expect(body.viewerRole).toBe('teacher');
       expect(body.students.map((entry) => entry.displayName)).toEqual([
         'Ada Lovelace',
-        'Grace Hopper',
+        'Katherine Johnson',
       ]);
       expect(body.students[0]!.studyGroups.map((group) => group.code)).toEqual(['S1']);
-      expect(body.students[1]!.status).toBe('withdrawn');
+      expect(body.students[1]!.status).toBe('completed');
       expect(body.students[1]!.studyGroups).toEqual([]);
     });
 

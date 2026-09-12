@@ -13,6 +13,7 @@ import {
   teachingAssignments,
   users,
   type CanonicalRole,
+  type EnrollmentStatus,
   type ExamRegistrationStatus,
   type NewExamTerm,
 } from '../../src/database/schema';
@@ -60,10 +61,14 @@ describe('My exam terms (e2e)', () => {
     return actor;
   };
 
-  const enrol = async (userId: string, courseOfferingId: string) => {
+  const enrol = async (
+    userId: string,
+    courseOfferingId: string,
+    status: EnrollmentStatus = 'active',
+  ) => {
     await harness.db
       .insert(enrollments)
-      .values({ institutionId, userId, courseOfferingId, status: 'active' });
+      .values({ institutionId, userId, courseOfferingId, status });
   };
 
   const teach = async (userId: string, courseOfferingId: string) => {
@@ -190,6 +195,34 @@ describe('My exam terms (e2e)', () => {
       .returning();
     examinerId = examiner!.id;
   });
+
+  it.each(['withdrawn', 'rejected', 'requested'] as const)(
+    'hides the exam term from a %s student, who holds no seat in the course',
+    async (status) => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id, algorithmsOfferingId, status);
+      await examTerm({ roomId, examinerId });
+
+      const response = await listMine(actor);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toHaveLength(0);
+    },
+  );
+
+  it.each(['provisioning', 'active', 'completed'] as const)(
+    'shows the exam term to a %s student, who holds an academic record for the course',
+    async (status) => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id, algorithmsOfferingId, status);
+      await examTerm({ roomId, examinerId });
+
+      const response = await listMine(actor);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toHaveLength(1);
+    },
+  );
 
   it('returns the caller’s exam terms with room, examiner, course and provenance', async () => {
     const actor = await actingAs('student');

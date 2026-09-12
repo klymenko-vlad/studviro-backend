@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, exists, gte, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, exists, gte, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   examRegistrations,
   examTerms,
@@ -176,6 +177,7 @@ export class MyExamTermsRepository {
           and(
             eq(enrollments.courseOfferingId, courseOfferings.id),
             eq(enrollments.userId, userId),
+            inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
             isNull(enrollments.deletedAt),
           ),
         ),

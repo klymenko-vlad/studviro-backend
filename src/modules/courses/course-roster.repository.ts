@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   studyGroupMemberships,
   studyGroups,
@@ -69,6 +70,7 @@ export class CourseRosterRepository {
       .where(
         and(
           eq(enrollments.courseOfferingId, offeringId),
+          inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
           isNull(enrollments.deletedAt),
           isNull(users.deletedAt),
         ),

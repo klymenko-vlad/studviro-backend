@@ -3,8 +3,8 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { EntityNotFoundError } from '../../common/errors/domain.error';
 import {
+  ENROLLMENT_PARTICIPATING_STATUSES,
   enrollments,
-  type EnrollmentStatus,
   notificationDeliveries,
   notificationEvents,
   type NotificationEvent,
@@ -12,8 +12,6 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 
 import type { NotificationEmission } from './notification-emitter.types';
-
-const NOTIFIABLE_ENROLLMENT_STATUSES: readonly EnrollmentStatus[] = ['provisioning', 'active'];
 
 @Injectable()
 export class NotificationEmitterRepository {
@@ -78,7 +76,7 @@ export class NotificationEmitterRepository {
           eq(enrollments.institutionId, institutionId),
           eq(enrollments.courseOfferingId, courseOfferingId),
           isNull(enrollments.deletedAt),
-          inArray(enrollments.status, NOTIFIABLE_ENROLLMENT_STATUSES),
+          inArray(enrollments.status, ENROLLMENT_PARTICIPATING_STATUSES),
         ),
       );
 

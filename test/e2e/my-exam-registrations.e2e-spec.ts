@@ -283,6 +283,25 @@ describe('My exam registrations (e2e)', () => {
     expect((await registerFor(actor, examTermId)).statusCode).toBe(201);
   });
 
+  it.each(['withdrawn', 'rejected', 'requested'] as const)(
+    'refuses a registration from a %s student, who holds no place in the course',
+    async (status) => {
+      const actor = await actingAs('student');
+      await harness.db.insert(enrollments).values({
+        institutionId,
+        userId: actor.user.id,
+        courseOfferingId: algorithmsOfferingId,
+        status,
+      });
+      const examTermId = await examTerm();
+
+      const response = await registerFor(actor, examTermId);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().code).toBe('EXAM_TERM_NOT_ENROLLED');
+    },
+  );
+
   it('refuses a registration for a course the caller does not attend', async () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id, algorithmsOfferingId);

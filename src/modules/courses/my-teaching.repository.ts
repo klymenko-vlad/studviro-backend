@@ -5,6 +5,7 @@ import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   teachingAssignments,
   type CourseOfferingStatus,
@@ -98,7 +99,11 @@ export class MyTeachingRepository {
       .select({ courseOfferingId: enrollments.courseOfferingId, enrolled: count() })
       .from(enrollments)
       .where(
-        and(inArray(enrollments.courseOfferingId, offeringIds), isNull(enrollments.deletedAt)),
+        and(
+          inArray(enrollments.courseOfferingId, offeringIds),
+          inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
+          isNull(enrollments.deletedAt),
+        ),
       )
       .groupBy(enrollments.courseOfferingId);
   }

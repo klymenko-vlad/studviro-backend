@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, exists, gt, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, exists, gt, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   rooms,
   studyGroupMemberships,
@@ -131,6 +132,7 @@ export class MyTimetableEventsRepository {
           and(
             eq(enrollments.courseOfferingId, courseOfferings.id),
             eq(enrollments.userId, userId),
+            inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
             isNull(enrollments.deletedAt),
           ),
         ),

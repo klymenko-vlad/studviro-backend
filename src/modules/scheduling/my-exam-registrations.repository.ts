@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, exists, isNull, ne, sql, type SQL } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, ne, sql, type SQL } from 'drizzle-orm';
 
 import { EntityNotFoundError } from '../../common/errors/domain.error';
 import {
   courseOfferings,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   examRegistrations,
   examTerms,
@@ -175,6 +176,7 @@ export class MyExamRegistrationsRepository {
           and(
             eq(enrollments.courseOfferingId, courseOfferings.id),
             eq(enrollments.userId, userId),
+            inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
             isNull(enrollments.deletedAt),
           ),
         ),

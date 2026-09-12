@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   officialCourseResults,
   type CourseGrade,
@@ -61,6 +62,7 @@ export class MyCourseResultsRepository {
     const conditions: SQL[] = [
       eq(officialCourseResults.institutionId, institutionId),
       eq(enrollments.userId, userId),
+      inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
       isNull(officialCourseResults.deletedAt),
       isNull(enrollments.deletedAt),
       isNull(courseOfferings.deletedAt),

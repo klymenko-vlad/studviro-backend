@@ -63,6 +63,27 @@ export const ENROLLMENT_STATUSES = [
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 export const enrollmentStatus = pgEnum('enrollment_status', ENROLLMENT_STATUSES);
 
+/**
+ * Statuses that place a student *in* the course right now: they occupy a seat, appear on the
+ * roster, count towards the teacher's enrolment total, see the course in their calendar and may
+ * register for its exam terms.
+ */
+export const ENROLLMENT_PARTICIPATING_STATUSES: readonly EnrollmentStatus[] = [
+  'provisioning',
+  'active',
+];
+
+/**
+ * Statuses that mean the student holds an academic record for the course — participation plus
+ * `completed`. A finished course still owes its student their grades and their transcript entry,
+ * so reads over results and course history use this wider set, never
+ * {@link ENROLLMENT_PARTICIPATING_STATUSES}.
+ */
+export const ENROLLMENT_RECORDED_STATUSES: readonly EnrollmentStatus[] = [
+  ...ENROLLMENT_PARTICIPATING_STATUSES,
+  'completed',
+];
+
 export const ENROLLMENT_REQUIREMENT_TYPES = ['compulsory', 'optional', 'elective'] as const;
 export type EnrollmentRequirementType = (typeof ENROLLMENT_REQUIREMENT_TYPES)[number];
 export const enrollmentRequirementType = pgEnum(
