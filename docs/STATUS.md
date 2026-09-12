@@ -27,9 +27,10 @@ reasoning lives in `docs/adr/`. In short:
   locks, idempotency; Drizzle migrations, transaction-mediated institution-scoped repositories,
   keyset pagination, soft deletion, provenance and 25 academic tables (ADR 0009), where an external
   identifier is never a primary key.
-- **Auth** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003), linked-identity
-  provisioning, canonical roles, scope ancestry, the permission catalogue, `PermissionsGuard` /
-  `@RequirePermission` and the role assignment UI. OIDC is blocked on institutional registration.
+- **Auth and authorization** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003),
+  linked-identity provisioning, canonical roles, scope ancestry, the permission catalogue,
+  `PermissionsGuard` / `@RequirePermission`, and a separate platform-operator `RolesGuard` tier
+  that holds no academic permission (ADR 0016). OIDC is blocked on institutional registration.
 - **Institution setup and synchronization** — terminology, flags and connector selection resolving
   over platform defaults; connector contracts, deterministic `mock-sis`, registry health and
   capabilities, ordered imports, provenance upserts, stale-write guards, tombstones, child pruning,
@@ -42,10 +43,15 @@ reasoning lives in `docs/adr/`. In short:
 - **Derived roles and the grant rules** (B13; narrows B2) — `student` derives from an active
   `program_membership` and `teacher`/`teaching_assistant` from a `teaching_assignments` row, so an
   imported person has permission the moment their academic record exists; neither is revocable
-  through the grant screen. The grant screen offers only the five roles an academic record cannot
-  express. `role:assign` is checked at the scope being granted or revoked on, not the institution;
-  a caller may not hand out a role whose permissions exceed their own, and an institution's last
+  through the grant screen, which offers only the five roles an academic record cannot express.
+  `role:assign` is checked at the scope being granted or revoked on, not the institution; a caller
+  may not hand out a role whose permissions exceed their own, and an institution's last
   `institution_admin` cannot be revoked. ADR 0016.
+- **Institution creation, org units and the person directory** (G6, G7; narrows B2 further) — a
+  platform operator creates an institution and its first `institution_admin` in one call at
+  `/institutions/new`; `role:read` gates a browsable org-unit tree and a person directory merging
+  granted and institution-wide derived roles. No more hand-written `INSERT` to reach a screen.
+  ADR 0017.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -75,13 +81,12 @@ the backlog_ (G1–G12, things not built) and _Business-logic and user-flow defe
 built to a rule the model does not enforce). `Feature Status.md` is corrected where a `Live` row
 turned out not to be. Read those before starting; the headlines:
 
-- **Onboarding is still the largest hole**, though narrower still. Steps (a) and (b) closed the
-  watermark poisoning and gave imported people permission the moment their academic record exists,
-  but there is still no invitation, no accept-and-claim, no merge and no password reset, so an
-  imported person cannot sign in with a password (**B1**). The first `institution_admin` needs SQL,
-  there is no institution creation, org-unit read or person directory, so a fresh account still has
-  nowhere to go and an administrative role still has to be granted by typing a UUID
-  (**B2** narrowed, **G6**, **G7**).
+- **Onboarding is narrower still, but not closed.** Steps (a)–(c) closed the watermark poisoning,
+  gave imported people permission the moment their academic record exists, and let a platform
+  operator create an institution and its first administrator without SQL. What remains: no
+  invitation, no accept-and-claim, no merge and no password reset, so an imported person still
+  cannot sign in with a password (**B1**), and a fresh account still has no self-service path into
+  an institution — only a platform operator can put one there (**B2** narrowed).
 - **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
   columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
   attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
@@ -95,17 +100,16 @@ turned out not to be. Read those before starting; the headlines:
 - **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); the LMS
   half of the model is dead and no backlog step plays the part `mock-sis` played for the SIS half
   (**G2**, **G3**); eight of twenty-two permissions have no endpoint — no catalogue, no grade entry,
-  no enrolment correction (**G4**, **G8**); no self-service enrolment (**G5**); no onboarding,
-  directory or org-unit read (**G6**, **G7**); one notification family (**G9**); no sync schedule
-  (**G10**); GDPR, threat model, audit and export unstarted while personal data is already
-  served (**G12**).
+  no enrolment correction (**G4**, **G8**); no self-service enrolment (**G5**); one notification
+  family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted
+  while personal data is already served (**G12**).
 - Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
-  rather than a provenanced canonical row — but the screen says nothing about the omission, so
-  the largest imported domain is simply missing from a table that claims to compare both sides.
+  rather than a provenanced canonical row — but the screen says nothing about the omission.
 - Smaller, known: the calendar's course picker lists only courses with an event that week and no
   filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
-  rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` still
-  governs the old user endpoints; theses and transcripts are intentionally out of the model.
+  rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` now
+  governs exactly `POST /institutions` and nothing else canonical; theses and transcripts are
+  intentionally out of the model.
 
 ## Deployment caveat — act on this first
 
@@ -114,31 +118,28 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — onboarding step (c): institution creation, org-unit read, person directory
+## Next task — onboarding step (d): invitations, accept-and-claim, merge, password reset
 
-Read `adr/0015-accounts-and-institutional-membership.md` and
-`adr/0016-administrative-authority.md` first; steps (a) the identity schema and (b) derived roles
-and the grant rules both landed 2026-09-12 and the sequence continues from there.
+Read `adr/0015-accounts-and-institutional-membership.md`,
+`adr/0016-administrative-authority.md` and `adr/0017-institution-self-service-creation.md`
+first; steps (a) the identity schema, (b) derived roles and the grant rules, and (c) institution
+creation, org-unit read and the person directory all landed 2026-09-12.
 
-**Take step (c)** (**G6**, **G7**). Today a tenant, its org units and its first `institution_admin`
-grant exist only by hand-writing SQL, and a grant names its subject and scope by raw UUID because
-there is no directory to look either up in. Build:
+**Take step (d)**, which closes **B1**. An imported person is a `users.status = 'invited'` row
+with no credential and no way to ever get one; a fresh account has no self-service path into an
+institution beyond a platform operator naming it directly (**B2**, narrowed as far as it goes
+without this step). Build the `invitations` table ADR 0016 already designs — institution,
+address, the `(role, scopeType, scopeId)` it grants, inviter, token digest, `expires_at`,
+`accepted_at`, `accepted_user_id` — the accept-and-claim flow that turns one into an ordinary
+`role_assignments` row, the merge for a person who already self-registered under the invited
+address, and password reset. `POST /institutions` should grow an email-based path once
+`invitations` exists (ADR 0017); `firstAdminUserId` stays as the faster case.
 
-1. `POST /institutions` behind the platform-operator `RolesGuard` tier (ADR 0016), creating the
-   institution and its first `institution_admin` invitation target.
-2. Org-unit read: list and fetch org units within an institution, so a grant's scope field can be
-   chosen rather than typed.
-3. A person directory: list people within an institution (name, status, derived roles) behind
-   `role:read` or a similar read permission, so a grant's subject can be chosen rather than typed.
-
-This also retires the hand-edited demo data this loop has repeatedly needed to reach a screen —
-worth fixing as part of this step if it falls out naturally, but do not let it become the step.
-
-**Then, in order:** (d) invitations, accept-and-claim, merge and password reset, which closes B1.
-Then **step 48's resolution half** behind an ADR on override-vs-winner; **G2**, a `mock-lms`
-connector and the learning-domain importers, which no numbered step covers; **G1's write-back
-ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the flags
-mean something).
+**Then, in order:** **step 48's resolution half** behind an ADR on override-vs-winner; **G2**, a
+`mock-lms` connector and the learning-domain importers, which no numbered step covers; **G1's
+write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the
+flags mean something). Wiring the person directory into the grant form as a picker (rather than
+a raw UUID field) is small and falls out naturally whenever that screen is next touched.
 
 ## Caveats
 
@@ -152,15 +153,15 @@ mean something).
   longer sends rows that fail the count, so the two numbers match except against a stale cache.
   Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 444.8 kB gzipped against the 455 kB guard — step (b)'s derived-role
-  badge and narrower grant form cost 3.9 kB. `pnpm size` is green with about 10 kB of headroom left;
-  take the Radix Select swap before raising the guard, not before spending what remains.
-- Listing derived roles is per person (`GET .../role-assignments?userId=`), not institution-wide:
-  enumerating every derived membership across an institution needs a directory query this step did
-  not build. Step (c)'s person directory is the natural place to add it.
-- Local development needs uncommitted `.env` files, with the backend's ports matching what
-  `docker-compose.yml` publishes (5432 / 6379). The dev seed creates two users and no institution;
-  demo data needs an institution row, a role grant, `academicSystemConnector: mock-sis` and a run. Every
-  walk so far has had to hand-edit that data to reach its screen. A seed producing a signed-in user with
-  a plausible student _and_ teacher life would pay for itself — this is now the longest-standing tax on
-  the loop.
+- The client bundle measures 451.31 kB gzipped against the 455 kB guard, about 3.7 kB of headroom
+  left after step (c)'s three new screens; the Radix Select swap is now due before the next screen
+  that adds meaningfully to the bundle, not optional.
+- `POST /institutions` needs an existing account's id, not an email, until step (d)'s invitations
+  exist (ADR 0017); the grant form still takes its subject as a raw UUID, with the person directory
+  this step built the natural source for a picker, not yet wired in.
+- The dev seed creates two users, one a platform operator (`admin@studviro.local`), and no
+  institution; a walk now creates its own institution through the UI in seconds via that seeded
+  operator. The remaining tax: no seeded institution has `academicSystemConnector: mock-sis` or a
+  sync run, so exercising student/teacher screens still needs that set up by hand.
+- The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; a
+  restart was needed mid-walk to pick up a new translation key.
