@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
+  ApiCreatedResponse,
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
@@ -23,10 +24,13 @@ import { RequirePermission } from '../authorization/decorators/require-permissio
 
 import { ListSyncRunsQueryDto } from './dto/list-sync-runs-query.dto';
 import { ReconciliationReportResponseDto } from './dto/reconciliation-report-response.dto';
+import { ReconciliationResolutionResponseDto } from './dto/reconciliation-resolution-response.dto';
+import { ResolveDiscrepancyDto } from './dto/resolve-discrepancy.dto';
 import { StartSyncRunDto } from './dto/start-sync-run.dto';
 import { SyncRunDetailResponseDto } from './dto/sync-run-detail-response.dto';
 import { SyncRunResponseDto } from './dto/sync-run-response.dto';
 import { SyncWatermarkResponseDto } from './dto/sync-watermark-response.dto';
+import { ReconciliationResolutionService } from './reconciliation-resolution.service';
 import { ReconciliationService } from './reconciliation.service';
 import { SynchronizationService } from './synchronization.service';
 
@@ -39,6 +43,7 @@ export class SynchronizationController {
   constructor(
     private readonly synchronization: SynchronizationService,
     private readonly reconciliation: ReconciliationService,
+    private readonly resolutions: ReconciliationResolutionService,
   ) {}
 
   @Post('runs')
@@ -115,6 +120,51 @@ export class SynchronizationController {
   ): Promise<ReconciliationReportResponseDto> {
     return ReconciliationReportResponseDto.from(
       await this.reconciliation.report(institutionId),
+    );
+  }
+
+  @Get('reconciliation/resolutions')
+  @RequirePermission('sync:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'listReconciliationResolutions',
+    summary: 'List the discrepancies somebody has already resolved',
+  })
+  @ApiOkResponse({ type: ReconciliationResolutionResponseDto, isArray: true })
+  @ApiErrorResponses({ notFound: true })
+  async findResolutions(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Query() query: ListSyncRunsQueryDto,
+  ): Promise<ReconciliationResolutionResponseDto[]> {
+    const resolutions = await this.resolutions.listRecent(institutionId, query.limit);
+
+    return resolutions.map((resolution) =>
+      ReconciliationResolutionResponseDto.fromEntity(resolution),
+    );
+  }
+
+  @Post('reconciliation/resolutions')
+  @RequirePermission('sync:run', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'resolveReconciliationDiscrepancy',
+    summary: 'Settle one discrepancy by accepting the source or overriding it',
+    description:
+      'Either yields the platform row to the source, or detaches it so no import matches it again. A record the platform never took in cannot be resolved here — run a full synchronization instead.',
+  })
+  @ApiCreatedResponse({ type: ReconciliationResolutionResponseDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async resolve(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Body() dto: ResolveDiscrepancyDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<ReconciliationResolutionResponseDto> {
+    return ReconciliationResolutionResponseDto.fromOutcome(
+      await this.resolutions.resolve(institutionId, userId, {
+        domain: dto.domain,
+        kind: dto.kind,
+        action: dto.action,
+        canonicalId: dto.canonicalId ?? null,
+        externalId: dto.externalId ?? null,
+      }),
     );
   }
 

@@ -44,6 +44,12 @@ export class ReconciliationService {
     @Inject(ACADEMIC_IMPORTERS) private readonly importers: readonly AcademicImporter[],
   ) {}
 
+  async academicTarget(institutionId: string): Promise<SyncTarget> {
+    const { connectorName } = await this.academicConnector(institutionId);
+
+    return { institutionId, sourceSystem: ACADEMIC_SOURCE, connectorName };
+  }
+
   async report(institutionId: string): Promise<ReconciliationReport> {
     const { connector, connectorName } = await this.academicConnector(institutionId);
     const target: SyncTarget = {

@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-12 (password-reset screen)
+Last updated: 2026-09-13 (step 48, reconciliation resolution)
 
 ## What this is
 
@@ -34,8 +34,13 @@ reasoning lives in `docs/adr/`. In short:
 - **Institution setup and synchronization** — terminology, flags and connector selection resolving
   over platform defaults; connector contracts, deterministic `mock-sis`, registry health and
   capabilities, ordered imports, provenance upserts, stale-write guards, tombstones, child pruning,
-  watermarks and a locked run state machine (ADR 0010); and reconciliation (37), which reads both
-  sides live and reports what is missing, stale or in conflict per domain, resolving nothing.
+  watermarks and a locked run state machine (ADR 0010); reconciliation (37), which reads both
+  sides live and reports what is missing, stale or in conflict per domain; and its resolution half (48),
+  which settles one either way — `accept_source` marks the row pending so the next import overwrites it,
+  or tombstones it when the source dropped it; `keep_platform` detaches the row from the source so no
+  import can ever match it again. A record the platform never took in is not resolvable there, because
+  the remedy is an import. Every decision is logged in `reconciliation_resolutions` with who made it, and
+  the log renders under the report. Behind `sync:run`. ADR 0019.
 - **Invited person records** — an import lands a person as `users.status = 'invited'` with no
   credential, and no longer throws `IDENTITY_EMAIL_CONFLICT` when the human self-registered first.
   `user_emails` separates an asserted address from a proven one; only a verified address is
@@ -61,9 +66,7 @@ reasoning lives in `docs/adr/`. In short:
   `firstAdminEmail` alongside `firstAdminUserId`, issuing an invitation instead of an immediate
   grant (ADR 0018). `/forgot-password` (linked from `/sign-in`) and `/reset-password` cover the
   reset side with the same non-enumeration shape and one message for an expired, consumed or
-  malformed token; neither route requires a session. Fitting it meant swapping `shared/ui`'s
-  `Select` from `@radix-ui/react-select` to a native `<select>`, recovering 27.61 kB of the client
-  bundle before the new screens spent 5.63 kB of it back — see _Caveats_.
+  malformed token; neither route requires a session.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -116,6 +119,11 @@ turned out not to be. Read those before starting; the headlines:
   while personal data is already served (**G12**).
 - Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
   rather than a provenanced canonical row — but the screen says nothing about the omission.
+- `accept_source` is a two-step operation: it clears the way, and a **full** run applies it. Until a
+  scheduled sync exists (**G10**) the second step is a button somebody must remember to press, and in
+  the meantime the row re-reports as a fresh `conflict` ("marked pending rather than in sync"), which
+  reads as a new problem rather than as a decision awaiting a run. Reconciliation should recognise a
+  row it was itself told to make pending.
 - Smaller, known: the calendar's course picker lists only courses with an event that week and no
   filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
   rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` now
@@ -129,18 +137,20 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — step 48's resolution half
+## Next task — G2, the learning half of the model
 
-**Take step 48's resolution half**, behind an ADR on override-vs-winner: the read half already
-ships (step 37, the sync monitor's discrepancy report); this step adds the write that resolves a
-discrepancy, either by platform override or by marking one side the winner, and the drill-down that
-acts on one from the report.
+**Build `mock-lms` and the learning-domain importers.** No numbered step covers it, and it is the
+largest hole left: six canonical tables (`learning_spaces`, `learning_activities`, `submission_refs`
+and their kin) have no importer, no `SYNC_DOMAIN`, no read endpoint and no screen, while
+`LearningSystemConnector` (step 14) is an interface with no implementation. Do for the LMS side what
+step 29 did for the SIS side: a deterministic `mock-lms` whose fixtures line up with `mock-sis`'s
+courses, the importers and sync domains behind it, and one screen that proves a learning space
+reached the platform. Reconciliation and the sync monitor should pick it up for free.
 
-**After that, in order:** **G2**, a `mock-lms` connector and the learning-domain importers, which no
-numbered step covers; **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
-(grade entry); and B6 (make the flags mean something). Wiring the person directory into the grant
-form as a picker (rather than a raw UUID field) is small and falls out naturally whenever that
-screen is next touched.
+**After that, in order:** **G1's write-back ADR** (a registration still never leaves StudViro);
+B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the flags mean
+something). Wiring the person directory into the grant form as a picker (rather than a raw UUID
+field) is small and falls out naturally whenever that screen is next touched.
 
 ## Caveats
 
@@ -154,16 +164,15 @@ screen is next touched.
   longer sends rows that fail the count, so the two numbers match except against a stale cache.
   Worth collapsing to a single figure when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 431.47 kB gzipped against the 455 kB guard — 23.53 kB of headroom.**
-  The native-`<select>` swap freed 27.61 kB; the password-reset screens spent 5.63 kB back. The
+- **The client bundle is at 433.34 kB gzipped against the 455 kB guard — 21.66 kB of headroom.**
+  Step 48's resolution UI spent 1.87 kB. The native-`<select>` swap freed 27.61 kB earlier. The
   swap touched six call sites and their tests (role granting, invite-person, the schedule filters,
   the two institution-settings field groups, the sync mode picker) — worth remembering when a
   future `shared/ui` primitive is chosen: a Radix control pulls in floating-ui, focus-scope,
   dismissable-layer and the collection helpers, and a plain HTML element sometimes covers the
   same behaviour for less.
-- Signing in as `admin@studviro.local` during this step's browser walk exercised the reset flow
-  for real: its password on this machine's dev database is now `newpassword123`, not the seed
-  default. `pnpm db:seed` does not reset an existing user's password.
+- `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
+  seed default; `pnpm db:seed` does not reset an existing user's password.
 - `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
   institutions importing the same address before either invites it would contend for one shadow
   row. Not reachable with the current single-tenant seed; see ADR 0018.
@@ -176,3 +185,9 @@ screen is next touched.
   sync run, so exercising student/teacher screens still needs that set up by hand.
 - The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; a
   restart was needed mid-walk to pick up a new translation key.
+- The footer's Light/Dark/System control did not switch theme during step 48's walk — clicking
+  `Light` left `System` selected and the document in dark. Not touched by that step; worth a look.
+- Step 48's walk left this machine's dev database with course `CRS-PF-P2-12` detached to
+  `source_system = 'platform'` and two rows in `reconciliation_resolutions`. A full sync will create
+  a fresh source-owned course beside the detached one — which is ADR 0019's named consequence, now
+  observed rather than predicted.

@@ -136,3 +136,46 @@ export type SyncDomainResult = typeof syncDomainResults.$inferSelect;
 export type NewSyncDomainResult = typeof syncDomainResults.$inferInsert;
 export type SyncWatermark = typeof syncWatermarks.$inferSelect;
 export type NewSyncWatermark = typeof syncWatermarks.$inferInsert;
+
+export const DISCREPANCY_KINDS = [
+  'missing_in_platform',
+  'missing_in_source',
+  'stale',
+  'conflict',
+] as const;
+export type DiscrepancyKind = (typeof DISCREPANCY_KINDS)[number];
+export const discrepancyKind = pgEnum('discrepancy_kind', DISCREPANCY_KINDS);
+
+export const RECONCILIATION_ACTIONS = ['accept_source', 'keep_platform'] as const;
+export type ReconciliationAction = (typeof RECONCILIATION_ACTIONS)[number];
+export const reconciliationAction = pgEnum('reconciliation_action', RECONCILIATION_ACTIONS);
+
+export const reconciliationResolutions = pgTable(
+  'reconciliation_resolutions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    sourceSystem: sourceSystemEnum('source_system').notNull(),
+    connectorName: text('connector_name').notNull(),
+    domain: syncDomain('domain').notNull(),
+    kind: discrepancyKind('kind').notNull(),
+    action: reconciliationAction('action').notNull(),
+    externalId: text('external_id'),
+    // Deliberately no foreign key: the row it names lives in whichever canonical
+    // table the domain maps to, and may since have been tombstoned.
+    canonicalId: uuid('canonical_id'),
+    detail: text('detail').notNull(),
+    resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestampColumn('resolved_at').notNull().defaultNow(),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('reconciliation_resolutions_institution_resolved_at_idx')
+      .on(table.institutionId, table.resolvedAt)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
+export type ReconciliationResolution = typeof reconciliationResolutions.$inferSelect;
+export type NewReconciliationResolution = typeof reconciliationResolutions.$inferInsert;

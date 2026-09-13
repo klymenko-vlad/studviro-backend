@@ -14,6 +14,8 @@ import {
   ACADEMIC_IMPORTER_CLASSES,
   academicImportersProvider,
 } from './importers/academic-importers.provider';
+import { ReconciliationResolutionRepository } from './reconciliation-resolution.repository';
+import { ReconciliationResolutionService } from './reconciliation-resolution.service';
 import { ReconciliationService } from './reconciliation.service';
 import { SyncDomainResultRepository } from './sync-domain-result.repository';
 import { SyncRunRepository } from './sync-run.repository';
@@ -40,6 +42,8 @@ import { SynchronizationService } from './synchronization.service';
     AcademicSyncService,
     SynchronizationService,
     ReconciliationService,
+    ReconciliationResolutionService,
+    ReconciliationResolutionRepository,
     SyncRunService,
     SyncRunRepository,
     SyncDomainResultRepository,

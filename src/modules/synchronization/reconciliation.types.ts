@@ -1,4 +1,8 @@
-import type { SyncDomain } from '../../database/schema';
+import {
+  DISCREPANCY_KINDS,
+  type DiscrepancyKind,
+  type SyncDomain,
+} from '../../database/schema';
 
 import type { CanonicalTableName } from './canonical-tables';
 
@@ -32,13 +36,8 @@ export function isReconciled(domain: SyncDomain): domain is ReconciledDomain {
   return domain in RECONCILED_TABLES;
 }
 
-export const DISCREPANCY_KINDS = [
-  'missing_in_platform',
-  'missing_in_source',
-  'stale',
-  'conflict',
-] as const;
-export type DiscrepancyKind = (typeof DISCREPANCY_KINDS)[number];
+export { DISCREPANCY_KINDS };
+export type { DiscrepancyKind };
 
 export const RECONCILIATION_DOMAIN_STATUSES = ['checked', 'skipped', 'failed'] as const;
 export type ReconciliationDomainStatus = (typeof RECONCILIATION_DOMAIN_STATUSES)[number];

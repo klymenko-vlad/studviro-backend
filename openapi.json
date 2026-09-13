@@ -337,6 +337,191 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/synchronization/reconciliation/resolutions": {
+      "get": {
+        "operationId": "listReconciliationResolutions",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReconciliationResolutionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the discrepancies somebody has already resolved",
+        "tags": [
+          "synchronization"
+        ]
+      },
+      "post": {
+        "description": "Either yields the platform row to the source, or detaches it so no import matches it again. A record the platform never took in cannot be resolved here — run a full synchronization instead.",
+        "operationId": "resolveReconciliationDiscrepancy",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveDiscrepancyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationResolutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Settle one discrepancy by accepting the source or overriding it",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/synchronization/state": {
       "get": {
         "operationId": "getSynchronizationState",
@@ -4437,6 +4622,139 @@
           "checkedAt",
           "discrepancyCount",
           "domains"
+        ]
+      },
+      "ReconciliationResolutionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "enum": [
+              "orgUnits",
+              "academicTerms",
+              "rooms",
+              "programs",
+              "courses",
+              "courseOfferings",
+              "programMemberships",
+              "studyGroups",
+              "enrollments",
+              "timetableEvents",
+              "examTerms",
+              "officialResults"
+            ],
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "missing_in_platform",
+              "missing_in_source",
+              "stale",
+              "conflict"
+            ],
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "accept_source",
+              "keep_platform"
+            ],
+            "type": "string"
+          },
+          "connectorName": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "canonicalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string"
+          },
+          "resolvedById": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requiresFullSync": {
+            "type": "boolean",
+            "description": "True when the resolution only clears the way and a full synchronization run is what applies it."
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "kind",
+          "action",
+          "connectorName",
+          "externalId",
+          "canonicalId",
+          "detail",
+          "resolvedById",
+          "resolvedAt",
+          "requiresFullSync"
+        ]
+      },
+      "ResolveDiscrepancyDto": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "enum": [
+              "orgUnits",
+              "academicTerms",
+              "rooms",
+              "programs",
+              "courses",
+              "courseOfferings",
+              "programMemberships",
+              "studyGroups",
+              "enrollments",
+              "timetableEvents",
+              "examTerms",
+              "officialResults"
+            ],
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "missing_in_platform",
+              "missing_in_source",
+              "stale",
+              "conflict"
+            ],
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "accept_source",
+              "keep_platform"
+            ],
+            "type": "string",
+            "description": "`accept_source` yields to the source system; `keep_platform` detaches the row from it and keeps the platform copy."
+          },
+          "canonicalId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "domain",
+          "kind",
+          "action"
         ]
       },
       "SyncWatermarkResponseDto": {
