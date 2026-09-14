@@ -22,9 +22,15 @@ const row = (overrides: Partial<LearningSpaceRow> = {}): LearningSpaceRow => ({
   ...overrides,
 });
 
-const service = (rows: LearningSpaceRow[], total = rows.length) => {
+const service = (
+  rows: LearningSpaceRow[],
+  counts = {
+    total: rows.length,
+    linked: rows.filter((entry) => entry.offeringId !== null).length,
+  },
+) => {
   const findSpaces = vi.fn().mockResolvedValue(rows);
-  const countSpaces = vi.fn().mockResolvedValue(total);
+  const countSpaces = vi.fn().mockResolvedValue(counts);
   const repository = { findSpaces, countSpaces } as unknown as LearningSpacesRepository;
 
   return { service: new LearningSpacesService(repository), findSpaces, countSpaces };
@@ -46,7 +52,10 @@ describe('LearningSpacesService', () => {
   });
 
   it('reports every space as unlinked when the SIS half has not run', async () => {
-    const { service: subject } = service([row({ offeringId: null })]);
+    const { service: subject } = service([row({ offeringId: null })], {
+      total: 1,
+      linked: 0,
+    });
 
     await expect(subject.listForInstitution(INSTITUTION)).resolves.toMatchObject({
       linked: 0,
@@ -54,17 +63,19 @@ describe('LearningSpacesService', () => {
     });
   });
 
-  it('reports the institution-wide total even when the page is shorter', async () => {
-    const { service: subject } = service([row()], 250);
+  it('counts linked spaces across the institution, not across one page', async () => {
+    const { service: subject } = service([row()], { total: 250, linked: 200 });
 
     const summary = await subject.listForInstitution(INSTITUTION);
 
     expect(summary.total).toBe(250);
+    expect(summary.linked).toBe(200);
+    expect(summary.unlinked).toBe(50);
     expect(summary.spaces).toHaveLength(1);
   });
 
   it('answers with no spaces at all before anything is imported', async () => {
-    const { service: subject } = service([], 0);
+    const { service: subject } = service([], { total: 0, linked: 0 });
 
     await expect(subject.listForInstitution(INSTITUTION)).resolves.toEqual({
       total: 0,

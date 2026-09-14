@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { asc, count, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, sql, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
@@ -9,6 +9,11 @@ import {
   learningSpaces,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+export interface LearningSpaceCounts {
+  total: number;
+  linked: number;
+}
 
 export interface LearningSpaceRow {
   id: string;
@@ -59,7 +64,7 @@ export class LearningSpacesRepository {
           where ${learningActivities.learningSpaceId} = ${learningSpaces.id}
             and ${learningActivities.deletedAt} is null
             and ${learningActivities.dueAt} is not null
-        )`,
+        )`.mapWith(learningActivities.dueAt),
       })
       .from(learningSpaces)
       .leftJoin(courseOfferings, eq(courseOfferings.id, learningSpaces.courseOfferingId))
@@ -70,14 +75,17 @@ export class LearningSpacesRepository {
       .limit(limit);
   }
 
-  async countSpaces(institutionId: string): Promise<number> {
+  async countSpaces(institutionId: string): Promise<LearningSpaceCounts> {
     const [row] = await this.txHost.db
-      .select({ total: count() })
+      .select({
+        total: count(),
+        linked: sql<number>`count(${learningSpaces.courseOfferingId})::int`,
+      })
       .from(learningSpaces)
       .where(
-        sql`${learningSpaces.institutionId} = ${institutionId} and ${learningSpaces.deletedAt} is null`,
+        and(eq(learningSpaces.institutionId, institutionId), isNull(learningSpaces.deletedAt)),
       );
 
-    return row?.total ?? 0;
+    return { total: row?.total ?? 0, linked: row?.linked ?? 0 };
   }
 }

@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-13 (step 48, reconciliation resolution)
+Last updated: 2026-09-14 (G2, the learning half)
 
 ## What this is
 
@@ -41,6 +41,14 @@ reasoning lives in `docs/adr/`. In short:
   import can ever match it again. A record the platform never took in is not resolvable there, because
   the remedy is an import. Every decision is logged in `reconciliation_resolutions` with who made it, and
   the log renders under the report. Behind `sync:run`. ADR 0019.
+- **The learning half of the model** (G2, partly) — a deterministic `mock-lms` derives one learning
+  space per `mock-sis` course offering, naming it by the SIS identifier, with activities whose
+  assessable types carry `opens_at`/`due_at`. Two sync domains (`learningSpaces`,
+  `learningActivities`) and two importers land them; an LMS run is the same sync run under
+  `sourceSystem: 'lms'`, taking its own lock and its own in-flight check, chosen from a _System_
+  picker beside the mode picker on the sync screen. `/institutions/[id]/learning` lists what
+  arrived with activity counts, next deadline and the offering each is matched to. ADR 0020.
+
 - **Invited person records** — an import lands a person as `users.status = 'invited'` with no
   credential, and no longer throws `IDENTITY_EMAIL_CONFLICT` when the human self-registered first.
   `user_emails` separates an asserted address from a proven one; only a verified address is
@@ -111,12 +119,20 @@ turned out not to be. Read those before starting; the headlines:
   notifications reach everyone enrolled rather than everyone holding a seat, and never the examiner
   (**B10**); a cancellation is soft-deleted so nobody can see it happened (**B11**); your own
   registration is never confirmed (**B12**).
-- **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); the LMS
-  half of the model is dead and no backlog step plays the part `mock-sis` played for the SIS half
-  (**G2**, **G3**); eight of twenty-two permissions have no endpoint — no catalogue, no grade entry,
-  no enrolment correction (**G4**, **G8**); no self-service enrolment (**G5**); one notification
-  family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted
-  while personal data is already served (**G12**).
+- **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); eight of
+  twenty-two permissions have no endpoint — no catalogue, no grade entry, no enrolment correction
+  (**G4**, **G8**); no self-service enrolment (**G5**); one notification family (**G9**); no sync
+  schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
+  already served (**G12**).
+- **G2 is half closed.** `assessments`, `assessment_results`, `activity_completions` and
+  `submission_refs` still have no importer — `mock-lms` advertises `courses.read` and
+  `activities.read` only, so the other four domains report `skipped` rather than succeeding on no
+  data. **G3** is now unblocked rather than blocked: `learning_activities.due_at` is populated, and
+  the calendar, dashboard and notifications are what still lack a deadline layer.
+- **Reconciliation covers the SIS half only.** `ReconciliationService` is constructed against the
+  academic connector and `ACADEMIC_IMPORTERS`, so the two learning domains are simply absent from
+  its report — `RECONCILED_TABLES` is a `Partial` map, so nothing breaks, nothing is compared.
+  Giving it a second source system is its own step.
 - Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
   rather than a provenanced canonical row — but the screen says nothing about the omission.
 - `accept_source` is a two-step operation: it clears the way, and a **full** run applies it. Until a
@@ -137,20 +153,25 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — G2, the learning half of the model
+## Next task — G3, the deadline layer
 
-**Build `mock-lms` and the learning-domain importers.** No numbered step covers it, and it is the
-largest hole left: six canonical tables (`learning_spaces`, `learning_activities`, `submission_refs`
-and their kin) have no importer, no `SYNC_DOMAIN`, no read endpoint and no screen, while
-`LearningSystemConnector` (step 14) is an interface with no implementation. Do for the LMS side what
-step 29 did for the SIS side: a deterministic `mock-lms` whose fixtures line up with `mock-sis`'s
-courses, the importers and sync domains behind it, and one screen that proves a learning space
-reached the platform. Reconciliation and the sync monitor should pick it up for free.
+**Put assignment deadlines in front of students.** G2 populated `learning_activities.due_at` and
+indexed it per institution for exactly this query, but the only screen that reads it is the admin
+learning list. Give the deadline the treatment ADR 0013 gave exam terms: a second layer on the week
+calendar, a section on the dashboard, and a notification family — reusing the `type:subject:day`
+deduplication (ADR 0012) rather than inventing a second one. The audience question is the same one
+**B10** is about, so read that caveat before choosing it.
 
-**After that, in order:** **G1's write-back ADR** (a registration still never leaves StudViro);
-B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make the flags mean
-something). Wiring the person directory into the grant form as a picker (rather than a raw UUID
-field) is small and falls out naturally whenever that screen is next touched.
+Scope note: a student cannot see a learning space at all today. The endpoint answers to
+`offering:read`, which every student holds, but the only screen behind it is gated in the nav on
+`sync:read`. G3 is where the student-facing half of the learning model gets built, so decide there
+whether the course page grows a _Learning_ section rather than adding a second standalone screen.
+
+**After that, in order:** G2's remainder (assessments, results, completion, submissions, plus
+reconciliation's second source system); **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle
+step; G4/G8 (grade entry); and B6 (make the flags mean something). Wiring the person directory into
+the grant form as a picker (rather than a raw UUID field) is small and falls out naturally whenever
+that screen is next touched.
 
 ## Caveats
 
@@ -160,17 +181,13 @@ field) is small and falls out naturally whenever that screen is next touched.
   `ENROLLMENT_PARTICIPATING_STATUSES`, so a `completed` student who legitimately registers for a
   resit is never told when that term moves — the exam flow still disagrees with itself, now only
   for retakes. Fold this into the B10 fix.
-- The roster's "{enrolled} enrolled of {total} listed" copy is now near-redundant: the server no
-  longer sends rows that fail the count, so the two numbers match except against a stale cache.
-  Worth collapsing to a single figure when that widget is next touched.
+- The roster's "{enrolled} enrolled of {total} listed" copy is near-redundant — the two numbers now
+  match except against a stale cache. Collapse it when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 433.34 kB gzipped against the 455 kB guard — 21.66 kB of headroom.**
-  Step 48's resolution UI spent 1.87 kB. The native-`<select>` swap freed 27.61 kB earlier. The
-  swap touched six call sites and their tests (role granting, invite-person, the schedule filters,
-  the two institution-settings field groups, the sync mode picker) — worth remembering when a
-  future `shared/ui` primitive is chosen: a Radix control pulls in floating-ui, focus-scope,
-  dismissable-layer and the collection helpers, and a plain HTML element sometimes covers the
-  same behaviour for less.
+- **The client bundle is at 436.26 kB gzipped against the 455 kB guard — 18.74 kB of headroom.**
+  G2 spent 2.67 kB. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
+  freed 27.61 kB: a Radix control pulls in floating-ui, focus-scope, dismissable-layer and the
+  collection helpers, and a plain HTML element sometimes covers the same behaviour for less.
 - `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
   seed default; `pnpm db:seed` does not reset an existing user's password.
 - `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
@@ -180,14 +197,23 @@ field) is small and falls out naturally whenever that screen is next touched.
   fails the whole accept transaction rather than resolving it — the safer failure, not the
   friendliest. See ADR 0018.
 - The dev seed creates two users, one a platform operator (`admin@studviro.local`), and no
-  institution; a walk now creates its own institution through the UI in seconds via that seeded
-  operator. The remaining tax: no seeded institution has `academicSystemConnector: mock-sis` or a
-  sync run, so exercising student/teacher screens still needs that set up by hand.
+  institution; a walk creates its own through the UI via that seeded operator.
 - The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; a
-  restart was needed mid-walk to pick up a new translation key.
-- The footer's Light/Dark/System control did not switch theme during step 48's walk — clicking
-  `Light` left `System` selected and the document in dark. Not touched by that step; worth a look.
-- Step 48's walk left this machine's dev database with course `CRS-PF-P2-12` detached to
-  `source_system = 'platform'` and two rows in `reconciliation_resolutions`. A full sync will create
-  a fresh source-owned course beside the detached one — which is ADR 0019's named consequence, now
-  observed rather than predicted.
+  restart was needed mid-walk to pick up a new translation key. Confirmed again during G2's walk —
+  the new keys rendered as raw `sync.source.lms` identifiers until the server was restarted.
+- **A `sql` subquery bypasses Drizzle's column mapper.** G2's learning list selected
+  `min(due_at)` through a raw `sql` fragment and served it as `"2026-11-05 21:00:00+00"` — a raw
+  PostgreSQL string the generated client rejects, so a screen with a green test suite failed in the
+  browser. `.mapWith(table.column)` fixes it; the e2e now asserts ISO 8601 at the API boundary and
+  fails without the fix. Worth checking any other raw `sql` timestamp selection.
+- A paged list must not compute a summary from the page. The same screen first reported
+  "144 learning spaces, 100 of them matched" because `total` counted the table and `linked` counted
+  the 100-row page. Both counts now come from one institution-wide query.
+- `mock-lms` names a learning space after its course's title, so the _Learning space_ and
+  _Course offering_ columns read almost identically on the screen. Honest to the fixture, but a
+  real Moodle course name would differ; worth revisiting if that table is widened.
+- This machine's dev institution now has `learningSystemConnector: mock-lms` and 144 imported
+  spaces with 576 activities, so the learning screen has data without further setup.
+- This machine's dev database has course `CRS-PF-P2-12` detached to `source_system = 'platform'`
+  from step 48's walk; a full sync creates a fresh source-owned course beside it, which is
+  ADR 0019's named consequence observed rather than predicted.

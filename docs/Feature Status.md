@@ -50,7 +50,7 @@ Last updated: 2026-09-12
 | Browse the course catalogue              | ⬜      | ⬜       | `Planned` | Gap G4. `mock-sis` imports programmes and courses; courses are reachable only through your own enrolments and `program:read` / `course:read` have no endpoint                                                                                                                                           |
 | Enrol in a course                        | ⬜      | ⬜       | `Planned` | Gap G5. The enrolment window, capacity and the `requested → provisioning → active` ladder are modelled; nothing requests one. Enrolment is imported fact only                                                                                                                                           |
 | Exam registration reaches the university | ⬜      | —        | `Planned` | Gap G1. Registration is platform-local: no connector call, no cancel command, no outbox. See the caveat on the Exam registration row above                                                                                                                                                              |
-| Assignments and deadlines                | ⬜      | ⬜       | `Planned` | Gap G3, follows G2. `learning_activities.due_at` is indexed for this and nothing reads it                                                                                                                                                                                                               |
+| Assignments and deadlines                | ✅      | ⬜       | `Partial` | Gap G3. `learning_activities.due_at` is now populated by the LMS import and shown on the learning screen; the calendar, the dashboard and the notifications still have no deadline layer                                                                                                                |
 | See my programme and study progress      | ⬜      | ⬜       | `Planned` | `program_memberships` is imported — study year, status, programme — and never shown                                                                                                                                                                                                                     |
 
 ## Teacher
@@ -86,20 +86,21 @@ Last updated: 2026-09-12
 
 ## Platform
 
-| Capability                                                          | State     | Notes                                                                                        |
-| ------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------- |
-| Canonical academic model                                            | `Live`    | 25 tables, institution-scoped, full provenance, external IDs never primary keys              |
-| Mock SIS connector                                                  | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                        |
-| Synchronization engine                                              | `Partial` | Imports the SIS into canonical tables; enrolments, offerings and course results are readable |
-| Retries, tombstones, watermarks                                     | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures                 |
-| Reconciliation checks                                               | `Live`    | Steps 37 and 48; reports discrepancies and settles one either way, with an audit log         |
-| Learning-system data (spaces, activities, assessments, submissions) | `Planned` | Gap G2. Six canonical tables with no importer, no sync domain, no read and no screen         |
-| Mock LMS connector                                                  | `Planned` | Gap G2. Not named by any of the 71 steps; the unblocker for everything Moodle gates          |
-| Write-back to source systems                                        | `Planned` | Gap G1. Two optional connector methods, no caller, no cancel, no outbox, no retry            |
-| Moodle connector                                                    | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance               |
-| AIS2 connector                                                      | `Blocked` | Blocked on documented institutional access (step 15)                                         |
-| Generated API contract                                              | `Live`    | `openapi.json` drift-checked; the client is generated from it                                |
-| Observability                                                       | `Partial` | Pino, health, Prometheus; sync freshness readable over the API, not a metric                 |
-| Containerized deployment                                            | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                        |
-| Backup and restore                                                  | `Planned` | Step 55                                                                                      |
-| End-to-end and security tests                                       | `Planned` | Steps 59–62; unit and domain tests are continuous                                            |
+| Capability                                                           | State     | Notes                                                                                    |
+| -------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| Canonical academic model                                             | `Live`    | 25 tables, institution-scoped, full provenance, external IDs never primary keys          |
+| Mock SIS connector                                                   | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                    |
+| Synchronization engine                                               | `Partial` | Imports the SIS and the LMS into canonical tables, each as its own source system and run |
+| Retries, tombstones, watermarks                                      | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures             |
+| Reconciliation checks                                                | `Live`    | Steps 37 and 48; reports discrepancies and settles one either way, with an audit log     |
+| Learning-system data (spaces, activities)                            | `Live`    | Imported behind `sync:run`, listed at `/institutions/:id/learning`, matched to offerings |
+| Learning-system data (assessments, results, completion, submissions) | `Planned` | Gap G2's remainder. Four canonical tables still have no importer and no read             |
+| Mock LMS connector                                                   | `Live`    | Deterministic `mock-lms`; spaces and activities derived from `mock-sis`'s offerings      |
+| Write-back to source systems                                         | `Planned` | Gap G1. Two optional connector methods, no caller, no cancel, no outbox, no retry        |
+| Moodle connector                                                     | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance           |
+| AIS2 connector                                                       | `Blocked` | Blocked on documented institutional access (step 15)                                     |
+| Generated API contract                                               | `Live`    | `openapi.json` drift-checked; the client is generated from it                            |
+| Observability                                                        | `Partial` | Pino, health, Prometheus; sync freshness readable over the API, not a metric             |
+| Containerized deployment                                             | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                    |
+| Backup and restore                                                   | `Planned` | Step 55                                                                                  |
+| End-to-end and security tests                                        | `Planned` | Steps 59–62; unit and domain tests are continuous                                        |

@@ -232,6 +232,46 @@ describe('Learning synchronization (e2e)', () => {
     expect(body.spaces[0]?.offeringId).not.toBeNull();
   });
 
+  it('serves every timestamp as ISO 8601, not as a raw database string', async () => {
+    await syncBothHalves();
+
+    const actor = await actingAs('institution_admin');
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/learning-spaces`,
+      headers: actor.headers,
+    });
+
+    const { spaces } = response.json<{
+      spaces: { nextDueAt: string | null; lastSynchronizedAt: string | null }[];
+    }>();
+    const dated = spaces.filter((space) => space.nextDueAt !== null);
+
+    expect(dated.length).toBeGreaterThan(0);
+    for (const space of spaces) {
+      for (const stamp of [space.nextDueAt, space.lastSynchronizedAt]) {
+        if (stamp === null) continue;
+        expect(stamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+      }
+    }
+  });
+
+  it('counts the linked spaces across the institution, not across one page', async () => {
+    await syncBothHalves();
+
+    const actor = await actingAs('institution_admin');
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/learning-spaces`,
+      headers: actor.headers,
+    });
+
+    const body = response.json<{ total: number; linked: number; unlinked: number }>();
+
+    expect(body.linked).toBe(body.total);
+    expect(body.unlinked).toBe(0);
+  });
+
   it('refuses the spaces list to a caller without offering:read', async () => {
     const actor = await harness.actingAs();
     const response = await harness.inject({

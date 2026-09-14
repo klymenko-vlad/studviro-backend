@@ -16,13 +16,16 @@ export class LearningSpacesService {
   constructor(private readonly spaces: LearningSpacesRepository) {}
 
   async listForInstitution(institutionId: string): Promise<LearningSpaceSummary> {
-    const [rows, total] = await Promise.all([
+    const [rows, counts] = await Promise.all([
       this.spaces.findSpaces(institutionId, LEARNING_SPACE_PAGE_SIZE),
       this.spaces.countSpaces(institutionId),
     ]);
 
-    const linked = rows.filter((row) => row.offeringId !== null).length;
-
-    return { total, linked, unlinked: rows.length - linked, spaces: rows };
+    return {
+      total: counts.total,
+      linked: counts.linked,
+      unlinked: counts.total - counts.linked,
+      spaces: rows,
+    };
   }
 }
