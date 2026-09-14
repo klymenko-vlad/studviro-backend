@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-14 (G2, the learning half)
+Last updated: 2026-09-14 (G3, the deadline layer)
 
 ## What this is
 
@@ -48,6 +48,12 @@ reasoning lives in `docs/adr/`. In short:
   `sourceSystem: 'lms'`, taking its own lock and its own in-flight check, chosen from a _System_
   picker beside the mode picker on the sync screen. `/institutions/[id]/learning` lists what
   arrived with activity counts, next deadline and the offering each is matched to. ADR 0020.
+- **Deadlines reach the student** (G3) — `GET .../me/deadlines` answers the same range the calendar
+  asks for, behind `schedule:read`, scoped to the offerings the caller participates in or teaches and
+  skipping anything the LMS marked invisible. The week calendar carries them as a third layer with its
+  own toggle, the dashboard as a two-week tile, and the LMS import announces a new or moved one as
+  `assignment_due_published` / `assignment_due_rescheduled` through the emitter ADR 0012 built — same
+  `type:subject:day` window, same offering audience. ADR 0021.
 
 - **Invited person records** — an import lands a person as `users.status = 'invited'` with no
   credential, and no longer throws `IDENTITY_EMAIL_CONFLICT` when the human self-registered first.
@@ -121,14 +127,14 @@ turned out not to be. Read those before starting; the headlines:
   registration is never confirmed (**B12**).
 - **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); eight of
   twenty-two permissions have no endpoint — no catalogue, no grade entry, no enrolment correction
-  (**G4**, **G8**); no self-service enrolment (**G5**); one notification family (**G9**); no sync
-  schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
+  (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
+  family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is half closed.** `assessments`, `assessment_results`, `activity_completions` and
   `submission_refs` still have no importer — `mock-lms` advertises `courses.read` and
   `activities.read` only, so the other four domains report `skipped` rather than succeeding on no
-  data. **G3** is now unblocked rather than blocked: `learning_activities.due_at` is populated, and
-  the calendar, dashboard and notifications are what still lack a deadline layer.
+  data. Because `submission_refs` is empty, nothing knows whether a student has handed work in, so an
+  overdue deadline reads as past due even when it was submitted.
 - **Reconciliation covers the SIS half only.** `ReconciliationService` is constructed against the
   academic connector and `ACADEMIC_IMPORTERS`, so the two learning domains are simply absent from
   its report — `RECONCILED_TABLES` is a `Partial` map, so nothing breaks, nothing is compared.
@@ -153,25 +159,25 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — G3, the deadline layer
+## Next task — G2's remainder: the assessment side of the LMS
 
-**Put assignment deadlines in front of students.** G2 populated `learning_activities.due_at` and
-indexed it per institution for exactly this query, but the only screen that reads it is the admin
-learning list. Give the deadline the treatment ADR 0013 gave exam terms: a second layer on the week
-calendar, a section on the dashboard, and a notification family — reusing the `type:subject:day`
-deduplication (ADR 0012) rather than inventing a second one. The audience question is the same one
-**B10** is about, so read that caveat before choosing it.
+**Import what a student is actually graded on.** `assessments`, `assessment_results`,
+`activity_completions` and `submission_refs` still have no importer, so `mock-lms` advertises
+`courses.read` and `activities.read` only and the other four domains report `skipped`. Extend the
+connector's capabilities and the fixture generator, add the four importers in dependency order, and
+put the result where it is useful: an assessment result belongs on the course page beside the
+official grade, and a submission state belongs on the deadline card, which today says _past due_ to
+a student who handed the work in a week ago.
 
-Scope note: a student cannot see a learning space at all today. The endpoint answers to
-`offering:read`, which every student holds, but the only screen behind it is gated in the nav on
-`sync:read`. G3 is where the student-facing half of the learning model gets built, so decide there
-whether the course page grows a _Learning_ section rather than adding a second standalone screen.
+Decide as part of it whether `assessment_results` feeds the calculated stage of `course_results` or
+stays a separate view — they answer different questions and merging them silently would be worse
+than either. Reconciliation's second source system (it is still constructed against the academic
+connector and `ACADEMIC_IMPORTERS`, so both learning domains are absent from its report) is the
+natural companion step, but it is its own step, not this one.
 
-**After that, in order:** G2's remainder (assessments, results, completion, submissions, plus
-reconciliation's second source system); **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle
-step; G4/G8 (grade entry); and B6 (make the flags mean something). Wiring the person directory into
-the grant form as a picker (rather than a raw UUID field) is small and falls out naturally whenever
-that screen is next touched.
+**After that, in order:** **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
+(grade entry); and B6 (make the flags mean something). Wiring the person directory into the grant
+form as a picker is small and falls out naturally whenever that screen is next touched.
 
 ## Caveats
 
@@ -184,8 +190,8 @@ that screen is next touched.
 - The roster's "{enrolled} enrolled of {total} listed" copy is near-redundant — the two numbers now
   match except against a stale cache. Collapse it when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 436.26 kB gzipped against the 455 kB guard — 18.74 kB of headroom.**
-  G2 spent 2.67 kB. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
+- **The client bundle is at 438.87 kB gzipped against the 455 kB guard — 16.13 kB of headroom.**
+  G3 spent 2.61 kB, G2 2.67 kB before it. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
   freed 27.61 kB: a Radix control pulls in floating-ui, focus-scope, dismissable-layer and the
   collection helpers, and a plain HTML element sometimes covers the same behaviour for less.
 - `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
@@ -201,19 +207,20 @@ that screen is next touched.
 - The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; a
   restart was needed mid-walk to pick up a new translation key. Confirmed again during G2's walk —
   the new keys rendered as raw `sync.source.lms` identifiers until the server was restarted.
-- **A `sql` subquery bypasses Drizzle's column mapper.** G2's learning list selected
-  `min(due_at)` through a raw `sql` fragment and served it as `"2026-11-05 21:00:00+00"` — a raw
-  PostgreSQL string the generated client rejects, so a screen with a green test suite failed in the
-  browser. `.mapWith(table.column)` fixes it; the e2e now asserts ISO 8601 at the API boundary and
-  fails without the fix. Worth checking any other raw `sql` timestamp selection.
-- A paged list must not compute a summary from the page. The same screen first reported
-  "144 learning spaces, 100 of them matched" because `total` counted the table and `linked` counted
-  the 100-row page. Both counts now come from one institution-wide query.
-- `mock-lms` names a learning space after its course's title, so the _Learning space_ and
-  _Course offering_ columns read almost identically on the screen. Honest to the fixture, but a
-  real Moodle course name would differ; worth revisiting if that table is widened.
+- A raw `sql` timestamp selection bypasses Drizzle's column mapper and serves a PostgreSQL string the
+  generated client rejects; `.mapWith(table.column)` fixes it, and both learning reads now assert
+  ISO 8601 at the API boundary. Worth checking any other raw `sql` timestamp selection.
 - This machine's dev institution now has `learningSystemConnector: mock-lms` and 144 imported
   spaces with 576 activities, so the learning screen has data without further setup.
 - This machine's dev database has course `CRS-PF-P2-12` detached to `source_system = 'platform'`
   from step 48's walk; a full sync creates a fresh source-owned course beside it, which is
   ADR 0019's named consequence observed rather than predicted.
+- **The sync monitor has no copy for the two learning domains.** `sync.domain.learningSpaces` and
+  `sync.domain.learningActivities` are missing from both message catalogues, so an LMS run's freshness
+  table logs `MISSING_MESSAGE` and renders the raw key. Two keys in each file; a G2 leftover found
+  during G3's walk.
+- A deadline card shows a bare time (`Due 12:00 AM` for a `due_at` that is an evening in UTC read in
+  the institution's timezone). The day heading above carries the date, but the card alone does not.
+- The dashboard's deadline tile covers fourteen days, so early in a term — where this machine's dev
+  data sits, with the first deadline a month out — it correctly but unhelpfully says nothing falls due.
+  Worth revisiting if the tile ever reads empty for a real cohort.
