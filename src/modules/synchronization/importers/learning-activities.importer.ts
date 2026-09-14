@@ -6,6 +6,7 @@ import type {
   LearningSystemConnector,
 } from '../../connectors/learning-system.connector';
 import type { LmsActivity } from '../../connectors/learning-system.records';
+import { LearningActivityNotificationsService } from '../../notifications/learning-activity-notifications.service';
 import type { SyncSession } from '../sync-session';
 import type { ApplyOutcome } from '../sync.types';
 
@@ -15,6 +16,10 @@ import { LearningRecordImporter } from './learning.importer';
 export class LearningActivitiesImporter extends LearningRecordImporter<LmsActivity> {
   readonly domain = 'learningActivities' as const;
   readonly capability: LearningSystemCapability = 'activities.read';
+
+  constructor(private readonly notifications: LearningActivityNotificationsService) {
+    super();
+  }
 
   fetch(
     connector: LearningSystemConnector,
@@ -27,16 +32,21 @@ export class LearningActivitiesImporter extends LearningRecordImporter<LmsActivi
     record: ConnectorRecord<LmsActivity>,
     session: SyncSession,
   ): Promise<ApplyOutcome> {
-    return session.apply('learningActivities', record, async () => ({
-      learningSpaceId: await session.requireReference(
-        'learningSpaces',
-        record.data.courseExternalId,
-      ),
-      type: record.data.type,
-      name: record.data.title,
-      url: record.data.url,
-      opensAt: record.data.opensAt,
-      dueAt: record.data.dueAt,
-    }));
+    return session.apply(
+      'learningActivities',
+      record,
+      async () => ({
+        learningSpaceId: await session.requireReference(
+          'learningSpaces',
+          record.data.courseExternalId,
+        ),
+        type: record.data.type,
+        name: record.data.title,
+        url: record.data.url,
+        opensAt: record.data.opensAt,
+        dueAt: record.data.dueAt,
+      }),
+      (change) => this.notifications.applied(session.target, change, session.startedAt),
+    );
   }
 }

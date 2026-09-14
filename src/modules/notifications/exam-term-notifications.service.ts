@@ -24,6 +24,7 @@ export class ExamTermNotificationsService {
       subjectId: subject.id,
       courseOfferingId: subject.courseOfferingId,
       examTermId: subject.id,
+      learningActivityId: null,
       payload: {
         kind: subject.kind,
         startsAt: subject.startsAt.toISOString(),

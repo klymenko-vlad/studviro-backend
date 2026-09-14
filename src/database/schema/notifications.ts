@@ -13,6 +13,7 @@ import {
 import { deletedAt, provenance, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
+import { learningActivities } from './learning';
 import { examTerms } from './scheduling';
 import { users } from './users';
 
@@ -20,6 +21,8 @@ export const NOTIFICATION_TYPES = [
   'exam_term_published',
   'exam_term_rescheduled',
   'exam_term_cancelled',
+  'assignment_due_published',
+  'assignment_due_rescheduled',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationType = pgEnum('notification_type', NOTIFICATION_TYPES);
@@ -28,6 +31,10 @@ export interface NotificationPayload {
   startsAt?: string;
   previousStartsAt?: string;
   kind?: string;
+  dueAt?: string;
+  previousDueAt?: string;
+  activityName?: string;
+  activityType?: string;
 }
 
 export const notificationEvents = pgTable(
@@ -41,6 +48,9 @@ export const notificationEvents = pgTable(
       onDelete: 'cascade',
     }),
     examTermId: uuid('exam_term_id').references(() => examTerms.id, { onDelete: 'cascade' }),
+    learningActivityId: uuid('learning_activity_id').references(() => learningActivities.id, {
+      onDelete: 'cascade',
+    }),
     payload: jsonb('payload').$type<NotificationPayload>().notNull().default({}),
     occurredAt: timestampColumn('occurred_at').notNull(),
     occurrenceCount: integer('occurrence_count').notNull().default(1),

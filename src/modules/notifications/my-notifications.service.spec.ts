@@ -18,6 +18,7 @@ const row = (overrides: Partial<MyNotificationRow> = {}): MyNotificationRow => (
   occurrenceCount: 1,
   payload: { startsAt: '2026-06-02T08:00:00.000Z' },
   examTermId: 'exam-1',
+  learningActivityId: null,
   courseOfferingId: 'offering-1',
   courseCode: 'PF-P106',
   courseTitle: 'Programming',

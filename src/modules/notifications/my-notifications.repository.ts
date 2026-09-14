@@ -20,6 +20,7 @@ export interface MyNotificationRow {
   occurrenceCount: number;
   payload: NotificationPayload;
   examTermId: string | null;
+  learningActivityId: string | null;
   courseOfferingId: string | null;
   courseCode: string | null;
   courseTitle: string | null;
@@ -108,6 +109,7 @@ export class MyNotificationsRepository {
         occurrenceCount: notificationEvents.occurrenceCount,
         payload: notificationEvents.payload,
         examTermId: notificationEvents.examTermId,
+        learningActivityId: notificationEvents.learningActivityId,
         courseOfferingId: notificationEvents.courseOfferingId,
         courseCode: courses.code,
         courseTitle: courses.title,

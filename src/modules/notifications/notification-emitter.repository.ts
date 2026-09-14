@@ -29,6 +29,7 @@ export class NotificationEmitterRepository {
         dedupeKey,
         courseOfferingId: emission.courseOfferingId,
         examTermId: emission.examTermId,
+        learningActivityId: emission.learningActivityId,
         payload: emission.payload,
         occurredAt: emission.occurredAt,
         sourceSystem: emission.target.sourceSystem,
@@ -48,6 +49,7 @@ export class NotificationEmitterRepository {
         occurredAt: emission.occurredAt,
         occurrenceCount: sql`${notificationEvents.occurrenceCount} + 1`,
         examTermId: emission.examTermId,
+        learningActivityId: emission.learningActivityId,
         courseOfferingId: emission.courseOfferingId,
       })
       .where(

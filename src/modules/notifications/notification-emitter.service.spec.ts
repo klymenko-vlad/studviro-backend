@@ -19,6 +19,7 @@ const emission = (overrides: Partial<NotificationEmission> = {}): NotificationEm
   subjectId: 'exam-1',
   courseOfferingId: 'offering-1',
   examTermId: 'exam-1',
+  learningActivityId: null,
   payload: { startsAt: '2026-06-02T08:00:00.000Z' },
   occurredAt: new Date('2026-05-20T09:00:00.000Z'),
   ...overrides,

@@ -31,6 +31,10 @@ export class NotificationResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   courseOfferingId!: string | null;
 
+  @Expose()
+  @ApiProperty({ format: 'uuid', nullable: true })
+  learningActivityId!: string | null;
+
   @Expose() @ApiProperty({ type: String, nullable: true }) courseCode!: string | null;
 
   @Expose() @ApiProperty({ type: String, nullable: true }) courseTitle!: string | null;
@@ -42,6 +46,16 @@ export class NotificationResponseDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   previousStartsAt!: Date | null;
+
+  @Expose()
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  dueAt!: Date | null;
+
+  @Expose()
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  previousDueAt!: Date | null;
+
+  @Expose() @ApiProperty({ type: String, nullable: true }) activityName!: string | null;
 
   @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
 
@@ -55,10 +69,14 @@ export class NotificationResponseDto {
     dto.readAt = row.readAt;
     dto.examTermId = row.examTermId;
     dto.courseOfferingId = row.courseOfferingId;
+    dto.learningActivityId = row.learningActivityId;
     dto.courseCode = row.courseCode;
     dto.courseTitle = row.courseTitle;
     dto.startsAt = toDate(row.payload.startsAt);
     dto.previousStartsAt = toDate(row.payload.previousStartsAt);
+    dto.dueAt = toDate(row.payload.dueAt);
+    dto.previousDueAt = toDate(row.payload.previousDueAt);
+    dto.activityName = row.payload.activityName ?? null;
     dto.sourceSystem = row.sourceSystem;
 
     return dto;

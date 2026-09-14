@@ -8,6 +8,7 @@ import {
   institutions,
   institutionSettings,
   learningActivities,
+  notificationEvents,
   learningSpaces,
   roleAssignments,
   syncWatermarks,
@@ -206,6 +207,35 @@ describe('Learning synchronization (e2e)', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ code: string }>().code).toBe('SYNC_CONNECTOR_NOT_CONFIGURED');
+  });
+
+  it('announces every imported deadline against the offering it belongs to', async () => {
+    await syncBothHalves();
+
+    const announced = await harness.db
+      .select({
+        learningActivityId: notificationEvents.learningActivityId,
+        courseOfferingId: notificationEvents.courseOfferingId,
+      })
+      .from(notificationEvents)
+      .where(eq(notificationEvents.type, 'assignment_due_published'));
+
+    expect(announced.length).toBeGreaterThan(0);
+    for (const event of announced) {
+      expect(event.learningActivityId).not.toBeNull();
+      expect(event.courseOfferingId).not.toBeNull();
+    }
+  });
+
+  it('announces nothing a second time when the same run is repeated', async () => {
+    await syncBothHalves();
+    const [first] = await harness.db.select({ value: count() }).from(notificationEvents);
+
+    await learning.execute((await startRun('lms')).id);
+
+    const [second] = await harness.db.select({ value: count() }).from(notificationEvents);
+
+    expect(second?.value).toBe(first?.value);
   });
 
   it('serves the imported spaces to a caller holding offering:read', async () => {

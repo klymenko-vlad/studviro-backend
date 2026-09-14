@@ -7,6 +7,7 @@ export interface NotificationEmission {
   readonly subjectId: string;
   readonly courseOfferingId: string | null;
   readonly examTermId: string | null;
+  readonly learningActivityId: string | null;
   readonly payload: NotificationPayload;
   readonly occurredAt: Date;
 }
