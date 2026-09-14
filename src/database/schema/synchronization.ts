@@ -19,6 +19,8 @@ export const SYNC_DOMAINS = [
   'timetableEvents',
   'examTerms',
   'officialResults',
+  'learningSpaces',
+  'learningActivities',
 ] as const;
 export type SyncDomain = (typeof SYNC_DOMAINS)[number];
 export const syncDomain = pgEnum('sync_domain', SYNC_DOMAINS);

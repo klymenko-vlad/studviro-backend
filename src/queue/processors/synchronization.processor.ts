@@ -2,6 +2,7 @@ import { Processor } from '@nestjs/bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
 import { AcademicSyncService } from '../../modules/synchronization/academic-sync.service';
+import { LearningSyncService } from '../../modules/synchronization/learning-sync.service';
 import { BaseProcessor } from '../base.processor';
 import {
   synchronizationJobSchemas,
@@ -16,11 +17,13 @@ export class SynchronizationProcessor extends BaseProcessor<SynchronizationJobSc
 
   protected readonly handlers = {
     academic: (payload: SynchronizationJobPayload<'academic'>) => this.runAcademic(payload),
+    learning: (payload: SynchronizationJobPayload<'learning'>) => this.runLearning(payload),
   };
 
   constructor(
     logger: PinoLogger,
     private readonly academic: AcademicSyncService,
+    private readonly learning: LearningSyncService,
   ) {
     super(logger);
   }
@@ -29,5 +32,11 @@ export class SynchronizationProcessor extends BaseProcessor<SynchronizationJobSc
     const run = await this.academic.execute(payload.runId);
 
     this.logger.info({ runId: run.id, status: run.status }, 'academic synchronization done');
+  }
+
+  private async runLearning(payload: SynchronizationJobPayload<'learning'>): Promise<void> {
+    const run = await this.learning.execute(payload.runId);
+
+    this.logger.info({ runId: run.id, status: run.status }, 'learning synchronization done');
   }
 }

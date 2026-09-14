@@ -5,6 +5,10 @@ export const synchronizationJobSchemas = {
     runId: z.uuid(),
     institutionId: z.uuid(),
   }),
+  learning: z.object({
+    runId: z.uuid(),
+    institutionId: z.uuid(),
+  }),
 } as const;
 
 export type SynchronizationJobSchemas = typeof synchronizationJobSchemas;

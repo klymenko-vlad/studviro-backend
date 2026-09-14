@@ -66,6 +66,7 @@ export class SynchronizationController {
       institutionId,
       dto.mode ?? 'incremental',
       userId,
+      dto.sourceSystem ?? 'sis',
     );
 
     return SyncRunResponseDto.fromEntity(run);

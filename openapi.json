@@ -3734,6 +3734,72 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/learning-spaces": {
+      "get": {
+        "operationId": "listLearningSpaces",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningSpaceListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the learning spaces imported from the learning management system",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/demo-requests": {
       "post": {
         "operationId": "createDemoRequest",
@@ -4240,6 +4306,15 @@
             "type": "string",
             "default": "incremental",
             "description": "A full run ignores the stored watermarks and re-reads every record the connector offers."
+          },
+          "sourceSystem": {
+            "enum": [
+              "sis",
+              "lms"
+            ],
+            "type": "string",
+            "default": "sis",
+            "description": "Which half of the model to import: the student information system or the learning management system."
           }
         }
       },
@@ -4409,7 +4484,9 @@
               "enrollments",
               "timetableEvents",
               "examTerms",
-              "officialResults"
+              "officialResults",
+              "learningSpaces",
+              "learningActivities"
             ],
             "type": "string"
           },
@@ -4774,7 +4851,9 @@
               "enrollments",
               "timetableEvents",
               "examTerms",
-              "officialResults"
+              "officialResults",
+              "learningSpaces",
+              "learningActivities"
             ],
             "type": "string"
           },
@@ -6979,6 +7058,104 @@
           "offering",
           "course",
           "term"
+        ]
+      },
+      "LearningSpaceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "shortName": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastSynchronizedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "offeringId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "courseTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "termCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityCount": {
+            "type": "number"
+          },
+          "nextDueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "shortName",
+          "url",
+          "visible",
+          "externalId",
+          "lastSynchronizedAt",
+          "offeringId",
+          "courseCode",
+          "courseTitle",
+          "termCode",
+          "activityCount",
+          "nextDueAt"
+        ]
+      },
+      "LearningSpaceListResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "linked": {
+            "type": "number"
+          },
+          "unlinked": {
+            "type": "number"
+          },
+          "spaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSpaceDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "linked",
+          "unlinked",
+          "spaces"
         ]
       },
       "CreateDemoRequestDto": {

@@ -14,6 +14,11 @@ import {
   ACADEMIC_IMPORTER_CLASSES,
   academicImportersProvider,
 } from './importers/academic-importers.provider';
+import {
+  LEARNING_IMPORTER_CLASSES,
+  learningImportersProvider,
+} from './importers/learning-importers.provider';
+import { LearningSyncService } from './learning-sync.service';
 import { ReconciliationResolutionRepository } from './reconciliation-resolution.repository';
 import { ReconciliationResolutionService } from './reconciliation-resolution.service';
 import { ReconciliationService } from './reconciliation.service';
@@ -37,9 +42,12 @@ import { SynchronizationService } from './synchronization.service';
   providers: [
     ...ACADEMIC_IMPORTER_CLASSES,
     academicImportersProvider,
+    ...LEARNING_IMPORTER_CLASSES,
+    learningImportersProvider,
     CanonicalRepositories,
     DomainSynchronizer,
     AcademicSyncService,
+    LearningSyncService,
     SynchronizationService,
     ReconciliationService,
     ReconciliationResolutionService,
@@ -49,6 +57,6 @@ import { SynchronizationService } from './synchronization.service';
     SyncDomainResultRepository,
     SyncWatermarkRepository,
   ],
-  exports: [AcademicSyncService, SynchronizationService],
+  exports: [AcademicSyncService, LearningSyncService, SynchronizationService],
 })
 export class SynchronizationModule {}

@@ -4,6 +4,8 @@ import {
   courses,
   enrollments,
   examTerms,
+  learningActivities,
+  learningSpaces,
   officialCourseResults,
   orgUnits,
   programMemberships,
@@ -30,6 +32,8 @@ export const CANONICAL_TABLES = {
   timetableEvents,
   examTerms,
   officialCourseResults,
+  learningSpaces,
+  learningActivities,
 } as const;
 
 export type CanonicalTableName = keyof typeof CANONICAL_TABLES;

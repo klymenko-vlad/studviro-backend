@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
 import type { SyncDomain, SyncDomainStatus } from '../../database/schema';
-import type { AcademicSystemConnector } from '../connectors/academic-system.connector';
 import type { ConnectorRecord } from '../connectors/connector.types';
 
-import type { AcademicImporter } from './importers/academic.importer';
+import type { SourceImporter } from './importers/source.importer';
 import type { SyncSession } from './sync-session';
 import { emptyCounts, type DomainOutcome, type RecordCounts } from './sync.types';
 
@@ -25,9 +24,9 @@ export class DomainSynchronizer {
     this.logger.setContext(DomainSynchronizer.name);
   }
 
-  async run(
-    importer: AcademicImporter,
-    connector: AcademicSystemConnector,
+  async run<TConnector>(
+    importer: SourceImporter<TConnector, string>,
+    connector: TConnector,
     session: SyncSession,
     changedSince: Date | null,
   ): Promise<DomainOutcome> {

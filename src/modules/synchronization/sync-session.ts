@@ -1,5 +1,6 @@
 import type { SQL } from 'drizzle-orm';
 
+import type { SourceSystem } from '../../database/schema';
 import type { ConnectorRecord } from '../connectors/connector.types';
 import type { ExternalIdentitiesRepository } from '../identity/external-identities.repository';
 
@@ -63,6 +64,19 @@ export class SyncSession {
     this.resolved.set(key, found);
 
     return found;
+  }
+
+  /** A learning space names its offering by the SIS identifier, not its own. */
+  async referenceIn(
+    sourceSystem: SourceSystem,
+    table: CanonicalTableName,
+    externalId: string,
+  ): Promise<string | null> {
+    if (sourceSystem === this.target.sourceSystem) return this.reference(table, externalId);
+
+    return this.repositories
+      .of(table)
+      .findIdByExternalId({ ...this.target, sourceSystem }, externalId);
   }
 
   async requireReference(table: CanonicalTableName, externalId: string): Promise<string> {

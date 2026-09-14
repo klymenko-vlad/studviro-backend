@@ -1,6 +1,7 @@
 import type { LearningActivityType, SubmissionState } from '../../database/schema';
 
 export interface LmsCourse {
+  readonly courseOfferingExternalId: string | null;
   readonly code: string;
   readonly name: string;
   readonly url: string;

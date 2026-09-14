@@ -254,7 +254,7 @@ describe('Institution configuration (e2e)', () => {
       const [academic, learning] = response.json();
 
       expect(academic.alternatives).toEqual(['mock-sis']);
-      expect(learning.alternatives).toEqual([]);
+      expect(learning.alternatives).toEqual(['mock-lms']);
     });
 
     it('refuses a member who cannot manage the institution', async () => {
