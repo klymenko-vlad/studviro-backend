@@ -7,6 +7,7 @@ import type {
 } from './connector.types';
 import type {
   LmsActivity,
+  LmsAssessment,
   LmsCompletion,
   LmsCourse,
   LmsEnrollment,
@@ -51,6 +52,7 @@ export interface LearningSystemConnector {
   getEnrollments(query?: ConnectorQuery): Promise<ConnectorRecord<LmsEnrollment>[]>;
   getActivities(query?: ConnectorQuery): Promise<ConnectorRecord<LmsActivity>[]>;
   getCompletion(query?: ConnectorQuery): Promise<ConnectorRecord<LmsCompletion>[]>;
+  getAssessments(query?: ConnectorQuery): Promise<ConnectorRecord<LmsAssessment>[]>;
   getGrades(query?: ConnectorQuery): Promise<ConnectorRecord<LmsGrade>[]>;
   getSubmissions(query?: ConnectorQuery): Promise<ConnectorRecord<LmsSubmission>[]>;
 

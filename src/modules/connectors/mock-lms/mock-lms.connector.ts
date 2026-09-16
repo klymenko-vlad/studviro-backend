@@ -14,6 +14,7 @@ import {
 } from '../learning-system.connector';
 import type {
   LmsActivity,
+  LmsAssessment,
   LmsCompletion,
   LmsCourse,
   LmsEnrollment,
@@ -25,7 +26,13 @@ import { MockSisConnector } from '../mock-sis/mock-sis.connector';
 import { buildMockLmsDataset, type MockLmsDataset } from './mock-lms.dataset';
 import { MOCK_LMS_OPTIONS, type MockLmsOptions } from './mock-lms.options';
 
-const SUPPORTED_CAPABILITIES = new Set<string>(['courses.read', 'activities.read']);
+const SUPPORTED_CAPABILITIES = new Set<string>([
+  'courses.read',
+  'activities.read',
+  'grades.read',
+  'submissions.read',
+  'completion.read',
+]);
 
 const CREDENTIAL_FIELDS: readonly ConnectorCredentialField[] = [
   {
@@ -70,7 +77,11 @@ export class MockLmsConnector implements LearningSystemConnector {
 
   get dataset(): MockLmsDataset {
     this.cached ??= buildMockLmsDataset(
-      { courseOfferings: this.sis.dataset.courseOfferings, courses: this.sis.dataset.courses },
+      {
+        courseOfferings: this.sis.dataset.courseOfferings,
+        courses: this.sis.dataset.courses,
+        enrollments: this.sis.dataset.enrollments,
+      },
       this.options,
     );
 
@@ -85,19 +96,24 @@ export class MockLmsConnector implements LearningSystemConnector {
     return this.read(this.dataset.activities, query);
   }
 
+  getAssessments(query?: ConnectorQuery): Promise<ConnectorRecord<LmsAssessment>[]> {
+    return this.read(this.dataset.assessments, query);
+  }
+
+  getGrades(query?: ConnectorQuery): Promise<ConnectorRecord<LmsGrade>[]> {
+    return this.read(this.dataset.grades, query);
+  }
+
+  getSubmissions(query?: ConnectorQuery): Promise<ConnectorRecord<LmsSubmission>[]> {
+    return this.read(this.dataset.submissions, query);
+  }
+
+  getCompletion(query?: ConnectorQuery): Promise<ConnectorRecord<LmsCompletion>[]> {
+    return this.read(this.dataset.completions, query);
+  }
+
+  /** The mock LMS never owned the enrolment list; the SIS does. */
   getEnrollments(): Promise<ConnectorRecord<LmsEnrollment>[]> {
-    return Promise.resolve([]);
-  }
-
-  getCompletion(): Promise<ConnectorRecord<LmsCompletion>[]> {
-    return Promise.resolve([]);
-  }
-
-  getGrades(): Promise<ConnectorRecord<LmsGrade>[]> {
-    return Promise.resolve([]);
-  }
-
-  getSubmissions(): Promise<ConnectorRecord<LmsSubmission>[]> {
     return Promise.resolve([]);
   }
 

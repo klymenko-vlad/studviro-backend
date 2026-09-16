@@ -9,8 +9,10 @@ import {
   enrollments,
   learningActivities,
   learningSpaces,
+  submissionRefs,
   teachingAssignments,
   type LearningActivityType,
+  type SubmissionState,
   type SourceSystem,
   type SynchronizationStatus,
 } from '../../database/schema';
@@ -24,6 +26,9 @@ export interface MyDeadlineRow {
   opensAt: Date | null;
   dueAt: Date;
   teaching: boolean;
+  submissionState: SubmissionState | null;
+  submittedAt: Date | null;
+  submissionIsLate: boolean | null;
   spaceId: string;
   spaceName: string;
   spaceUrl: string | null;
@@ -56,6 +61,7 @@ export class MyDeadlinesRepository {
     filter: MyDeadlineFilter,
   ): Promise<MyDeadlineRow[]> {
     const teaches = this.teaches(userId);
+    const submission = this.latestSubmission(userId);
     const conditions: (SQL | undefined)[] = [
       eq(learningActivities.institutionId, institutionId),
       isNull(learningActivities.deletedAt),
@@ -81,6 +87,11 @@ export class MyDeadlinesRepository {
         opensAt: learningActivities.opensAt,
         dueAt: sql<Date>`${learningActivities.dueAt}`.mapWith(learningActivities.dueAt),
         teaching: sql<boolean>`${teaches}`.mapWith(Boolean),
+        submissionState: submissionRefs.state,
+        submittedAt: sql<Date | null>`${submissionRefs.submittedAt}`.mapWith(
+          submissionRefs.submittedAt,
+        ),
+        submissionIsLate: submissionRefs.isLate,
         spaceId: learningSpaces.id,
         spaceName: learningSpaces.name,
         spaceUrl: learningSpaces.url,
@@ -97,12 +108,31 @@ export class MyDeadlinesRepository {
         synchronizationStatus: learningActivities.synchronizationStatus,
       })
       .from(learningActivities)
+      .leftJoin(
+        submissionRefs,
+        and(
+          eq(submissionRefs.learningActivityId, learningActivities.id),
+          eq(submissionRefs.userId, userId),
+          isNull(submissionRefs.deletedAt),
+          eq(submissionRefs.attempt, submission),
+        ),
+      )
       .innerJoin(learningSpaces, eq(learningSpaces.id, learningActivities.learningSpaceId))
       .innerJoin(courseOfferings, eq(courseOfferings.id, learningSpaces.courseOfferingId))
       .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .innerJoin(academicTerms, eq(academicTerms.id, courseOfferings.academicTermId))
       .where(and(...conditions))
       .orderBy(asc(learningActivities.dueAt), asc(courses.code), asc(learningActivities.name));
+  }
+
+  /** Only the newest attempt speaks for the student on a deadline card. */
+  private latestSubmission(userId: string): SQL<number> {
+    return sql<number>`(
+      select max(latest.attempt) from ${submissionRefs} as latest
+      where latest.learning_activity_id = ${learningActivities.id}
+        and latest.user_id = ${userId}
+        and latest.deleted_at is null
+    )`;
   }
 
   private attends(userId: string): SQL {

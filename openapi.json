@@ -3896,6 +3896,84 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/me/assessment-results": {
+      "get": {
+        "operationId": "listMyAssessmentResults",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyAssessmentResultResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the current user’s marks from the learning management system",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/demo-requests": {
       "post": {
         "operationId": "createDemoRequest",
@@ -4582,7 +4660,11 @@
               "examTerms",
               "officialResults",
               "learningSpaces",
-              "learningActivities"
+              "learningActivities",
+              "assessments",
+              "assessmentResults",
+              "activityCompletions",
+              "submissions"
             ],
             "type": "string"
           },
@@ -4949,7 +5031,11 @@
               "examTerms",
               "officialResults",
               "learningSpaces",
-              "learningActivities"
+              "learningActivities",
+              "assessments",
+              "assessmentResults",
+              "activityCompletions",
+              "submissions"
             ],
             "type": "string"
           },
@@ -7279,6 +7365,33 @@
           "spaces"
         ]
       },
+      "DeadlineSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "draft",
+              "submitted",
+              "returned",
+              "graded"
+            ],
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isLate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "state",
+          "submittedAt",
+          "isLate"
+        ]
+      },
       "DeadlineLearningSpaceDto": {
         "type": "object",
         "properties": {
@@ -7429,6 +7542,15 @@
           "isOverdue": {
             "type": "boolean"
           },
+          "submission": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeadlineSubmissionDto"
+              }
+            ]
+          },
           "attendance": {
             "enum": [
               "enrolled",
@@ -7461,11 +7583,234 @@
           "dueAt",
           "isOpen",
           "isOverdue",
+          "submission",
           "attendance",
           "learningSpace",
           "offering",
           "course",
           "term",
+          "provenance"
+        ]
+      },
+      "AssessmentSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "draft",
+              "submitted",
+              "returned",
+              "graded"
+            ],
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isLate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "state",
+          "submittedAt",
+          "isLate"
+        ]
+      },
+      "AssessmentActivityDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "enum": [
+              "assignment",
+              "quiz",
+              "forum",
+              "resource",
+              "workshop",
+              "other"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "completionState": {
+            "nullable": true,
+            "enum": [
+              "incomplete",
+              "complete",
+              "complete_pass",
+              "complete_fail"
+            ],
+            "type": "string"
+          },
+          "submission": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentSubmissionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "url",
+          "dueAt",
+          "completionState",
+          "submission"
+        ]
+      },
+      "AssessmentLearningSpaceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "AssessmentOfferingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "AssessmentProvenanceDto": {
+        "type": "object",
+        "properties": {
+          "sourceSystem": {
+            "enum": [
+              "platform",
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastSynchronizedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synchronizationStatus": {
+            "enum": [
+              "in_sync",
+              "pending",
+              "conflict",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceSystem",
+          "externalId",
+          "lastSynchronizedAt",
+          "synchronizationStatus"
+        ]
+      },
+      "MyAssessmentResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "points": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxPoints": {
+            "type": "number",
+            "nullable": true
+          },
+          "percentage": {
+            "type": "number",
+            "nullable": true
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "gradedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "countsTowardFinalGrade": {
+            "type": "boolean"
+          },
+          "activity": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentActivityDto"
+              }
+            ]
+          },
+          "learningSpace": {
+            "$ref": "#/components/schemas/AssessmentLearningSpaceDto"
+          },
+          "offering": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentOfferingDto"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/AssessmentProvenanceDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "points",
+          "maxPoints",
+          "percentage",
+          "feedback",
+          "gradedAt",
+          "countsTowardFinalGrade",
+          "activity",
+          "learningSpace",
+          "offering",
           "provenance"
         ]
       },

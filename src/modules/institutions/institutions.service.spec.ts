@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Institution, RoleAssignment } from '../../database/schema';
+import type { DerivedRolesRepository } from '../authorization/derived-roles.repository';
 import type { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
 import type { InvitationsService } from '../invitations/invitations.service';
 import type { UsersRepository } from '../users/users.repository';
@@ -43,14 +44,18 @@ function serviceWith(
     isDevToken: vi.fn().mockReturnValue(true),
   };
 
+  const derivedRoles = { institutionsFor: vi.fn().mockResolvedValue([]) };
+
   return {
     repository,
     roleAssignments,
+    derivedRoles,
     users,
     invitations,
     service: new InstitutionsService(
       repository as unknown as InstitutionsRepository,
       roleAssignments as unknown as RoleAssignmentsRepository,
+      derivedRoles as unknown as DerivedRolesRepository,
       users as unknown as UsersRepository,
       invitations as unknown as InvitationsService,
     ),
@@ -83,6 +88,28 @@ describe('InstitutionsService', () => {
 
     await expect(service.listForUser(USER)).resolves.toEqual([]);
     expect(repository.findByIds).not.toHaveBeenCalled();
+  });
+
+  it('lists an institution the user belongs to through an academic record alone', async () => {
+    const { service, derivedRoles } = serviceWith([], [institution(TUKE, 'tuke')]);
+    derivedRoles.institutionsFor.mockResolvedValue([TUKE]);
+
+    const listed = await service.listForUser(USER);
+
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.code).toBe('tuke');
+  });
+
+  it('asks for an institution once when a grant and an academic record both name it', async () => {
+    const { service, repository, derivedRoles } = serviceWith(
+      [assignment(UPJS)],
+      [institution(UPJS, 'upjs')],
+    );
+    derivedRoles.institutionsFor.mockResolvedValue([UPJS]);
+
+    await service.listForUser(USER);
+
+    expect(repository.findByIds).toHaveBeenCalledWith([UPJS], expect.anything());
   });
 
   it('exposes a single institution by id', async () => {

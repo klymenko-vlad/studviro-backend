@@ -1,5 +1,8 @@
 import {
   academicTerms,
+  activityCompletions,
+  assessmentResults,
+  assessments,
   courseOfferings,
   courses,
   enrollments,
@@ -13,6 +16,7 @@ import {
   rooms,
   studyGroupMemberships,
   studyGroups,
+  submissionRefs,
   teachingAssignments,
   timetableEvents,
 } from '../../database/schema';
@@ -34,6 +38,10 @@ export const CANONICAL_TABLES = {
   officialCourseResults,
   learningSpaces,
   learningActivities,
+  assessments,
+  assessmentResults,
+  activityCompletions,
+  submissionRefs,
 } as const;
 
 export type CanonicalTableName = keyof typeof CANONICAL_TABLES;

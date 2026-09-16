@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-14 (G3, the deadline layer)
+Last updated: 2026-09-16 (G2 closed — the assessment side of the LMS)
 
 ## What this is
 
@@ -55,32 +55,18 @@ reasoning lives in `docs/adr/`. In short:
   `assignment_due_published` / `assignment_due_rescheduled` through the emitter ADR 0012 built — same
   `type:subject:day` window, same offering audience. ADR 0021.
 
-- **Invited person records** — an import lands a person as `users.status = 'invited'` with no
-  credential, and no longer throws `IDENTITY_EMAIL_CONFLICT` when the human self-registered first.
-  `user_emails` separates an asserted address from a proven one; only a verified address is
-  globally unique, and signing in at the institution's provider claims the record. ADR 0015 step (a).
-- **Derived roles and the grant rules** (B13; narrows B2) — `student` derives from an active
-  `program_membership` and `teacher`/`teaching_assistant` from a `teaching_assignments` row, so an
-  imported person has permission the moment their academic record exists; neither is revocable
-  through the grant screen, which offers only the five roles an academic record cannot express.
-  `role:assign` is checked at the scope being granted or revoked on, not the institution; a caller
-  may not hand out a role whose permissions exceed their own, and an institution's last
-  `institution_admin` cannot be revoked. ADR 0016.
-- **Institution creation, org units and the person directory** (G6, G7; narrows B2 further) — a
-  platform operator creates an institution and its first `institution_admin` in one call at
-  `/institutions/new`; `role:read` gates a browsable org-unit tree and a person directory merging
-  granted and institution-wide derived roles. No more hand-written `INSERT` to reach a screen.
-  ADR 0017.
-- **Invitations, accept-and-claim, merge, self-service password reset** (step (d); **closes B1**,
-  narrows B2 further) — an institution admin invites an address behind `role:assign` at
-  `/institutions/[id]/roles`; the single-use, 7-day, SHA-256-hashed token is accepted at
-  `/sign-up?invitation=<token>`, which either promotes an `invited` shadow in place, attaches the
-  grant to an already-active account, or merges the two in one transaction when both exist under
-  the same address, repointing every table that owns a `user_id`. `POST /institutions` accepts
-  `firstAdminEmail` alongside `firstAdminUserId`, issuing an invitation instead of an immediate
-  grant (ADR 0018). `/forgot-password` (linked from `/sign-in`) and `/reset-password` cover the
-  reset side with the same non-enumeration shape and one message for an expired, consumed or
-  malformed token; neither route requires a session.
+- **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
+  lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
+  asserted address from a proven one; `student` derives from an active `program_membership` and
+  `teacher`/`teaching_assistant` from a `teaching_assignments` row, so an imported person has
+  permission the moment their academic record exists, and neither is grantable or revocable by hand;
+  `role:assign` is checked at the scope being granted on, nobody may hand out a role exceeding their
+  own, and an institution's last `institution_admin` cannot be revoked. A platform operator creates an
+  institution and its first admin at `/institutions/new`; `role:read` gates an org-unit tree and a
+  person directory. An admin invites an address behind `role:assign`; the single-use, 7-day,
+  SHA-256-hashed token is accepted at `/sign-up?invitation=<token>`, which promotes a shadow in place,
+  attaches the grant to an active account, or merges the two in one transaction. `/forgot-password`
+  and `/reset-password` cover the reset side with the same non-enumeration shape.
 - **Connector credentials** (46) — a connector declares its fields; values are AES-256-GCM encrypted
   and never echoed back, behind `connector:configure` held by `institution_admin` alone (ADR 0014).
 - **Student and teacher surfaces** (38–45, 47) — courses and a 360° course page; grades with the
@@ -130,15 +116,12 @@ turned out not to be. Read those before starting; the headlines:
   (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
   family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
-- **G2 is half closed.** `assessments`, `assessment_results`, `activity_completions` and
-  `submission_refs` still have no importer — `mock-lms` advertises `courses.read` and
-  `activities.read` only, so the other four domains report `skipped` rather than succeeding on no
-  data. Because `submission_refs` is empty, nothing knows whether a student has handed work in, so an
-  overdue deadline reads as past due even when it was submitted.
+- **G2 is closed.** What it did not settle: an LMS mark deliberately does not feed the calculated
+  stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
 - **Reconciliation covers the SIS half only.** `ReconciliationService` is constructed against the
-  academic connector and `ACADEMIC_IMPORTERS`, so the two learning domains are simply absent from
-  its report — `RECONCILED_TABLES` is a `Partial` map, so nothing breaks, nothing is compared.
-  Giving it a second source system is its own step.
+  academic connector and `ACADEMIC_IMPORTERS`, so all **six** learning domains are absent from its
+  report — `RECONCILED_TABLES` is a `Partial` map, so nothing breaks, nothing is compared.
+  Giving it a second source system is its own step, and it got bigger with G2's remainder.
 - Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
   rather than a provenanced canonical row — but the screen says nothing about the omission.
 - `accept_source` is a two-step operation: it clears the way, and a **full** run applies it. Until a
@@ -159,21 +142,19 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — G2's remainder: the assessment side of the LMS
+## Next task — reconciliation's second source system
 
-**Import what a student is actually graded on.** `assessments`, `assessment_results`,
-`activity_completions` and `submission_refs` still have no importer, so `mock-lms` advertises
-`courses.read` and `activities.read` only and the other four domains report `skipped`. Extend the
-connector's capabilities and the fixture generator, add the four importers in dependency order, and
-put the result where it is useful: an assessment result belongs on the course page beside the
-official grade, and a submission state belongs on the deadline card, which today says _past due_ to
-a student who handed the work in a week ago.
+**Give `ReconciliationService` the LMS.** It is constructed against the academic connector and
+`ACADEMIC_IMPORTERS`, so none of the six learning domains is compared against what the LMS actually
+holds — `RECONCILED_TABLES` is a `Partial` map, so the screen silently reports on the SIS half alone
+and says nothing about the omission. Take the source system as a parameter the way the sync run
+already does, add the learning tables to the map, and put a _System_ picker on the reconciliation
+screen beside the one the sync screen already has. Decide as part of it what `accept_source` means
+for a learning row whose remedy is an LMS run rather than a SIS one.
 
-Decide as part of it whether `assessment_results` feeds the calculated stage of `course_results` or
-stays a separate view — they answer different questions and merging them silently would be worse
-than either. Reconciliation's second source system (it is still constructed against the academic
-connector and `ACADEMIC_IMPORTERS`, so both learning domains are absent from its report) is the
-natural companion step, but it is its own step, not this one.
+While that screen is open: it also skips `persons` deliberately and says nothing about it, and a row
+marked pending by an earlier `accept_source` re-reports as a fresh `conflict` rather than as a
+decision awaiting a run. Both are small and both belong to whoever touches it next.
 
 **After that, in order:** **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
 (grade entry); and B6 (make the flags mean something). Wiring the person directory into the grant
@@ -190,8 +171,9 @@ form as a picker is small and falls out naturally whenever that screen is next t
 - The roster's "{enrolled} enrolled of {total} listed" copy is near-redundant — the two numbers now
   match except against a stale cache. Collapse it when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 438.87 kB gzipped against the 455 kB guard — 16.13 kB of headroom.**
-  G3 spent 2.61 kB, G2 2.67 kB before it. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
+- **The client bundle is at 440.59 kB gzipped against the 455 kB guard — 14.41 kB of headroom.**
+  This step spent 1.72 kB, G3 2.61 kB, G2 2.67 kB before it. `pnpm size` is green; the breach earlier
+  notes recorded is no longer present. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
   freed 27.61 kB: a Radix control pulls in floating-ui, focus-scope, dismissable-layer and the
   collection helpers, and a plain HTML element sometimes covers the same behaviour for less.
 - `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
@@ -210,17 +192,32 @@ form as a picker is small and falls out naturally whenever that screen is next t
 - A raw `sql` timestamp selection bypasses Drizzle's column mapper and serves a PostgreSQL string the
   generated client rejects; `.mapWith(table.column)` fixes it, and both learning reads now assert
   ISO 8601 at the API boundary. Worth checking any other raw `sql` timestamp selection.
-- This machine's dev institution now has `learningSystemConnector: mock-lms` and 144 imported
-  spaces with 576 activities, so the learning screen has data without further setup.
+- This machine's dev institution now has `learningSystemConnector: mock-lms` with 144 spaces, 576
+  activities, 345 gradebook columns, 417 marks, 569 hand-ins and 1738 completions, so both the
+  learning screen and the course page's marks panel have data without further setup.
+- `MockLmsOptions.weeksElapsed` (6) moved every LMS deadline six weeks earlier so the fixture sits
+  inside a term already under way. Existing dev deadlines moved with it; that is intended.
+- The walk signed in as `veronika.gajdos0128@mocku.example` (`walkwalk123`), an imported student whose
+  password was set directly in the dev database — there is still no request-to-join (**B2**), so an
+  imported person cannot otherwise get a credential without an invitation.
 - This machine's dev database has course `CRS-PF-P2-12` detached to `source_system = 'platform'`
   from step 48's walk; a full sync creates a fresh source-owned course beside it, which is
   ADR 0019's named consequence observed rather than predicted.
-- **The sync monitor has no copy for the two learning domains.** `sync.domain.learningSpaces` and
-  `sync.domain.learningActivities` are missing from both message catalogues, so an LMS run's freshness
-  table logs `MISSING_MESSAGE` and renders the raw key. Two keys in each file; a G2 leftover found
-  during G3's walk.
-- A deadline card shows a bare time (`Due 12:00 AM` for a `due_at` that is an evening in UTC read in
-  the institution's timezone). The day heading above carries the date, but the card alone does not.
+- **A student could not reach their own institution (B14, fixed here).** `listMyInstitutions` read
+  granted `role_assignments` only, so an imported student landed on an account page saying they belong
+  nowhere. It now unions the institutions a `program_membership` or `teaching_assignment` implies.
+- **Importing a `@Global` module registers its `APP_GUARD` a second time, and the second registration
+  denies everything.** Adding `AuthorizationModule` to `InstitutionsModule.imports` made every
+  `@RequirePermission` route answer `PERMISSION_DENIED` before `AuthorizationService` was ever called —
+  for a platform operator as much as for a student. The module is `@Global`, so the import was never
+  needed. Found during this walk; worth a lint rule if it ever happens twice.
+- The sync monitor's copy for all six learning domains is now in both catalogues (the two G3 flagged
+  as missing plus the four this step added).
+- A deadline card still shows a bare time (`Due 12:00 AM` for a `due_at` that is an evening in UTC read
+  in the institution's timezone). The day heading above carries the date, but the card alone does not.
+- `nest start --watch` does not release port 3010 on restart on this machine: every reload after the
+  first fails `EADDRINUSE` and the **previous build keeps serving**, which silently invalidates any
+  live check. Kill the listener by pid, or build and run `node dist/main.js`, when probing behaviour.
 - The dashboard's deadline tile covers fourteen days, so early in a term — where this machine's dev
   data sits, with the first deadline a month out — it correctly but unhelpfully says nothing falls due.
   Worth revisiting if the tile ever reads empty for a real cohort.

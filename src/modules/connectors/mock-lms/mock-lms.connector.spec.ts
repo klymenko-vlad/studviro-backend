@@ -26,8 +26,10 @@ describe('MockLmsConnector', () => {
 
     expect(capabilities['courses.read']).toBe(true);
     expect(capabilities['activities.read']).toBe(true);
-    expect(capabilities['grades.read']).toBe(false);
-    expect(capabilities['submissions.read']).toBe(false);
+    expect(capabilities['grades.read']).toBe(true);
+    expect(capabilities['submissions.read']).toBe(true);
+    expect(capabilities['completion.read']).toBe(true);
+    expect(capabilities['enrollments.read']).toBe(false);
     expect(capabilities['enrollment.write']).toBe(false);
   });
 
@@ -44,13 +46,8 @@ describe('MockLmsConnector', () => {
     ]);
   });
 
-  it('returns nothing for the domains it does not advertise', async () => {
-    const instance = connector();
-
-    await expect(instance.getGrades()).resolves.toEqual([]);
-    await expect(instance.getSubmissions()).resolves.toEqual([]);
-    await expect(instance.getCompletion()).resolves.toEqual([]);
-    await expect(instance.getEnrollments()).resolves.toEqual([]);
+  it('leaves the enrolment list to the SIS that owns it', async () => {
+    await expect(connector().getEnrollments()).resolves.toEqual([]);
   });
 
   describe('determinism', () => {
@@ -197,6 +194,144 @@ describe('MockLmsConnector', () => {
       for (const entry of since) {
         expect(entry.sourceUpdatedAt.getTime()).toBeGreaterThan(middle!.getTime());
       }
+    });
+  });
+
+  describe('the gradebook', () => {
+    it('opens one gradebook column per assessable activity and no more', async () => {
+      const instance = connector();
+      const [assessments, activities] = await Promise.all([
+        instance.getAssessments(),
+        instance.getActivities(),
+      ]);
+      const assessable = activities.filter((activity) => activity.data.dueAt !== null);
+
+      expect(assessments).toHaveLength(assessable.length);
+      expect(new Set(externalIds(assessments)).size).toBe(assessments.length);
+    });
+
+    it('names an activity and a space it also reports', async () => {
+      const instance = connector();
+      const [assessments, activities, spaces] = await Promise.all([
+        instance.getAssessments(),
+        instance.getActivities(),
+        instance.getCourses(),
+      ]);
+      const activityIds = new Set(externalIds(activities));
+      const spaceIds = new Set(externalIds(spaces));
+
+      for (const assessment of assessments) {
+        expect(spaceIds.has(assessment.data.courseExternalId)).toBe(true);
+        expect(activityIds.has(assessment.data.activityExternalId!)).toBe(true);
+      }
+    });
+
+    it('grades only columns it opened, for people the SIS enrolled', async () => {
+      const sis = new MockSisConnector(DEFAULT_MOCK_SIS_OPTIONS);
+      const instance = connector();
+      const [grades, assessments, enrollments] = await Promise.all([
+        instance.getGrades(),
+        instance.getAssessments(),
+        sis.getEnrollments(),
+      ]);
+      const columns = new Set(externalIds(assessments));
+      const people = new Set(enrollments.map((entry) => entry.data.personExternalId));
+
+      expect(grades.length).toBeGreaterThan(0);
+      for (const grade of grades) {
+        expect(columns.has(grade.data.assessmentExternalId)).toBe(true);
+        expect(people.has(grade.data.personExternalId)).toBe(true);
+      }
+    });
+
+    it('awards no more than the maximum and never a negative mark', async () => {
+      const grades = await connector().getGrades();
+
+      for (const grade of grades) {
+        expect(grade.data.points).not.toBeNull();
+        expect(grade.data.points!).toBeGreaterThanOrEqual(0);
+        expect(grade.data.points!).toBeLessThanOrEqual(grade.data.maxPoints!);
+      }
+    });
+  });
+
+  describe('submissions', () => {
+    it('reports work handed in only against deadlines already passed', async () => {
+      const instance = connector();
+      const [submissions, activities] = await Promise.all([
+        instance.getSubmissions(),
+        instance.getActivities(),
+      ]);
+      const dueAt = new Map(
+        activities.map((activity) => [activity.externalId, activity.data.dueAt]),
+      );
+
+      expect(submissions.length).toBeGreaterThan(0);
+      for (const submission of submissions) {
+        const due = dueAt.get(submission.data.activityExternalId);
+
+        expect(due).toBeTruthy();
+        expect(due!.getTime()).toBeLessThanOrEqual(DEFAULT_MOCK_LMS_OPTIONS.anchor.getTime());
+      }
+    });
+
+    it('leaves some students with nothing handed in, so a gap is exercised', async () => {
+      const instance = connector();
+      const [submissions, grades] = await Promise.all([
+        instance.getSubmissions(),
+        instance.getGrades(),
+      ]);
+
+      expect(grades.length).toBeLessThan(submissions.length);
+    });
+
+    it('marks a late hand-in as after its deadline and a punctual one as before', async () => {
+      const instance = connector();
+      const [submissions, activities] = await Promise.all([
+        instance.getSubmissions(),
+        instance.getActivities(),
+      ]);
+      const dueAt = new Map(
+        activities.map((activity) => [activity.externalId, activity.data.dueAt]),
+      );
+      const late = submissions.filter((submission) => submission.data.isLate);
+
+      expect(late.length).toBeGreaterThan(0);
+      expect(late.length).toBeLessThan(submissions.length);
+      for (const submission of submissions) {
+        const due = dueAt.get(submission.data.activityExternalId)!;
+        const punctual = submission.data.submittedAt!.getTime() <= due.getTime();
+
+        expect(punctual).toBe(!submission.data.isLate);
+      }
+    });
+  });
+
+  describe('completion', () => {
+    it('reports completion for the activities the term has already reached', async () => {
+      const completions = await connector().getCompletion();
+
+      expect(completions.length).toBeGreaterThan(0);
+      expect(new Set(externalIds(completions)).size).toBe(completions.length);
+    });
+
+    it('reports both outcomes, so neither branch goes untested', async () => {
+      const completions = await connector().getCompletion();
+      const states = new Set(completions.map((entry) => entry.data.state));
+
+      expect(states.has('complete')).toBe(true);
+      expect(states.has('incomplete')).toBe(true);
+    });
+  });
+
+  describe('a term in progress', () => {
+    it('places deadlines on both sides of the anchor', async () => {
+      const activities = await connector().getActivities();
+      const dated = activities.filter((activity) => activity.data.dueAt !== null);
+      const anchor = DEFAULT_MOCK_LMS_OPTIONS.anchor.getTime();
+
+      expect(dated.some((entry) => entry.data.dueAt!.getTime() < anchor)).toBe(true);
+      expect(dated.some((entry) => entry.data.dueAt!.getTime() > anchor)).toBe(true);
     });
   });
 });

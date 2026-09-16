@@ -4,9 +4,11 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   LEARNING_ACTIVITY_TYPES,
   SOURCE_SYSTEMS,
+  SUBMISSION_STATES,
   SYNCHRONIZATION_STATUSES,
   type LearningActivityType,
   type SourceSystem,
+  type SubmissionState,
   type SynchronizationStatus,
 } from '../../../database/schema';
 import {
@@ -56,6 +58,17 @@ export class DeadlineProvenanceDto {
 }
 
 @Exclude()
+export class DeadlineSubmissionDto {
+  @Expose() @ApiProperty({ enum: SUBMISSION_STATES }) state!: SubmissionState;
+
+  @Expose()
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  submittedAt!: Date | null;
+
+  @Expose() @ApiProperty() isLate!: boolean;
+}
+
+@Exclude()
 export class MyDeadlineResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: LEARNING_ACTIVITY_TYPES }) type!: LearningActivityType;
@@ -69,6 +82,11 @@ export class MyDeadlineResponseDto {
   @Expose() @ApiProperty({ type: String, format: 'date-time' }) dueAt!: Date;
   @Expose() @ApiProperty() isOpen!: boolean;
   @Expose() @ApiProperty() isOverdue!: boolean;
+
+  @Expose()
+  @Type(() => DeadlineSubmissionDto)
+  @ApiProperty({ type: DeadlineSubmissionDto, nullable: true })
+  submission!: DeadlineSubmissionDto | null;
 
   @Expose()
   @ApiProperty({ enum: DEADLINE_ATTENDANCES })

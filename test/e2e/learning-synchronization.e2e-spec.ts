@@ -4,6 +4,9 @@ import { count, eq, isNotNull } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  activityCompletions,
+  assessmentResults,
+  assessments,
   courseOfferings,
   institutions,
   institutionSettings,
@@ -11,6 +14,7 @@ import {
   notificationEvents,
   learningSpaces,
   roleAssignments,
+  submissionRefs,
   syncWatermarks,
   type CanonicalRole,
 } from '../../src/database/schema';
@@ -80,7 +84,14 @@ describe('Learning synchronization (e2e)', () => {
   };
 
   const countOf = async (
-    table: typeof learningSpaces | typeof learningActivities | typeof courseOfferings,
+    table:
+      | typeof learningSpaces
+      | typeof learningActivities
+      | typeof courseOfferings
+      | typeof assessments
+      | typeof assessmentResults
+      | typeof activityCompletions
+      | typeof submissionRefs,
   ): Promise<number> => {
     const [row] = await harness.db.select({ value: count() }).from(table);
 
@@ -164,13 +175,21 @@ describe('Learning synchronization (e2e)', () => {
       .where(eq(syncWatermarks.sourceSystem, 'lms'));
     const domains = marks.map((mark) => mark.domain).sort();
 
-    expect(domains).toEqual(['learningActivities', 'learningSpaces']);
+    expect(domains).toEqual([
+      'activityCompletions',
+      'assessmentResults',
+      'assessments',
+      'learningActivities',
+      'learningSpaces',
+      'submissions',
+    ]);
   });
 
   it('leaves the space unlinked when the SIS half has not run', async () => {
     const run = await learning.execute((await startRun('lms')).id);
 
-    expect(run.status).toBe('succeeded');
+    // Partial, not succeeded: a mark names a person only the SIS half provisions.
+    expect(run.status).toBe('partial');
 
     const [linked] = await harness.db
       .select({ value: count() })
@@ -179,6 +198,64 @@ describe('Learning synchronization (e2e)', () => {
 
     expect(await countOf(learningSpaces)).toBeGreaterThan(0);
     expect(linked?.value).toBe(0);
+  });
+
+  it('imports the gradebook, the marks, the hand-ins and the completions', async () => {
+    const run = await syncBothHalves();
+
+    expect(run.status).toBe('succeeded');
+    expect(await countOf(assessments)).toBeGreaterThan(0);
+    expect(await countOf(assessmentResults)).toBeGreaterThan(0);
+    expect(await countOf(submissionRefs)).toBeGreaterThan(0);
+    expect(await countOf(activityCompletions)).toBeGreaterThan(0);
+  });
+
+  it('opens one gradebook column per activity that carries a deadline', async () => {
+    await syncBothHalves();
+
+    const [dated] = await harness.db
+      .select({ value: count() })
+      .from(learningActivities)
+      .where(isNotNull(learningActivities.dueAt));
+
+    expect(await countOf(assessments)).toBe(dated?.value);
+  });
+
+  it('attaches a mark to the person the SIS provisioned, not to a shadow of its own', async () => {
+    await syncBothHalves();
+
+    const rows = await harness.db
+      .select({ userId: assessmentResults.userId })
+      .from(assessmentResults);
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.userId).toBeTruthy();
+  });
+
+  it('records the share of the maximum alongside the raw points', async () => {
+    await syncBothHalves();
+
+    const rows = await harness.db
+      .select({
+        points: assessmentResults.points,
+        normalizedScore: assessmentResults.normalizedScore,
+      })
+      .from(assessmentResults);
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const share = Number(row.normalizedScore);
+
+      expect(share).toBeGreaterThan(0);
+      expect(share).toBeLessThanOrEqual(1);
+      expect(share).toBeCloseTo(Number(row.points) / 100, 3);
+    }
+  });
+
+  it('leaves more work handed in than marked, so an ungraded hand-in exists', async () => {
+    await syncBothHalves();
+
+    expect(await countOf(submissionRefs)).toBeGreaterThan(await countOf(assessmentResults));
   });
 
   it('is idempotent: a second full run creates nothing new', async () => {

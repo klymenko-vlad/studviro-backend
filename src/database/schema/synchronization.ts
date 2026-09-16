@@ -21,6 +21,10 @@ export const SYNC_DOMAINS = [
   'officialResults',
   'learningSpaces',
   'learningActivities',
+  'assessments',
+  'assessmentResults',
+  'activityCompletions',
+  'submissions',
 ] as const;
 export type SyncDomain = (typeof SYNC_DOMAINS)[number];
 export const syncDomain = pgEnum('sync_domain', SYNC_DOMAINS);

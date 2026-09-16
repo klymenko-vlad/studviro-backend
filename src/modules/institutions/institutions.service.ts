@@ -7,6 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import { isUniqueViolation } from '../../database/repository/database-error';
 import { institutions } from '../../database/schema';
+import { DerivedRolesRepository } from '../authorization/derived-roles.repository';
 import { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
 import { InvitationsService } from '../invitations/invitations.service';
 import { UsersRepository } from '../users/users.repository';
@@ -20,6 +21,7 @@ export class InstitutionsService {
   constructor(
     private readonly repository: InstitutionsRepository,
     private readonly assignments: RoleAssignmentsRepository,
+    private readonly derivedRoles: DerivedRolesRepository,
     private readonly users: UsersRepository,
     private readonly invitations: InvitationsService,
   ) {}
@@ -103,9 +105,20 @@ export class InstitutionsService {
     }
   }
 
+  /**
+   * Belonging is a granted role *or* an academic record (ADR 0016): an imported
+   * student holds no `role_assignments` row, and reading only that table left
+   * them on an account page saying they belong nowhere, with no way to click
+   * through to their own courses.
+   */
   async listForUser(userId: string): Promise<InstitutionResponseDto[]> {
-    const active = await this.assignments.findActiveForUserAnywhere(userId);
-    const ids = [...new Set(active.map((assignment) => assignment.institutionId))];
+    const [active, derived] = await Promise.all([
+      this.assignments.findActiveForUserAnywhere(userId),
+      this.derivedRoles.institutionsFor(userId),
+    ]);
+    const ids = [
+      ...new Set([...active.map((assignment) => assignment.institutionId), ...derived]),
+    ];
 
     if (ids.length === 0) return [];
 

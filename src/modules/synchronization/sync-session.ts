@@ -109,6 +109,32 @@ export class SyncSession {
     return found;
   }
 
+  /** The LMS half resolves a person against the identity the SIS provisioned. */
+  async userFrom(sourceSystem: SourceSystem, externalId: string): Promise<string | null> {
+    if (sourceSystem === this.target.sourceSystem) return this.user(externalId);
+
+    const key = this.key(`${USER_REFERENCE}:${sourceSystem}`, externalId);
+    const cached = this.resolved.get(key);
+    if (cached !== undefined) return cached;
+
+    const identity = await this.identities.findBySubjectInSource(
+      this.target.institutionId,
+      sourceSystem,
+      externalId,
+    );
+    const found = identity?.userId ?? null;
+    this.resolved.set(key, found);
+
+    return found;
+  }
+
+  async requireUserFrom(sourceSystem: SourceSystem, externalId: string): Promise<string> {
+    const found = await this.userFrom(sourceSystem, externalId);
+    if (!found) throw new UnresolvedReferenceError(USER_REFERENCE, externalId);
+
+    return found;
+  }
+
   rememberUser(externalId: string, userId: string | null): void {
     this.resolved.set(this.key(USER_REFERENCE, externalId), userId);
   }

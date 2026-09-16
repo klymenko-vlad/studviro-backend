@@ -5,7 +5,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-09-12
+Last updated: 2026-09-16
 
 ## States
 
@@ -50,7 +50,8 @@ Last updated: 2026-09-12
 | Browse the course catalogue              | ⬜      | ⬜       | `Planned` | Gap G4. `mock-sis` imports programmes and courses; courses are reachable only through your own enrolments and `program:read` / `course:read` have no endpoint                                                                                                                                                                        |
 | Enrol in a course                        | ⬜      | ⬜       | `Planned` | Gap G5. The enrolment window, capacity and the `requested → provisioning → active` ladder are modelled; nothing requests one. Enrolment is imported fact only                                                                                                                                                                        |
 | Exam registration reaches the university | ⬜      | —        | `Planned` | Gap G1. Registration is platform-local: no connector call, no cancel command, no outbox. See the caveat on the Exam registration row above                                                                                                                                                                                           |
-| Assignments and deadlines                | ✅      | ✅       | `Partial` | `/institutions/[id]/calendar` carries deadlines as a third layer beside classes and exam terms, the dashboard a two-week tile, and the LMS import announces a new or moved one. Closes G3 for dated activities; the submission itself, its state and its result are still unimported (G2's remainder)                                |
+| Assignments and deadlines                | ✅      | ✅       | `Partial` | `/institutions/[id]/calendar` carries deadlines as a third layer beside classes and exam terms, the dashboard a two-week tile, and the LMS import announces a new or moved one. A card now reads _Handed in_ or _Missed_ rather than _Past due_, because submissions are imported. Closes G3; closes G2 (ADR 0022)                   |
+| Marks from the learning system           | ✅      | ✅       | `Live`    | `GET .../me/assessment-results` behind `grade:read`; the course page shows every LMS mark with its score, share of the maximum, hand-in and completion, beside the registrar's result rather than merged into it (ADR 0022)                                                                                                          |
 | See my programme and study progress      | ⬜      | ⬜       | `Planned` | `program_memberships` is imported — study year, status, programme — and never shown                                                                                                                                                                                                                                                  |
 
 ## Teacher
@@ -94,8 +95,8 @@ Last updated: 2026-09-12
 | Retries, tombstones, watermarks                                      | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures             |
 | Reconciliation checks                                                | `Live`    | Steps 37 and 48; reports discrepancies and settles one either way, with an audit log     |
 | Learning-system data (spaces, activities)                            | `Live`    | Imported behind `sync:run`, listed at `/institutions/:id/learning`, matched to offerings |
-| Learning-system data (assessments, results, completion, submissions) | `Planned` | Gap G2's remainder. Four canonical tables still have no importer and no read             |
-| Mock LMS connector                                                   | `Live`    | Deterministic `mock-lms`; spaces and activities derived from `mock-sis`'s offerings      |
+| Learning-system data (assessments, results, completion, submissions) | `Live`    | Imported behind `sync:run`; a student's marks render on the course page (ADR 0022)       |
+| Mock LMS connector                                                   | `Live`    | Deterministic `mock-lms`; spaces, activities, gradebook and hand-ins from `mock-sis`     |
 | Write-back to source systems                                         | `Planned` | Gap G1. Two optional connector methods, no caller, no cancel, no outbox, no retry        |
 | Moodle connector                                                     | `Planned` | `LearningSystemConnector` interface exists; no implementation, no dev instance           |
 | AIS2 connector                                                       | `Blocked` | Blocked on documented institutional access (step 15)                                     |

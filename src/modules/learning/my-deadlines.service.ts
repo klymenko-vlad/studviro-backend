@@ -4,6 +4,7 @@ import { InvalidInputError } from '../../common/errors/domain.error';
 import type {
   LearningActivityType,
   SourceSystem,
+  SubmissionState,
   SynchronizationStatus,
 } from '../../database/schema';
 
@@ -18,6 +19,12 @@ export type DeadlineAttendance = (typeof DEADLINE_ATTENDANCES)[number];
 
 export const MAX_DEADLINE_RANGE_DAYS = 92;
 
+export interface DeadlineSubmission {
+  state: SubmissionState;
+  submittedAt: Date | null;
+  isLate: boolean;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface MyDeadline {
@@ -29,6 +36,8 @@ export interface MyDeadline {
   dueAt: Date;
   isOpen: boolean;
   isOverdue: boolean;
+  /** Null when the learner has handed nothing in, or is teaching the course. */
+  submission: DeadlineSubmission | null;
   attendance: DeadlineAttendance;
   learningSpace: { id: string; name: string; url: string | null };
   offering: { id: string };
@@ -72,6 +81,14 @@ function compose(row: MyDeadlineRow, now: Date): MyDeadline {
     dueAt: row.dueAt,
     isOpen: !isOverdue && (row.opensAt === null || row.opensAt.getTime() <= now.getTime()),
     isOverdue,
+    submission:
+      row.submissionState === null
+        ? null
+        : {
+            state: row.submissionState,
+            submittedAt: row.submittedAt,
+            isLate: row.submissionIsLate ?? false,
+          },
     attendance: row.teaching ? 'teaching' : 'enrolled',
     learningSpace: { id: row.spaceId, name: row.spaceName, url: row.spaceUrl },
     offering: { id: row.offeringId },

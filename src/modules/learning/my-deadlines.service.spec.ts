@@ -13,6 +13,9 @@ const row = (overrides: Partial<MyDeadlineRow> = {}): MyDeadlineRow => ({
   opensAt: new Date('2026-10-29T21:00:00.000Z'),
   dueAt: new Date('2026-11-05T21:00:00.000Z'),
   teaching: false,
+  submissionState: null,
+  submittedAt: null,
+  submissionIsLate: null,
   spaceId: 'space-1',
   spaceName: 'Programming 2',
   spaceUrl: 'https://lms.example/course/view.php?idnumber=CRS-1',
@@ -115,5 +118,50 @@ describe(MyDeadlinesService.name, () => {
     findMyDeadlines.mockResolvedValue([]);
 
     await expect(list()).resolves.toEqual([]);
+  });
+});
+
+describe(`${MyDeadlinesService.name} submissions`, () => {
+  const findMyDeadlines = vi.fn();
+  const repository = { findMyDeadlines } as unknown as MyDeadlinesRepository;
+  const service = new MyDeadlinesService(repository);
+  const now = new Date('2026-11-06T09:00:00.000Z');
+
+  const listOne = async (overrides: Partial<MyDeadlineRow>) => {
+    findMyDeadlines.mockResolvedValue([row(overrides)]);
+    const [deadline] = await service.listMine('institution-1', 'student-1', range, now);
+
+    return deadline;
+  };
+
+  it('reports nothing handed in as no submission at all', async () => {
+    await expect(listOne({})).resolves.toMatchObject({ isOverdue: true, submission: null });
+  });
+
+  it('carries the state and the moment the work was handed in', async () => {
+    const submittedAt = new Date('2026-11-05T18:00:00.000Z');
+
+    await expect(
+      listOne({ submissionState: 'submitted', submittedAt, submissionIsLate: false }),
+    ).resolves.toMatchObject({
+      isOverdue: true,
+      submission: { state: 'submitted', submittedAt, isLate: false },
+    });
+  });
+
+  it('keeps a late hand-in distinguishable from a punctual one', async () => {
+    await expect(
+      listOne({
+        submissionState: 'graded',
+        submittedAt: new Date('2026-11-06T03:00:00.000Z'),
+        submissionIsLate: true,
+      }),
+    ).resolves.toMatchObject({ submission: { state: 'graded', isLate: true } });
+  });
+
+  it('treats a missing lateness flag as on time rather than as unknown', async () => {
+    await expect(
+      listOne({ submissionState: 'draft', submittedAt: null, submissionIsLate: null }),
+    ).resolves.toMatchObject({ submission: { state: 'draft', isLate: false } });
   });
 });
