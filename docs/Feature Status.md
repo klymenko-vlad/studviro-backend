@@ -93,7 +93,7 @@ Last updated: 2026-09-16
 | Mock SIS connector                                                   | `Live`    | Deterministic, ~5k linked records from a seed, honours `changedSince`                    |
 | Synchronization engine                                               | `Partial` | Imports the SIS and the LMS into canonical tables, each as its own source system and run |
 | Retries, tombstones, watermarks                                      | `Live`    | Stale-write guard, per-domain watermarks, child pruning, per-record failures             |
-| Reconciliation checks                                                | `Live`    | Steps 37 and 48; reports discrepancies and settles one either way, with an audit log     |
+| Reconciliation checks                                                | `Live`    | Steps 37 and 48; compares either the SIS or the LMS half and settles one either way, with an audit log |
 | Learning-system data (spaces, activities)                            | `Live`    | Imported behind `sync:run`, listed at `/institutions/:id/learning`, matched to offerings |
 | Learning-system data (assessments, results, completion, submissions) | `Live`    | Imported behind `sync:run`; a student's marks render on the course page (ADR 0022)       |
 | Mock LMS connector                                                   | `Live`    | Deterministic `mock-lms`; spaces, activities, gradebook and hand-ins from `mock-sis`     |

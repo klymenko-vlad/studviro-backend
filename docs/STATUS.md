@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-16 (G2 closed — the assessment side of the LMS)
+Last updated: 2026-09-17 (reconciliation gained its second source system)
 
 ## What this is
 
@@ -34,13 +34,18 @@ reasoning lives in `docs/adr/`. In short:
 - **Institution setup and synchronization** — terminology, flags and connector selection resolving
   over platform defaults; connector contracts, deterministic `mock-sis`, registry health and
   capabilities, ordered imports, provenance upserts, stale-write guards, tombstones, child pruning,
-  watermarks and a locked run state machine (ADR 0010); reconciliation (37), which reads both
-  sides live and reports what is missing, stale or in conflict per domain; and its resolution half (48),
-  which settles one either way — `accept_source` marks the row pending so the next import overwrites it,
-  or tombstones it when the source dropped it; `keep_platform` detaches the row from the source so no
+  watermarks and a locked run state machine (ADR 0010).
+- **Reconciliation** (37, 48) — reads both sides live and reports what is missing, stale or in conflict
+  per domain, then settles one either way: `accept_source` marks the row pending so the next import
+  overwrites it, or tombstones it when the source dropped it; `keep_platform` detaches the row so no
   import can ever match it again. A record the platform never took in is not resolvable there, because
-  the remedy is an import. Every decision is logged in `reconciliation_resolutions` with who made it, and
-  the log renders under the report. Behind `sync:run`. ADR 0019.
+  the remedy is an import. Every decision is logged in `reconciliation_resolutions` with who made it.
+  **Both halves are covered**: the source system is a parameter the way it is for a sync run, so
+  `?sourceSystem=lms` resolves the learning connector and walks the six learning domains, and the
+  domain alone decides which source owns a row — resolution is never told, so it cannot be told
+  wrongly. Every message that said "a full synchronization" names which system's run would settle it.
+  A _System_ picker sits beside the check button, and the screen says people are compared by neither.
+  Behind `sync:run`. ADR 0019.
 - **The learning half of the model** (G2, partly) — a deterministic `mock-lms` derives one learning
   space per `mock-sis` course offering, naming it by the SIS identifier, with activities whose
   assessable types carry `opens_at`/`due_at`. Two sync domains (`learningSpaces`,
@@ -116,19 +121,11 @@ turned out not to be. Read those before starting; the headlines:
   (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
   family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
-- **G2 is closed.** What it did not settle: an LMS mark deliberately does not feed the calculated
-  stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
-- **Reconciliation covers the SIS half only.** `ReconciliationService` is constructed against the
-  academic connector and `ACADEMIC_IMPORTERS`, so all **six** learning domains are absent from its
-  report — `RECONCILED_TABLES` is a `Partial` map, so nothing breaks, nothing is compared.
-  Giving it a second source system is its own step, and it got bigger with G2's remainder.
-- Reconciliation deliberately skips `persons` — a person becomes a user and a linked identity
-  rather than a provenanced canonical row — but the screen says nothing about the omission.
-- `accept_source` is a two-step operation: it clears the way, and a **full** run applies it. Until a
-  scheduled sync exists (**G10**) the second step is a button somebody must remember to press, and in
-  the meantime the row re-reports as a fresh `conflict` ("marked pending rather than in sync"), which
-  reads as a new problem rather than as a decision awaiting a run. Reconciliation should recognise a
-  row it was itself told to make pending.
+- **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
+  deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
+- `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. Until a
+  scheduled sync exists (**G10**) the second step is a button somebody must remember to press — but the
+  row now re-reports as a decision awaiting that run rather than as a fresh conflict.
 - Smaller, known: the calendar's course picker lists only courses with an event that week and no
   filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
   rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` now
@@ -142,23 +139,25 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — reconciliation's second source system
+## Next task — the write-back ADR (G1)
 
-**Give `ReconciliationService` the LMS.** It is constructed against the academic connector and
-`ACADEMIC_IMPORTERS`, so none of the six learning domains is compared against what the LMS actually
-holds — `RECONCILED_TABLES` is a `Partial` map, so the screen silently reports on the SIS half alone
-and says nothing about the omission. Take the source system as a parameter the way the sync run
-already does, add the learning tables to the map, and put a _System_ picker on the reconciliation
-screen beside the one the sync screen already has. Decide as part of it what `accept_source` means
-for a learning row whose remedy is an LMS run rather than a SIS one.
+**Decide, in an ADR, how a decision taken in StudViro reaches the source system.** Today every
+connector is read-only: a student registers for an exam term, a teacher proposes a grade, an admin
+resolves a discrepancy — and none of it ever leaves the platform. The next import can quietly
+overwrite all three. Nothing else in the backlog is safe to build on until the shape is settled.
 
-While that screen is open: it also skips `persons` deliberately and says nothing about it, and a row
-marked pending by an earlier `accept_source` re-reports as a fresh `conflict` rather than as a
-decision awaiting a run. Both are small and both belong to whoever touches it next.
+The ADR has to answer: which domains are writable at all and which are read-only by nature; whether
+a write is synchronous against the connector or queued and reconciled; what happens when the source
+refuses; how a pending write interacts with an import that lands first; and how `accept_source` /
+`keep_platform` relate to it, since reconciliation is the one place the platform already claims to
+win. `ConnectorRegistry` and the capability set are the natural extension points — a connector should
+declare what it can write the way it already declares what it can read.
 
-**After that, in order:** **G1's write-back ADR**; B4/B5/B9/B11 as one exam-lifecycle step; G4/G8
-(grade entry); and B6 (make the flags mean something). Wiring the person directory into the grant
-form as a picker is small and falls out naturally whenever that screen is next touched.
+Write the ADR first and land it on its own; the implementation is a later step, and probably several.
+
+**After that, in order:** B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make
+the flags mean something). Wiring the person directory into the grant form as a picker is small and
+falls out naturally whenever that screen is next touched.
 
 ## Caveats
 
@@ -168,14 +167,23 @@ form as a picker is small and falls out naturally whenever that screen is next t
   `ENROLLMENT_PARTICIPATING_STATUSES`, so a `completed` student who legitimately registers for a
   resit is never told when that term moves — the exam flow still disagrees with itself, now only
   for retakes. Fold this into the B10 fix.
-- The roster's "{enrolled} enrolled of {total} listed" copy is near-redundant — the two numbers now
-  match except against a stale cache. Collapse it when that widget is next touched.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 440.59 kB gzipped against the 455 kB guard — 14.41 kB of headroom.**
-  This step spent 1.72 kB, G3 2.61 kB, G2 2.67 kB before it. `pnpm size` is green; the breach earlier
-  notes recorded is no longer present. When choosing a `shared/ui` primitive, remember the native-`<select>` swap that
-  freed 27.61 kB: a Radix control pulls in floating-ui, focus-scope, dismissable-layer and the
-  collection helpers, and a plain HTML element sometimes covers the same behaviour for less.
+- **The client bundle is at 441.05 kB gzipped against the 455 kB guard — 13.95 kB of headroom.**
+  This step spent 0.46 kB, the one before it 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
+  `shared/ui` primitive, remember the native-`<select>` swap that freed 27.61 kB: a Radix control pulls
+  in floating-ui, focus-scope, dismissable-layer and the collection helpers, and a plain HTML element
+  sometimes covers the same behaviour for less.
+- **Switching the reconciliation _System_ picker blanks the report until you press Check again.** The
+  query is keyed by source system and starts disabled, so the new key simply has no data yet. It is
+  coherent — it never re-labels the old answer as the new one — but it reads as the report vanishing.
+  A line saying "press Check to compare this system" would cost nothing.
+- The `pending` detail copy ("waiting to be overwritten — run a full synchronization to apply it") is
+  covered by unit tests but was not exercised in the walk: this machine's only `accept_source` row had
+  already been applied by a later full run, so it matched cleanly.
+- The SIS report on this machine shows two exam-term `conflict` rows with **no external identifier** —
+  "the row claims this source but carries no external identifier, so no import can ever match it".
+  That is dev data from an earlier walk, not a defect this step introduced, but it is unresolvable by
+  hand and will keep showing up until those rows are cleaned out.
 - `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
   seed default; `pnpm db:seed` does not reset an existing user's password.
 - `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
@@ -186,33 +194,21 @@ form as a picker is small and falls out naturally whenever that screen is next t
   friendliest. See ADR 0018.
 - The dev seed creates two users, one a platform operator (`admin@studviro.local`), and no
   institution; a walk creates its own through the UI via that seeded operator.
-- The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; a
-  restart was needed mid-walk to pick up a new translation key. Confirmed again during G2's walk —
-  the new keys rendered as raw `sync.source.lms` identifiers until the server was restarted.
-- A raw `sql` timestamp selection bypasses Drizzle's column mapper and serves a PostgreSQL string the
-  generated client rejects; `.mapWith(table.column)` fixes it, and both learning reads now assert
-  ISO 8601 at the API boundary. Worth checking any other raw `sql` timestamp selection.
+- The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; restart it
+  when a new translation key renders as its raw identifier.
 - This machine's dev institution now has `learningSystemConnector: mock-lms` with 144 spaces, 576
   activities, 345 gradebook columns, 417 marks, 569 hand-ins and 1738 completions, so both the
   learning screen and the course page's marks panel have data without further setup.
-- `MockLmsOptions.weeksElapsed` (6) moved every LMS deadline six weeks earlier so the fixture sits
-  inside a term already under way. Existing dev deadlines moved with it; that is intended.
-- The walk signed in as `veronika.gajdos0128@mocku.example` (`walkwalk123`), an imported student whose
-  password was set directly in the dev database — there is still no request-to-join (**B2**), so an
-  imported person cannot otherwise get a credential without an invitation.
+- For a student-side walk, `veronika.gajdos0128@mocku.example` (`walkwalk123`) is an imported student
+  whose password was set directly in the dev database — there is still no request-to-join (**B2**).
 - This machine's dev database has course `CRS-PF-P2-12` detached to `source_system = 'platform'`
   from step 48's walk; a full sync creates a fresh source-owned course beside it, which is
   ADR 0019's named consequence observed rather than predicted.
-- **A student could not reach their own institution (B14, fixed here).** `listMyInstitutions` read
-  granted `role_assignments` only, so an imported student landed on an account page saying they belong
-  nowhere. It now unions the institutions a `program_membership` or `teaching_assignment` implies.
 - **Importing a `@Global` module registers its `APP_GUARD` a second time, and the second registration
   denies everything.** Adding `AuthorizationModule` to `InstitutionsModule.imports` made every
   `@RequirePermission` route answer `PERMISSION_DENIED` before `AuthorizationService` was ever called —
   for a platform operator as much as for a student. The module is `@Global`, so the import was never
   needed. Found during this walk; worth a lint rule if it ever happens twice.
-- The sync monitor's copy for all six learning domains is now in both catalogues (the two G3 flagged
-  as missing plus the four this step added).
 - A deadline card still shows a bare time (`Due 12:00 AM` for a `due_at` that is an evening in UTC read
   in the institution's timezone). The day heading above carries the date, but the card alone does not.
 - `nest start --watch` does not release port 3010 on restart on this machine: every reload after the
