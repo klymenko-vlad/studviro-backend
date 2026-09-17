@@ -7,6 +7,7 @@ import type { InstitutionConfigurationService } from '../institutions/configurat
 
 import type { CanonicalRepositories } from './canonical.repositories';
 import type { AcademicImporter } from './importers/academic.importer';
+import type { LearningImporter } from './importers/learning.importer';
 import type { ProvenanceSnapshot } from './provenance.repository';
 import { MAX_DISCREPANCIES_PER_DOMAIN, ReconciliationService } from './reconciliation.service';
 
@@ -41,6 +42,7 @@ function serviceWith(options: {
   rows?: ProvenanceSnapshot[];
   capable?: boolean;
   academicSystem?: string | null;
+  learningSystem?: string | null;
   installed?: boolean;
   fetchError?: Error;
 }) {
@@ -49,37 +51,52 @@ function serviceWith(options: {
       connectors: {
         academicSystem:
           options.academicSystem === undefined ? 'mock-sis' : options.academicSystem,
-        learningSystem: null,
+        learningSystem:
+          options.learningSystem === undefined ? 'mock-lms' : options.learningSystem,
       },
     }),
   };
-  const connector = {
+  const fetch = options.fetchError
+    ? vi.fn().mockRejectedValue(options.fetchError)
+    : vi.fn().mockResolvedValue(options.records ?? []);
+  const academicConnector = {
     capabilities: vi.fn().mockReturnValue({ 'courses.read': options.capable ?? true }),
   };
+  const learningConnector = {
+    capabilities: vi.fn().mockReturnValue({ 'courses.read': options.capable ?? true }),
+  };
+  const missing = options.installed === false;
   const registry = {
-    academicSystem: vi
-      .fn()
-      .mockReturnValue(options.installed === false ? undefined : connector),
+    academicSystem: vi.fn().mockReturnValue(missing ? undefined : academicConnector),
+    learningSystem: vi.fn().mockReturnValue(missing ? undefined : learningConnector),
   };
   const importer = {
     domain: 'courses',
     capability: 'courses.read',
-    fetch: options.fetchError
-      ? vi.fn().mockRejectedValue(options.fetchError)
-      : vi.fn().mockResolvedValue(options.records ?? []),
+    fetch,
     apply: vi.fn(),
   } satisfies AcademicImporter;
+  const learningImporter = {
+    domain: 'learningSpaces',
+    capability: 'courses.read',
+    fetch,
+    apply: vi.fn(),
+  } satisfies LearningImporter;
   const listProvenance = vi.fn().mockResolvedValue(options.rows ?? []);
   const repositories = { of: vi.fn().mockReturnValue({ listProvenance }) };
 
   return {
     importer,
+    learningImporter,
+    registry,
     listProvenance,
+    repositories,
     service: new ReconciliationService(
       configuration as unknown as InstitutionConfigurationService,
       registry as unknown as ConnectorRegistry,
       repositories as unknown as CanonicalRepositories,
       [importer],
+      [learningImporter],
     ),
   };
 }
@@ -88,7 +105,7 @@ describe('ReconciliationService', () => {
   it('reports a source record the platform never took in', async () => {
     const { service } = serviceWith({ records: [record('C-1')], rows: [] });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.discrepancyCount).toBe(1);
     expect(report.domains[0]).toMatchObject({
@@ -108,7 +125,7 @@ describe('ReconciliationService', () => {
   it('reports a live canonical row the source no longer offers', async () => {
     const { service } = serviceWith({ records: [], rows: [row('C-9')] });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.discrepancies[0]).toMatchObject({
       kind: 'missing_in_source',
@@ -123,7 +140,7 @@ describe('ReconciliationService', () => {
       rows: [row('C-1'), row(null, { id: 'id-orphan' })],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.matched).toBe(1);
     expect(report.domains[0]?.discrepancies).toHaveLength(1);
@@ -140,7 +157,7 @@ describe('ReconciliationService', () => {
       rows: [row(null, { id: 'id-orphan' })],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.matched).toBe(0);
     expect(report.domains[0]?.discrepancies.map((one) => one.kind).sort()).toEqual([
@@ -155,7 +172,7 @@ describe('ReconciliationService', () => {
       rows: [row('C-1')],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.matched).toBe(1);
     expect(report.domains[0]?.discrepancies[0]).toMatchObject({
@@ -171,7 +188,7 @@ describe('ReconciliationService', () => {
       rows: [row('C-1', { synchronizationStatus: 'conflict' })],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.discrepancies[0]?.kind).toBe('conflict');
   });
@@ -179,7 +196,7 @@ describe('ReconciliationService', () => {
   it('says nothing when both populations agree', async () => {
     const { service } = serviceWith({ records: [record('C-1')], rows: [row('C-1')] });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.discrepancyCount).toBe(0);
     expect(report.domains[0]).toMatchObject({ matched: 1, truncated: false });
@@ -191,7 +208,7 @@ describe('ReconciliationService', () => {
       rows: [],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.discrepancyCount).toBe(0);
     expect(report.domains[0]?.sourceCount).toBe(0);
@@ -200,7 +217,7 @@ describe('ReconciliationService', () => {
   it('compares whole populations rather than a changed window', async () => {
     const { service, importer } = serviceWith({});
 
-    await service.report(INSTITUTION);
+    await service.report(INSTITUTION, 'sis');
 
     expect(importer.fetch).toHaveBeenCalledWith(expect.anything(), {});
   });
@@ -212,7 +229,7 @@ describe('ReconciliationService', () => {
       rows: [],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]?.discrepancyCount).toBe(overflow);
     expect(report.domains[0]?.discrepancies).toHaveLength(MAX_DISCREPANCIES_PER_DOMAIN);
@@ -225,7 +242,7 @@ describe('ReconciliationService', () => {
       rows: [row('C-1')],
     });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]).toMatchObject({ status: 'skipped', discrepancyCount: 0 });
     expect(importer.fetch).not.toHaveBeenCalled();
@@ -235,7 +252,7 @@ describe('ReconciliationService', () => {
   it('records a domain whose fetch failed rather than aborting the report', async () => {
     const { service } = serviceWith({ fetchError: new Error('source unreachable') });
 
-    const report = await service.report(INSTITUTION);
+    const report = await service.report(INSTITUTION, 'sis');
 
     expect(report.domains[0]).toMatchObject({
       status: 'failed',
@@ -246,12 +263,57 @@ describe('ReconciliationService', () => {
   it('refuses when the institution has no academic connector configured', async () => {
     const { service } = serviceWith({ academicSystem: null });
 
-    await expect(service.report(INSTITUTION)).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(service.report(INSTITUTION, 'sis')).rejects.toBeInstanceOf(InvalidInputError);
   });
 
   it('refuses when the configured connector is not installed', async () => {
     const { service } = serviceWith({ installed: false });
 
-    await expect(service.report(INSTITUTION)).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(service.report(INSTITUTION, 'sis')).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
+  it('compares the learning half against the learning connector when asked', async () => {
+    const { service, registry, learningImporter, repositories } = serviceWith({
+      records: [record('LS-1')],
+      rows: [],
+    });
+
+    const report = await service.report(INSTITUTION, 'lms');
+
+    expect(report.sourceSystem).toBe('lms');
+    expect(report.connectorName).toBe('mock-lms');
+    expect(registry.learningSystem).toHaveBeenCalledWith('mock-lms');
+    expect(registry.academicSystem).not.toHaveBeenCalled();
+    expect(learningImporter.fetch).toHaveBeenCalled();
+    expect(repositories.of).toHaveBeenCalledWith('learningSpaces');
+    expect(report.domains[0]?.domain).toBe('learningSpaces');
+  });
+
+  it('scopes the provenance read to the source system it is comparing', async () => {
+    const { service, listProvenance } = serviceWith({ records: [], rows: [] });
+
+    await service.report(INSTITUTION, 'lms');
+
+    expect(listProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceSystem: 'lms', connectorName: 'mock-lms' }),
+    );
+  });
+
+  it('refuses when the institution has no learning connector configured', async () => {
+    const { service } = serviceWith({ learningSystem: null });
+
+    await expect(service.report(INSTITUTION, 'lms')).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
+  it('reads a pending row as a decision awaiting a run, not as a fresh conflict', async () => {
+    const { service } = serviceWith({
+      records: [record('C-1')],
+      rows: [row('C-1', { synchronizationStatus: 'pending' })],
+    });
+
+    const report = await service.report(INSTITUTION, 'sis');
+
+    expect(report.domains[0]?.discrepancies[0]).toMatchObject({ kind: 'conflict' });
+    expect(report.domains[0]?.discrepancies[0]?.detail).toContain('waiting to be overwritten');
   });
 });

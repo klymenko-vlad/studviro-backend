@@ -9,7 +9,13 @@ import {
   type ReconciliationResolution,
 } from '../../../database/schema';
 import type { ResolutionOutcome } from '../reconciliation-resolution.service';
-import { RECONCILED_TABLES, type ReconciledDomain } from '../reconciliation.types';
+import {
+  RECONCILED_TABLES,
+  RECONCILIATION_SOURCE_SYSTEMS,
+  sourceSystemFor,
+  type ReconciledDomain,
+  type ReconciliationSourceSystem,
+} from '../reconciliation.types';
 
 const RECONCILED_DOMAINS = Object.keys(RECONCILED_TABLES) as ReconciledDomain[];
 
@@ -20,6 +26,14 @@ export class ReconciliationResolutionResponseDto {
   @Expose() @ApiProperty({ enum: DISCREPANCY_KINDS }) kind!: DiscrepancyKind;
   @Expose() @ApiProperty({ enum: RECONCILIATION_ACTIONS }) action!: ReconciliationAction;
   @Expose() @ApiProperty() connectorName!: string;
+
+  @Expose()
+  @ApiProperty({
+    enum: RECONCILIATION_SOURCE_SYSTEMS,
+    description:
+      'Which half of the model the resolved row belongs to. A run that applies an accepted source must be a run against this system.',
+  })
+  sourceSystem!: ReconciliationSourceSystem;
 
   @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
   @Expose() @ApiProperty({ type: String, nullable: true }) canonicalId!: string | null;
@@ -45,6 +59,7 @@ export class ReconciliationResolutionResponseDto {
     dto.kind = resolution.kind;
     dto.action = resolution.action;
     dto.connectorName = resolution.connectorName;
+    dto.sourceSystem = sourceSystemFor(dto.domain);
     dto.externalId = resolution.externalId;
     dto.canonicalId = resolution.canonicalId;
     dto.detail = resolution.detail;

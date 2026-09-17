@@ -23,6 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 
 import { ListSyncRunsQueryDto } from './dto/list-sync-runs-query.dto';
+import { ReconciliationQueryDto } from './dto/reconciliation-query.dto';
 import { ReconciliationReportResponseDto } from './dto/reconciliation-report-response.dto';
 import { ReconciliationResolutionResponseDto } from './dto/reconciliation-resolution-response.dto';
 import { ResolveDiscrepancyDto } from './dto/resolve-discrepancy.dto';
@@ -112,15 +113,16 @@ export class SynchronizationController {
     operationId: 'getSynchronizationReconciliation',
     summary: 'Compare the source population against the canonical one',
     description:
-      'Reads both sides live and reports where they disagree. It resolves nothing and writes nothing.',
+      'Reads both sides live and reports where they disagree. It resolves nothing and writes nothing. `sourceSystem` chooses which half of the model is compared; people are reconciled by neither, because a person becomes a user and a linked identity rather than a provenanced canonical row.',
   })
   @ApiOkResponse({ type: ReconciliationReportResponseDto })
   @ApiErrorResponses({ notFound: true })
   async findReconciliation(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Query() query: ReconciliationQueryDto,
   ): Promise<ReconciliationReportResponseDto> {
     return ReconciliationReportResponseDto.from(
-      await this.reconciliation.report(institutionId),
+      await this.reconciliation.report(institutionId, query.sourceSystem ?? 'sis'),
     );
   }
 

@@ -11,7 +11,7 @@ import { TransactionHost } from '../../database/transaction.host';
 import { CanonicalRepositories } from './canonical.repositories';
 import { ReconciliationResolutionRepository } from './reconciliation-resolution.repository';
 import { ReconciliationService } from './reconciliation.service';
-import { tableFor, type ReconciledDomain } from './reconciliation.types';
+import { sourceSystemFor, tableFor, type ReconciledDomain } from './reconciliation.types';
 import type { SyncTarget } from './sync.types';
 
 export interface ResolveDiscrepancyInput {
@@ -55,13 +55,18 @@ export class ReconciliationResolutionService {
     resolvedById: string,
     input: ResolveDiscrepancyInput,
   ): Promise<ResolutionOutcome> {
-    const target = await this.reconciliation.academicTarget(institutionId);
+    // The domain decides which source owns the row, so the caller never has to
+    // say — and can never say wrongly.
+    const target = await this.reconciliation.targetFor(
+      institutionId,
+      sourceSystemFor(input.domain),
+    );
 
     if (input.kind === 'missing_in_platform') {
       throw new InvalidInputError(
         'RECONCILIATION_NOT_RESOLVABLE',
-        'The platform holds no row for this record, so there is nothing to resolve. Run a full synchronization to take it in.',
-        { kind: input.kind },
+        `The platform holds no row for this record, so there is nothing to resolve. Run a full ${target.sourceSystem === 'lms' ? 'learning system' : 'academic system'} synchronization to take it in.`,
+        { kind: input.kind, sourceSystem: target.sourceSystem },
       );
     }
 
@@ -116,7 +121,7 @@ export class ReconciliationResolutionService {
     if (found.sourceSystem !== target.sourceSystem) {
       throw new InvalidInputError(
         'RECONCILIATION_ROW_NOT_SOURCED',
-        'That row is not owned by the academic source, so reconciliation has no say over it',
+        `That row is not owned by the ${target.sourceSystem === 'lms' ? 'learning' : 'academic'} source, so reconciliation has no say over it`,
         { domain, canonicalId },
       );
     }

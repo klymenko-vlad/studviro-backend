@@ -5,12 +5,14 @@ import {
   DISCREPANCY_KINDS,
   RECONCILED_TABLES,
   RECONCILIATION_DOMAIN_STATUSES,
+  RECONCILIATION_SOURCE_SYSTEMS,
   type Discrepancy,
   type DiscrepancyKind,
   type DomainReconciliation,
   type ReconciledDomain,
   type ReconciliationDomainStatus,
   type ReconciliationReport,
+  type ReconciliationSourceSystem,
 } from '../reconciliation.types';
 
 const RECONCILED_DOMAINS = Object.keys(RECONCILED_TABLES) as ReconciledDomain[];
@@ -100,6 +102,10 @@ export class DomainReconciliationResponseDto {
 
 @Exclude()
 export class ReconciliationReportResponseDto {
+  @Expose()
+  @ApiProperty({ enum: RECONCILIATION_SOURCE_SYSTEMS })
+  sourceSystem!: ReconciliationSourceSystem;
+
   @Expose() @ApiProperty() connectorName!: string;
   @Expose() @ApiProperty({ type: String, format: 'date-time' }) checkedAt!: Date;
   @Expose() @ApiProperty() discrepancyCount!: number;
@@ -111,6 +117,7 @@ export class ReconciliationReportResponseDto {
   static from(report: ReconciliationReport): ReconciliationReportResponseDto {
     const dto = new ReconciliationReportResponseDto();
 
+    dto.sourceSystem = report.sourceSystem;
     dto.connectorName = report.connectorName;
     dto.checkedAt = report.checkedAt;
     dto.discrepancyCount = report.discrepancyCount;

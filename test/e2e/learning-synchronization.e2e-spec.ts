@@ -40,6 +40,19 @@ const SMALL_UNIVERSITY: Partial<MockSisOptions> = {
   teachingWeeks: 1,
 };
 
+interface ReconciliationBody {
+  sourceSystem: string;
+  connectorName: string;
+  discrepancyCount: number;
+  domains: {
+    domain: string;
+    status: string;
+    sourceCount: number;
+    matched: number;
+    discrepancies: { kind: string; externalId: string }[];
+  }[];
+}
+
 describe('Learning synchronization (e2e)', () => {
   let harness: TestHarness;
   let academic: AcademicSyncService;
@@ -388,5 +401,105 @@ describe('Learning synchronization (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(403);
+  });
+
+  it('reconciles the learning half against the learning connector', async () => {
+    await syncBothHalves();
+    const actor = await actingAs('institution_admin');
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation?sourceSystem=lms`,
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json<ReconciliationBody>();
+
+    expect(body.sourceSystem).toBe('lms');
+    expect(body.connectorName).toBe('mock-lms');
+    expect(body.discrepancyCount).toBe(0);
+    expect(body.domains.map((domain) => domain.domain)).toEqual([
+      'learningSpaces',
+      'learningActivities',
+      'assessments',
+      'assessmentResults',
+      'activityCompletions',
+      'submissions',
+    ]);
+
+    const spaces = body.domains.find((domain) => domain.domain === 'learningSpaces');
+    expect(spaces).toMatchObject({ status: 'checked' });
+    expect(spaces!.sourceCount).toBeGreaterThan(0);
+    expect(spaces!.matched).toBe(spaces!.sourceCount);
+  });
+
+  it('never mentions a learning domain in the academic report', async () => {
+    await syncBothHalves();
+    const actor = await actingAs('institution_admin');
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation`,
+      headers: actor.headers,
+    });
+
+    const body = response.json<ReconciliationBody>();
+
+    expect(body.sourceSystem).toBe('sis');
+    expect(body.domains.map((domain) => domain.domain)).not.toContain('learningSpaces');
+  });
+
+  it('sees a learning row the platform has fallen behind on', async () => {
+    await syncBothHalves();
+
+    const [space] = await harness.db.select().from(learningSpaces).limit(1);
+    await harness.db
+      .update(learningSpaces)
+      .set({ sourceUpdatedAt: new Date('2000-01-01T00:00:00.000Z') })
+      .where(eq(learningSpaces.id, space!.id));
+
+    const actor = await actingAs('institution_admin');
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation?sourceSystem=lms`,
+      headers: actor.headers,
+    });
+
+    const body = response.json<ReconciliationBody>();
+    const spaces = body.domains.find((domain) => domain.domain === 'learningSpaces');
+
+    expect(spaces!.discrepancies).toContainEqual(
+      expect.objectContaining({ kind: 'stale', externalId: space!.externalId }),
+    );
+  });
+
+  it('settles a learning discrepancy by keeping the platform row', async () => {
+    await syncBothHalves();
+
+    const [space] = await harness.db.select().from(learningSpaces).limit(1);
+    const actor = await actingAs('institution_admin');
+
+    const response = await harness.inject({
+      method: 'POST',
+      url: `/api/v1/institutions/${institutionId}/synchronization/reconciliation/resolutions`,
+      headers: actor.headers,
+      payload: {
+        domain: 'learningSpaces',
+        kind: 'stale',
+        action: 'keep_platform',
+        canonicalId: space!.id,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json<{ sourceSystem: string }>().sourceSystem).toBe('lms');
+
+    const [detached] = await harness.db
+      .select()
+      .from(learningSpaces)
+      .where(eq(learningSpaces.id, space!.id));
+
+    expect(detached).toMatchObject({ sourceSystem: 'platform', externalId: null });
   });
 });

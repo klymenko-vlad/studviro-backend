@@ -262,7 +262,7 @@
     },
     "/api/v1/institutions/{institutionId}/synchronization/reconciliation": {
       "get": {
-        "description": "Reads both sides live and reports where they disagree. It resolves nothing and writes nothing.",
+        "description": "Reads both sides live and reports where they disagree. It resolves nothing and writes nothing. `sourceSystem` chooses which half of the model is compared; people are reconciled by neither, because a person becomes a user and a linked identity rather than a provenanced canonical row.",
         "operationId": "getSynchronizationReconciliation",
         "parameters": [
           {
@@ -271,6 +271,20 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "sourceSystem",
+            "required": false,
+            "in": "query",
+            "description": "Which half of the model to compare: the student information system or the learning management system. Each has its own connector and its own domains.",
+            "schema": {
+              "default": "sis",
+              "type": "string",
+              "enum": [
+                "sis",
+                "lms"
+              ]
             }
           }
         ],
@@ -4801,7 +4815,13 @@
               "enrollments",
               "timetableEvents",
               "examTerms",
-              "officialResults"
+              "officialResults",
+              "learningSpaces",
+              "learningActivities",
+              "assessments",
+              "assessmentResults",
+              "activityCompletions",
+              "submissions"
             ],
             "type": "string"
           },
@@ -4855,6 +4875,13 @@
       "ReconciliationReportResponseDto": {
         "type": "object",
         "properties": {
+          "sourceSystem": {
+            "enum": [
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
           "connectorName": {
             "type": "string"
           },
@@ -4873,6 +4900,7 @@
           }
         },
         "required": [
+          "sourceSystem",
           "connectorName",
           "checkedAt",
           "discrepancyCount",
@@ -4898,7 +4926,13 @@
               "enrollments",
               "timetableEvents",
               "examTerms",
-              "officialResults"
+              "officialResults",
+              "learningSpaces",
+              "learningActivities",
+              "assessments",
+              "assessmentResults",
+              "activityCompletions",
+              "submissions"
             ],
             "type": "string"
           },
@@ -4920,6 +4954,14 @@
           },
           "connectorName": {
             "type": "string"
+          },
+          "sourceSystem": {
+            "enum": [
+              "sis",
+              "lms"
+            ],
+            "type": "string",
+            "description": "Which half of the model the resolved row belongs to. A run that applies an accepted source must be a run against this system."
           },
           "externalId": {
             "type": "string",
@@ -4951,6 +4993,7 @@
           "kind",
           "action",
           "connectorName",
+          "sourceSystem",
           "externalId",
           "canonicalId",
           "detail",
@@ -4975,7 +5018,13 @@
               "enrollments",
               "timetableEvents",
               "examTerms",
-              "officialResults"
+              "officialResults",
+              "learningSpaces",
+              "learningActivities",
+              "assessments",
+              "assessmentResults",
+              "activityCompletions",
+              "submissions"
             ],
             "type": "string"
           },

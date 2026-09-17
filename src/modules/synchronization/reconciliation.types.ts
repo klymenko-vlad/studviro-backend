@@ -7,11 +7,12 @@ import {
 import type { CanonicalTableName } from './canonical-tables';
 
 /**
- * The canonical table each synchronized domain lands in. `persons` is absent on
- * purpose: a person becomes a user and a linked identity rather than a
- * provenanced canonical row, so it is reconciled by neither side of this map.
+ * The canonical table each synchronized domain lands in, split by the source
+ * system that owns it. `persons` is absent on purpose: a person becomes a user
+ * and a linked identity rather than a provenanced canonical row, so neither side
+ * of this map reconciles it — the screen says so rather than staying silent.
  */
-export const RECONCILED_TABLES = {
+export const SIS_RECONCILED_TABLES = {
   orgUnits: 'orgUnits',
   academicTerms: 'academicTerms',
   rooms: 'rooms',
@@ -26,7 +27,37 @@ export const RECONCILED_TABLES = {
   officialResults: 'officialCourseResults',
 } as const satisfies Partial<Record<SyncDomain, CanonicalTableName>>;
 
+/** The learning half, imported under `sourceSystem: 'lms'` (ADR 0020, ADR 0022). */
+export const LMS_RECONCILED_TABLES = {
+  learningSpaces: 'learningSpaces',
+  learningActivities: 'learningActivities',
+  assessments: 'assessments',
+  assessmentResults: 'assessmentResults',
+  activityCompletions: 'activityCompletions',
+  submissions: 'submissionRefs',
+} as const satisfies Partial<Record<SyncDomain, CanonicalTableName>>;
+
+export const RECONCILED_TABLES = {
+  ...SIS_RECONCILED_TABLES,
+  ...LMS_RECONCILED_TABLES,
+} as const satisfies Partial<Record<SyncDomain, CanonicalTableName>>;
+
+/**
+ * Which half a domain belongs to. A discrepancy names a domain, and the domain
+ * alone decides which source system owns the row — so resolution never needs to
+ * be told, and can never be told wrongly.
+ */
+export const RECONCILIATION_SOURCE_SYSTEMS = ['sis', 'lms'] as const;
+export type ReconciliationSourceSystem = (typeof RECONCILIATION_SOURCE_SYSTEMS)[number];
+
+export const RECONCILED_TABLES_BY_SOURCE = {
+  sis: SIS_RECONCILED_TABLES,
+  lms: LMS_RECONCILED_TABLES,
+} as const;
+
 export type ReconciledDomain = keyof typeof RECONCILED_TABLES;
+export type SisReconciledDomain = keyof typeof SIS_RECONCILED_TABLES;
+export type LmsReconciledDomain = keyof typeof LMS_RECONCILED_TABLES;
 
 export function tableFor(domain: ReconciledDomain): CanonicalTableName {
   return RECONCILED_TABLES[domain];
@@ -34,6 +65,18 @@ export function tableFor(domain: ReconciledDomain): CanonicalTableName {
 
 export function isReconciled(domain: SyncDomain): domain is ReconciledDomain {
   return domain in RECONCILED_TABLES;
+}
+
+export function isReconciledIn(
+  domain: SyncDomain,
+  sourceSystem: ReconciliationSourceSystem,
+): boolean {
+  return domain in RECONCILED_TABLES_BY_SOURCE[sourceSystem];
+}
+
+/** The source system that owns a reconciled domain's rows. */
+export function sourceSystemFor(domain: ReconciledDomain): ReconciliationSourceSystem {
+  return domain in LMS_RECONCILED_TABLES ? 'lms' : 'sis';
 }
 
 export { DISCREPANCY_KINDS };
@@ -66,6 +109,7 @@ export interface DomainReconciliation {
 
 export interface ReconciliationReport {
   readonly institutionId: string;
+  readonly sourceSystem: ReconciliationSourceSystem;
   readonly connectorName: string;
   readonly checkedAt: Date;
   readonly discrepancyCount: number;

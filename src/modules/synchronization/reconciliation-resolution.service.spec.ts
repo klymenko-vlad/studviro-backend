@@ -39,11 +39,11 @@ function serviceWith(
     service: new ReconciliationResolutionService(
       { run: <T>(fn: (tx: unknown) => Promise<T>) => fn(undefined) } as TransactionHost,
       {
-        academicTarget: vi.fn().mockResolvedValue({
+        targetFor: vi.fn().mockImplementation((_id: string, sourceSystem: string) => ({
           institutionId: INSTITUTION,
-          sourceSystem: 'sis',
-          connectorName: 'mock-sis',
-        }),
+          sourceSystem,
+          connectorName: sourceSystem === 'lms' ? 'mock-lms' : 'mock-sis',
+        })),
       } as unknown as ReconciliationService,
       { of: vi.fn().mockReturnValue(canonical) } as unknown as CanonicalRepositories,
       { create, findRecent } as unknown as ReconciliationResolutionRepository,
@@ -178,5 +178,27 @@ describe('ReconciliationResolutionService', () => {
     await service.listRecent(INSTITUTION, 10);
 
     expect(findRecent).toHaveBeenCalledWith(INSTITUTION, 10);
+  });
+
+  it('resolves a learning-domain discrepancy against the learning source', async () => {
+    const { service, create } = serviceWith({
+      row: { id: ROW, sourceSystem: 'lms', externalId: 'LS-1' },
+    });
+
+    await service.resolve(INSTITUTION, ACTOR, input({ domain: 'learningSpaces' }));
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceSystem: 'lms', connectorName: 'mock-lms' }),
+    );
+  });
+
+  it('refuses a learning row that is owned by the academic source', async () => {
+    const { service } = serviceWith({
+      row: { id: ROW, sourceSystem: 'sis', externalId: 'LS-1' },
+    });
+
+    await expect(
+      service.resolve(INSTITUTION, ACTOR, input({ domain: 'learningSpaces' })),
+    ).rejects.toBeInstanceOf(InvalidInputError);
   });
 });
