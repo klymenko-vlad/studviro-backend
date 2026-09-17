@@ -56,6 +56,24 @@ describe('validateEnv', () => {
       );
     });
 
+    it('rejects Swagger credentials that are only half configured', () => {
+      expect(() =>
+        validateEnv({ ...production, SWAGGER_ENABLED: 'true', SWAGGER_USER: 'docs' }),
+      ).toThrow(/SWAGGER_ENABLED/);
+    });
+
+    it('allows Swagger on a deployed environment once it is password-protected', () => {
+      const env = validateEnv({
+        ...production,
+        SWAGGER_ENABLED: 'true',
+        SWAGGER_USER: 'docs',
+        SWAGGER_PASSWORD: 's'.repeat(16),
+      });
+
+      expect(env.SWAGGER_ENABLED).toBe(true);
+      expect(env.SWAGGER_USER).toBe('docs');
+    });
+
     it('rejects trusting every proxy hop', () => {
       expect(() => validateEnv({ ...production, TRUSTED_PROXIES: 'true' })).toThrow(
         /TRUSTED_PROXIES/,

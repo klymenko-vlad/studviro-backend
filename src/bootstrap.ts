@@ -2,7 +2,7 @@
 // and several of them read it while their decorators are being evaluated.
 import './config/load-env';
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { Http2ServerRequest } from 'node:http2';
 
@@ -99,6 +99,12 @@ function setupSwagger(app: NestFastifyApplication, config: AppConfigService): vo
   const document = buildOpenApiDocument(app, { appUrl: config.http.appUrl });
 
   const path = `${config.http.apiPrefix}/docs`;
+
+  const credentials = config.swaggerCredentials;
+  if (credentials) {
+    guardSwaggerWithBasicAuth(app, path, credentials);
+  }
+
   SwaggerModule.setup(path, app, document, {
     jsonDocumentUrl: `${path}/json`,
     yamlDocumentUrl: `${path}/yaml`,
@@ -109,4 +115,51 @@ function setupSwagger(app: NestFastifyApplication, config: AppConfigService): vo
       displayRequestDuration: true,
     },
   });
+}
+
+/**
+ * Basic rather than bearer auth: the docs are opened in a browser, and only
+ * Basic makes the browser collect the credentials for us. Covers the UI and the
+ * `/json` and `/yaml` documents, which leak the same API surface.
+ */
+function guardSwaggerWithBasicAuth(
+  app: NestFastifyApplication,
+  path: string,
+  credentials: { readonly user: string; readonly password: string },
+): void {
+  const prefix = `/${path.replace(/^\/+/, '')}`;
+  const expected = `${credentials.user}:${credentials.password}`;
+
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRequest', (request, reply, done) => {
+      const url = request.url.split('?')[0] ?? '';
+      if (url !== prefix && !url.startsWith(`${prefix}/`)) {
+        done();
+        return;
+      }
+
+      const authorization = request.headers.authorization;
+      const presented = authorization?.startsWith('Basic ')
+        ? Buffer.from(authorization.slice(6), 'base64').toString('utf8')
+        : undefined;
+
+      if (!presented || !sameValue(presented, expected)) {
+        void reply
+          .code(401)
+          .header('www-authenticate', 'Basic realm="Studviro API docs", charset="UTF-8"')
+          .send({ statusCode: 401, message: 'Valid documentation credentials are required' });
+        return;
+      }
+
+      done();
+    });
+}
+
+function sameValue(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }

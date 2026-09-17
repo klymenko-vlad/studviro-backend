@@ -88,6 +88,11 @@ export const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 
   SWAGGER_ENABLED: bool('false'),
+  // Serving the docs from a deployed box is only acceptable behind a lock, so
+  // these are what turn SWAGGER_ENABLED from a production error into a
+  // password-protected staging convenience.
+  SWAGGER_USER: z.string().min(1).optional(),
+  SWAGGER_PASSWORD: z.string().min(16).optional(),
 
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(5_000),
@@ -115,10 +120,10 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     );
   }
 
-  if (env.SWAGGER_ENABLED) {
+  if (env.SWAGGER_ENABLED && !(env.SWAGGER_USER && env.SWAGGER_PASSWORD)) {
     reject(
       'SWAGGER_ENABLED',
-      'must be false in production; it publishes the full API surface and disables the Helmet CSP',
+      'must be false in production unless SWAGGER_USER and SWAGGER_PASSWORD are both set; unprotected it publishes the full API surface and disables the Helmet CSP',
     );
   }
 

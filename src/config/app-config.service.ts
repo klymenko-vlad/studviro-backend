@@ -192,6 +192,17 @@ export class AppConfigService {
     return this.config.get<boolean>('SWAGGER_ENABLED');
   }
 
+  /**
+   * Present only when the docs are meant to be password-protected. Optional in
+   * development, mandatory in production — see `assertProductionHardening`.
+   */
+  get swaggerCredentials(): { readonly user: string; readonly password: string } | undefined {
+    const user = this.config.get<string | undefined>('SWAGGER_USER');
+    const password = this.config.get<string | undefined>('SWAGGER_PASSWORD');
+
+    return user && password ? { user, password } : undefined;
+  }
+
   private parseOrigins(raw: string): true | string[] {
     if (raw === '*') return true;
 
