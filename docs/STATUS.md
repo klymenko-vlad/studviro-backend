@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-17 (reconciliation gained its second source system)
+Last updated: 2026-09-18 (write-back is designed — ADR 0023)
 
 ## What this is
 
@@ -116,13 +116,18 @@ turned out not to be. Read those before starting; the headlines:
   notifications reach everyone enrolled rather than everyone holding a seat, and never the examiner
   (**B10**); a cancellation is soft-deleted so nobody can see it happened (**B11**); your own
   registration is never confirmed (**B12**).
-- **Not built at all.** No write-back, so a registration never leaves StudViro (**G1**); eight of
+- **Not built at all.** No write-back, so a registration never leaves StudViro — **G1 is now designed
+  (ADR 0023) and unbuilt**; eight of
   twenty-two permissions have no endpoint — no catalogue, no grade entry, no enrolment correction
   (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
   family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
   deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
+- **A refusal reverses the student's own act, and nothing tells them.** ADR 0023 compensates a
+  `rejected` write by cancelling the registration, which is correct and currently silent: the
+  notification families are **G9**. Worth revisiting whether the compensation should wait for the
+  message, or ship ahead of it with the sync monitor as the only witness.
 - `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. Until a
   scheduled sync exists (**G10**) the second step is a button somebody must remember to press — but the
   row now re-reports as a decision awaiting that run rather than as a fresh conflict.
@@ -139,24 +144,32 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — the write-back ADR (G1)
+## Next task — deliver the exam-registration write-back (G1, step 1 of 3)
 
-**Decide, in an ADR, how a decision taken in StudViro reaches the source system.** Today every
-connector is read-only: a student registers for an exam term, a teacher proposes a grade, an admin
-resolves a discrepancy — and none of it ever leaves the platform. The next import can quietly
-overwrite all three. Nothing else in the backlog is safe to build on until the shape is settled.
+**Build the outbox loop end to end on one intent kind.** ADR 0023 settles the shape; this step
+makes it real for `exam_registration.create` and `.cancel`, and nothing else.
 
-The ADR has to answer: which domains are writable at all and which are read-only by nature; whether
-a write is synchronous against the connector or queued and reconciled; what happens when the source
-refuses; how a pending write interacts with an import that lands first; and how `accept_source` /
-`keep_platform` relate to it, since reconciliation is the one place the platform already claims to
-win. `ConnectorRegistry` and the capability set are the natural extension points — a connector should
-declare what it can write the way it already declares what it can read.
+What it takes: the `source_write_intents` table (institution, target source system, connector,
+intent kind, canonical table and id, payload, actor, `pending → in_flight → acknowledged |
+rejected | abandoned`, attempts, `next_attempt_at`, last error) with a partial unique index on one
+live intent per canonical row; enqueue inside `MyExamRegistrationsService`'s existing serializable
+transaction, gated on the connector declaring `examRegistration.write`; a worker on the
+`synchronization` queue passing the intent id as the idempotency key; acknowledgement stamping
+`external_id` and `source_system` on the registration and returning it to `in_sync`; a business
+refusal cancelling the registration, a transport failure retrying then stopping as `abandoned`;
+the `DomainSynchronizer` predicate that keeps a row with a live intent out of tombstoning and
+pruning; and `mock-sis` implementing both commands with a deterministic refusal so the `rejected`
+path can actually be walked.
 
-Write the ADR first and land it on its own; the implementation is a later step, and probably several.
+Frontend: the registration's delivery state on the exam-terms screen — _registered_, _sending to
+the university_, _refused by the university_ — plus the stuck-write list on the sync monitor under
+`sync:read`, with retry and discard under `sync:run`. Where the connector cannot write, say
+"registered in StudViro; this institution's system is not notified automatically" rather than
+hiding the difference. No new permission.
 
-**After that, in order:** B4/B5/B9/B11 as one exam-lifecycle step; G4/G8 (grade entry); and B6 (make
-the flags mean something). Wiring the person directory into the grant form as a picker is small and
+**After that, in order:** B4/B5/B9/B11 as one exam-lifecycle step (it decides what a result is on a
+retake, which write-back step 3 depends on); G4/G8 (grade entry); the LMS write pair; B6 (make the
+flags mean something). Wiring the person directory into the grant form as a picker is small and
 falls out naturally whenever that screen is next touched.
 
 ## Caveats
@@ -169,7 +182,7 @@ falls out naturally whenever that screen is next touched.
   for retakes. Fold this into the B10 fix.
 - Steps 1–22 were inferred from documents, not re-verified.
 - **The client bundle is at 441.05 kB gzipped against the 455 kB guard — 13.95 kB of headroom.**
-  This step spent 0.46 kB, the one before it 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
+  The last step to touch the client spent 0.46 kB, the one before it 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
   `shared/ui` primitive, remember the native-`<select>` swap that freed 27.61 kB: a Radix control pulls
   in floating-ui, focus-scope, dismissable-layer and the collection helpers, and a plain HTML element
   sometimes covers the same behaviour for less.
@@ -177,13 +190,6 @@ falls out naturally whenever that screen is next touched.
   query is keyed by source system and starts disabled, so the new key simply has no data yet. It is
   coherent — it never re-labels the old answer as the new one — but it reads as the report vanishing.
   A line saying "press Check to compare this system" would cost nothing.
-- The `pending` detail copy ("waiting to be overwritten — run a full synchronization to apply it") is
-  covered by unit tests but was not exercised in the walk: this machine's only `accept_source` row had
-  already been applied by a later full run, so it matched cleanly.
-- The SIS report on this machine shows two exam-term `conflict` rows with **no external identifier** —
-  "the row claims this source but carries no external identifier, so no import can ever match it".
-  That is dev data from an earlier walk, not a defect this step introduced, but it is unresolvable by
-  hand and will keep showing up until those rows are cleaned out.
 - `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not the
   seed default; `pnpm db:seed` does not reset an existing user's password.
 - `UsersRepository.findInvitedByEmail` (step (d)) is not scoped to the inviting institution — two
@@ -196,14 +202,8 @@ falls out naturally whenever that screen is next touched.
   institution; a walk creates its own through the UI via that seeded operator.
 - The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack; restart it
   when a new translation key renders as its raw identifier.
-- This machine's dev institution now has `learningSystemConnector: mock-lms` with 144 spaces, 576
-  activities, 345 gradebook columns, 417 marks, 569 hand-ins and 1738 completions, so both the
-  learning screen and the course page's marks panel have data without further setup.
 - For a student-side walk, `veronika.gajdos0128@mocku.example` (`walkwalk123`) is an imported student
   whose password was set directly in the dev database — there is still no request-to-join (**B2**).
-- This machine's dev database has course `CRS-PF-P2-12` detached to `source_system = 'platform'`
-  from step 48's walk; a full sync creates a fresh source-owned course beside it, which is
-  ADR 0019's named consequence observed rather than predicted.
 - **Importing a `@Global` module registers its `APP_GUARD` a second time, and the second registration
   denies everything.** Adding `AuthorizationModule` to `InstitutionsModule.imports` made every
   `@RequirePermission` route answer `PERMISSION_DENIED` before `AuthorizationService` was ever called —
@@ -214,6 +214,3 @@ falls out naturally whenever that screen is next touched.
 - `nest start --watch` does not release port 3010 on restart on this machine: every reload after the
   first fails `EADDRINUSE` and the **previous build keeps serving**, which silently invalidates any
   live check. Kill the listener by pid, or build and run `node dist/main.js`, when probing behaviour.
-- The dashboard's deadline tile covers fourteen days, so early in a term — where this machine's dev
-  data sits, with the first deadline a month out — it correctly but unhelpfully says nothing falls due.
-  Worth revisiting if the tile ever reads empty for a real cohort.
