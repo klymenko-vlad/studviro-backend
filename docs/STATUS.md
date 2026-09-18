@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (write-back step 2 — the LMS pair)
+Last updated: 2026-09-18 (write-back complete — G1 closed; G10 closed)
 
 ## What this is
 
@@ -116,6 +116,15 @@ reasoning lives in `docs/adr/`. In short:
   be given the last place; a re-request reuses the withdrawn row. The write-back pair from ADR 0023 is
   wired, so `courseRegistration` is the fourth implemented feature flag.
 
+- **Write-back is complete** (G1 closed) — all seven intents of ADR 0023 go through one outbox. The
+  last, `course_result.publish`, is enqueued where a grade is published and carries the attempt, so the
+  registrar is told which sitting it belongs to; a refusal returns the result to `proposed`, because
+  the examiner's judgement stands even when its publication does not.
+- **Synchronization has a schedule** (G10 closed) — one repeatable job for the deployment, registered
+  at bootstrap from `SYNC_SCHEDULE_ENABLED` / `_CRON` / `_MODE` and removed when turned off. It fans
+  out to every institution with a connector, with `trigger: 'scheduled'`. Off by default and documented
+  in `docs/Deployment.md`. It is also the sweeper the outbox lacked: a `pending` intent whose delayed
+  job was lost no longer waits for a human.
 - **The LMS is told what the registrar decided** (G1 step 2) — `learning_space.provision` and
   `learning_enrollment.upsert` are wired through the same outbox. Unlike the exam and enrolment pairs
   no user act creates them, so **the learning sync run originates them**: a run is when the platform
@@ -177,17 +186,17 @@ turned out not to be. Read those before starting; the headlines:
   `program` and `academicTerm` are one-line swaps nobody has made yet.
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
-  **G8 is closed** and **G4** is down to six permissions with no endpoint — no catalogue
-  administration and no enrolment correction; no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
+  **G4** is down to six permissions with no endpoint — no catalogue administration and no enrolment
+  correction; GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
   deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
 - **A refused write-back now says so.** The compensation announces itself as
   `exam_registration_refused`, carrying the reason the source gave, which closes the one cost ADR 0023
   named.
-- `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. Until a
-  scheduled sync exists (**G10**) the second step is a button somebody must remember to press — but the
-  row now re-reports as a decision awaiting that run rather than as a fresh conflict.
+- `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. A
+  nightly schedule with `SYNC_SCHEDULE_MODE=full` applies it without anybody remembering; the default
+  `incremental` does not, and the row re-reports as a decision awaiting that run.
 - Smaller, known: the calendar's course picker lists only courses with an event that week and no
   filter survives a reload; the account card omits Calendar, Exams and Teaching; no credential key
   rotation; configuration is read from PostgreSQL on every call; the legacy flat `RolesGuard` now
@@ -201,27 +210,33 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — write-back step 3, and then a schedule (G10)
+## Next task — the rest of G4: the catalogue nobody can administer
 
-**`course_result.publish` is the last of the seven intents.** G8 gave it something to publish and the
-exam-lifecycle step settled what a result is on a retake, which is what it was waiting for.
+**Six permissions still gate no endpoint**, and they are one coherent surface rather than six:
+`program:read` / `program:manage`, `course:read` / `course:manage`, `offering:manage` (checked as
+standing today but never the subject of a route) and `enrollment:manage`.
 
-What it takes: a writer on `official_course_results`, enqueued from
-`OfferingResultsService.record` when a grade is published (the same place that already marks the seat
-attended and emits the notification); `officialResult.write` as a new academic capability; `mock-sis`
-implementing it with a deterministic refusal; and acknowledgement stamping `external_id` on the result
-so the next import matches rather than duplicating. The attempt is part of the payload — the registrar
-must be told which sitting the grade belongs to.
+Everything in the catalogue arrives by import and nothing can be corrected by hand, which is fine
+while `mock-sis` is the only source and wrong the moment a real one has a gap. What it takes:
 
-**Then G10, a synchronization schedule**, which the outbox needs as much as the importers do:
-`sync_run_trigger` already has `scheduled` and the BullMQ queue exists, but nothing enqueues, so a
-`pending` intent whose job was lost waits for a human to press Retry and an `accept_source`
-reconciliation waits for somebody to remember to run a full sync. One repeatable job per institution
-fixes all three.
+- `GET/POST/PATCH .../programs` and `.../courses` behind the read and manage pairs; a
+  platform-authored row is `sourceSystem: 'platform'`, which reconciliation already knows how to leave
+  alone.
+- `PATCH .../course-offerings/:id` behind `offering:manage` for capacity and status — the two fields
+  self-service enrolment now reads and an administrator cannot touch.
+- `PATCH .../course-offerings/:id/enrollments/:id` behind `enrollment:manage`: the correction verb.
+  A registrar must be able to admit a student past a full course or reverse a mistaken withdrawal, and
+  today only the student can act on their own enrolment.
+- Editing an imported row is a known disagreement: mark it `pending` the way grade entry does, so the
+  next run settles it and reconciliation can see it.
 
-**After that, in order:** the rest of G4 (catalogue administration, enrolment correction); G12 (GDPR
-inventory, threat model, audit events, export — steps 19, 20, 49, 50); the remaining terminology swaps
-(**B7**); step 51 (search), 52 (WCAG pass), 53 (metrics); and the testing passes 57–62.
+Frontend: a catalogue screen under the institution tab bar behind `course:read`, and the capacity and
+status fields on the course-offering page for anyone who may manage it.
+
+**After that, in order:** G12 — GDPR inventory and DPIA (step 19), threat model (step 20), audit events
+(step 49), personal-data export (step 50): four documents and two features, and the last gap where
+personal data is served ahead of its controls. Then the remaining terminology swaps (**B7**), step 51
+(search), 52 (WCAG pass), 53 (metrics), and the testing passes 57–62.
 
 ## Caveats
 
@@ -232,9 +247,9 @@ inventory, threat model, audit events, export — steps 19, 20, 49, 50); the rem
 - **A refused _cancellation_ reverses nothing.** ADR 0023 names the compensation for a refused
   `create`; for a refused `cancel` the student has already cancelled here, and un-cancelling because
   the registrar refused the message would be the worse lie. It stays a stuck write on the monitor.
-- **Nothing sweeps the outbox.** A `pending` intent whose BullMQ job was lost waits for a human to
-  press Retry, because the delayed re-enqueue is the only thing that wakes the worker. A sync
-  schedule (**G10**) is where a sweeper belongs.
+- **The outbox sweeper is the sync schedule, which is off by default.** With
+  `SYNC_SCHEDULE_ENABLED=false` a `pending` intent whose BullMQ job was lost still waits for a human
+  to press Retry.
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.

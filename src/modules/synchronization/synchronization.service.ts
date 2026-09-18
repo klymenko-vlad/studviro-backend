@@ -8,6 +8,7 @@ import {
   type SyncDomainResult,
   type SyncRun,
   type SyncRunMode,
+  type SyncRunTrigger,
   type SyncWatermark,
 } from '../../database/schema';
 import { QueueProducer } from '../../queue/queue.producer';
@@ -61,6 +62,7 @@ export class SynchronizationService {
     mode: SyncRunMode,
     requestedById: string | null,
     sourceSystem: SynchronizedSourceSystem = 'sis',
+    trigger: SyncRunTrigger = 'manual',
   ): Promise<SyncRun> {
     const source = SOURCES[sourceSystem];
     const connectorName = await this.connectorName(institutionId, sourceSystem);
@@ -74,7 +76,7 @@ export class SynchronizationService {
 
     const run = await this.runs.create(
       { institutionId, sourceSystem: source.system, connectorName },
-      { mode, trigger: 'manual', requestedById },
+      { mode, trigger, requestedById },
     );
 
     await this.queue.enqueueSynchronization(source.job, {

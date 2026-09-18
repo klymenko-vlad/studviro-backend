@@ -56,6 +56,14 @@ export const envSchema = z.object({
   QUEUE_DEFAULT_BACKOFF_MS: z.coerce.number().int().positive().default(1_000),
   QUEUE_UI_ENABLED: bool('false'),
 
+  /**
+   * The synchronization schedule (G10). Off by default: a deployment that has
+   * not chosen a cadence should not acquire one by upgrading.
+   */
+  SYNC_SCHEDULE_ENABLED: bool('false'),
+  SYNC_SCHEDULE_CRON: z.string().default('0 3 * * *'),
+  SYNC_SCHEDULE_MODE: z.enum(['incremental', 'full']).default('incremental'),
+
   THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
 

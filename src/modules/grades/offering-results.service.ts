@@ -17,6 +17,7 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { GradeNotificationsService } from '../notifications/grade-notifications.service';
+import { CourseResultWriteBackService } from '../write-back/course-result-write-back.service';
 
 import {
   OfferingResultsRepository,
@@ -71,6 +72,7 @@ export class OfferingResultsService {
     private readonly authorization: AuthorizationService,
     private readonly txHost: TransactionHost,
     private readonly notifications: GradeNotificationsService,
+    private readonly writeBack: CourseResultWriteBackService,
   ) {}
 
   async findForViewer(
@@ -121,7 +123,7 @@ export class OfferingResultsService {
       );
     }
 
-    return this.txHost.run(async () => {
+    const { written, outcome } = await this.txHost.run(async () => {
       const enrollment = await this.repository.findEnrollment(
         institutionId,
         input.enrollmentId,
@@ -170,8 +172,18 @@ export class OfferingResultsService {
         );
       }
 
-      return written;
+      return {
+        written,
+        outcome:
+          publishes && input.officialGrade !== null
+            ? await this.writeBack.enqueuePublication(written, userId)
+            : ({ kind: 'not_writable' } as const),
+      };
     });
+
+    await this.writeBack.publish(institutionId, outcome);
+
+    return written;
   }
 
   private stages(

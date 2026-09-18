@@ -13,6 +13,9 @@ export const synchronizationJobSchemas = {
     intentId: z.uuid(),
     institutionId: z.uuid(),
   }),
+  scheduled: z.object({
+    mode: z.enum(['incremental', 'full']),
+  }),
 } as const;
 
 export type SynchronizationJobSchemas = typeof synchronizationJobSchemas;

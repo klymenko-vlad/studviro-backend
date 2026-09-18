@@ -8,6 +8,7 @@ import {
   type SisCourseWithdrawalCommand,
   type SisExamRegistrationCancelCommand,
   type SisExamRegistrationCommand,
+  type SisResultPublicationCommand,
   type SisWriteAcknowledgement,
 } from '../academic-system.connector';
 import type {
@@ -40,6 +41,7 @@ import {
   acceptCourseWithdrawal,
   acceptExamRegistration,
   acceptExamRegistrationCancellation,
+  acceptResultPublication,
 } from './mock-sis.registrar';
 
 const UNSUPPORTED_CAPABILITIES = new Set<string>();
@@ -156,6 +158,10 @@ export class MockSisConnector implements AcademicSystemConnector {
 
   withdrawFromCourse(command: SisCourseWithdrawalCommand): Promise<void> {
     return acceptCourseWithdrawal(command);
+  }
+
+  publishResult(command: SisResultPublicationCommand): Promise<SisWriteAcknowledgement> {
+    return acceptResultPublication(command);
   }
 
   private read<TData>(

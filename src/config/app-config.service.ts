@@ -40,6 +40,12 @@ export interface QueueConfig {
   readonly uiEnabled: boolean;
 }
 
+export interface SyncScheduleConfig {
+  readonly enabled: boolean;
+  readonly cron: string;
+  readonly mode: 'incremental' | 'full';
+}
+
 export interface ThrottleConfig {
   readonly ttlMs: number;
   readonly limit: number;
@@ -125,6 +131,14 @@ export class AppConfigService {
       defaultAttempts: this.config.get<number>('QUEUE_DEFAULT_ATTEMPTS'),
       defaultBackoffMs: this.config.get<number>('QUEUE_DEFAULT_BACKOFF_MS'),
       uiEnabled: this.config.get<boolean>('QUEUE_UI_ENABLED'),
+    };
+  }
+
+  get syncSchedule(): SyncScheduleConfig {
+    return {
+      enabled: this.config.get<boolean>('SYNC_SCHEDULE_ENABLED'),
+      cron: this.config.get<string>('SYNC_SCHEDULE_CRON'),
+      mode: this.config.get<'incremental' | 'full'>('SYNC_SCHEDULE_MODE'),
     };
   }
 

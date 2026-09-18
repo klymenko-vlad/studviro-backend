@@ -11,6 +11,8 @@ import {
 } from './jobs/synchronization.jobs';
 import { QUEUES } from './queue.constants';
 
+const SYNC_SCHEDULER_ID = 'synchronization:all-institutions';
+
 @Injectable()
 export class QueueProducer {
   constructor(
@@ -35,6 +37,22 @@ export class QueueProducer {
     });
 
     return job.id ?? '';
+  }
+
+  /**
+   * One repeatable job for the whole deployment, not one per institution: the
+   * handler fans out, so changing the cadence is one change rather than N.
+   */
+  async scheduleSynchronization(cron: string, mode: 'incremental' | 'full'): Promise<void> {
+    await this.synchronizationQueue.upsertJobScheduler(
+      SYNC_SCHEDULER_ID,
+      { pattern: cron },
+      { name: 'scheduled', data: { mode } },
+    );
+  }
+
+  async removeSynchronizationSchedule(): Promise<void> {
+    await this.synchronizationQueue.removeJobScheduler(SYNC_SCHEDULER_ID);
   }
 
   async enqueueEmail<TName extends EmailJobName>(

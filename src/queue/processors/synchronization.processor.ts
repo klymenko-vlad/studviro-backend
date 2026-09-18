@@ -3,6 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { AcademicSyncService } from '../../modules/synchronization/academic-sync.service';
 import { LearningSyncService } from '../../modules/synchronization/learning-sync.service';
+import { ScheduledSyncService } from '../../modules/synchronization/scheduled-sync.service';
 import { WriteBackService } from '../../modules/write-back/write-back.service';
 import { BaseProcessor } from '../base.processor';
 import {
@@ -21,6 +22,7 @@ export class SynchronizationProcessor extends BaseProcessor<SynchronizationJobSc
     academic: (payload: SynchronizationJobPayload<'academic'>) => this.runAcademic(payload),
     learning: (payload: SynchronizationJobPayload<'learning'>) => this.runLearning(payload),
     writeBack: (payload: SynchronizationJobPayload<'writeBack'>) => this.runWriteBack(payload),
+    scheduled: (payload: SynchronizationJobPayload<'scheduled'>) => this.runScheduled(payload),
   };
 
   constructor(
@@ -28,6 +30,7 @@ export class SynchronizationProcessor extends BaseProcessor<SynchronizationJobSc
     private readonly academic: AcademicSyncService,
     private readonly learning: LearningSyncService,
     private readonly writeBack: WriteBackService,
+    private readonly scheduled: ScheduledSyncService,
     private readonly queue: QueueProducer,
   ) {
     super(logger);
@@ -61,6 +64,15 @@ export class SynchronizationProcessor extends BaseProcessor<SynchronizationJobSc
       'writeBack',
       { intentId: payload.intentId, institutionId: payload.institutionId },
       { delay: outcome.retryInMs },
+    );
+  }
+
+  private async runScheduled(payload: SynchronizationJobPayload<'scheduled'>): Promise<void> {
+    const outcome = await this.scheduled.runAll(payload.mode);
+
+    this.logger.info(
+      { mode: payload.mode, ...outcome },
+      'scheduled synchronization fanned out',
     );
   }
 }

@@ -3,6 +3,7 @@ import type {
   SisCourseWithdrawalCommand,
   SisExamRegistrationCancelCommand,
   SisExamRegistrationCommand,
+  SisResultPublicationCommand,
   SisWriteAcknowledgement,
 } from '../academic-system.connector';
 import { ConnectorRejectedError } from '../connector-rejected.error';
@@ -72,6 +73,32 @@ export function acceptCourseWithdrawal(command: SisCourseWithdrawalCommand): Pro
         ),
       )
     : Promise.resolve();
+}
+
+export const MOCK_SIS_GRADE_LOCKED_REFUSAL_CODE = 'GRADE_PERIOD_CLOSED';
+
+/**
+ * The registrar will not take a grade past the second attempt: beyond that a
+ * result is settled by the study department, not by the examiner. It is the
+ * refusal the `rejected` path is walked with on this intent.
+ */
+const MAX_ACCEPTED_ATTEMPT = 2;
+
+export function acceptResultPublication(
+  command: SisResultPublicationCommand,
+): Promise<SisWriteAcknowledgement> {
+  if (command.attempt > MAX_ACCEPTED_ATTEMPT) {
+    return Promise.reject(
+      new ConnectorRejectedError(
+        MOCK_SIS_GRADE_LOCKED_REFUSAL_CODE,
+        'A third attempt is recorded by the study department, not by the examiner',
+      ),
+    );
+  }
+
+  return Promise.resolve({
+    externalId: `RES-${command.enrollmentExternalId}-${command.attempt}`,
+  });
 }
 
 export function acceptExamRegistrationCancellation(

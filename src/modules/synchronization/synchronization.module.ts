@@ -25,9 +25,12 @@ import { LearningSyncService } from './learning-sync.service';
 import { ReconciliationResolutionRepository } from './reconciliation-resolution.repository';
 import { ReconciliationResolutionService } from './reconciliation-resolution.service';
 import { ReconciliationService } from './reconciliation.service';
+import { ScheduledSyncRepository } from './scheduled-sync.repository';
+import { ScheduledSyncService } from './scheduled-sync.service';
 import { SyncDomainResultRepository } from './sync-domain-result.repository';
 import { SyncRunRepository } from './sync-run.repository';
 import { SyncRunService } from './sync-run.service';
+import { SyncSchedulerService } from './sync-scheduler.service';
 import { SyncWatermarkRepository } from './sync-watermark.repository';
 import { SynchronizationController } from './synchronization.controller';
 import { SynchronizationService } from './synchronization.service';
@@ -58,11 +61,19 @@ import { SynchronizationService } from './synchronization.service';
     ReconciliationService,
     ReconciliationResolutionService,
     ReconciliationResolutionRepository,
+    ScheduledSyncService,
+    ScheduledSyncRepository,
+    SyncSchedulerService,
     SyncRunService,
     SyncRunRepository,
     SyncDomainResultRepository,
     SyncWatermarkRepository,
   ],
-  exports: [AcademicSyncService, LearningSyncService, SynchronizationService],
+  exports: [
+    AcademicSyncService,
+    LearningSyncService,
+    SynchronizationService,
+    ScheduledSyncService,
+  ],
 })
 export class SynchronizationModule {}

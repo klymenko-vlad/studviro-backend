@@ -10,6 +10,9 @@ import {
   CourseEnrollmentRequestWriter,
   CourseEnrollmentWithdrawWriter,
 } from './course-enrollment.writer';
+import { CourseResultWriteBackService } from './course-result-write-back.service';
+import { CourseResultWriteRepository } from './course-result-write.repository';
+import { CourseResultPublishWriter } from './course-result.writer';
 import { ExamRegistrationWriteBackService } from './exam-registration-write-back.service';
 import { ExamRegistrationWriteRepository } from './exam-registration-write.repository';
 import {
@@ -34,6 +37,7 @@ const WRITER_CLASSES = [
   CourseEnrollmentWithdrawWriter,
   LearningSpaceProvisionWriter,
   LearningEnrollmentWriter,
+  CourseResultPublishWriter,
 ];
 
 @Module({
@@ -57,11 +61,14 @@ const WRITER_CLASSES = [
     CourseEnrollmentWriteBackService,
     LearningProvisioningRepository,
     LearningProvisioningService,
+    CourseResultWriteRepository,
+    CourseResultWriteBackService,
   ],
   exports: [
     ExamRegistrationWriteBackService,
     CourseEnrollmentWriteBackService,
     LearningProvisioningService,
+    CourseResultWriteBackService,
     WriteBackService,
     WriteIntentRepository,
   ],

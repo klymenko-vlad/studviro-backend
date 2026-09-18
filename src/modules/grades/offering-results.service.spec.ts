@@ -10,6 +10,7 @@ import type { OfficialCourseResult } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { AuthorizationService } from '../authorization/authorization.service';
 import type { GradeNotificationsService } from '../notifications/grade-notifications.service';
+import type { CourseResultWriteBackService } from '../write-back/course-result-write-back.service';
 
 import type { OfferingResultsRepository } from './offering-results.repository';
 import { OfferingResultsService, type RecordGradeInput } from './offering-results.service';
@@ -36,6 +37,8 @@ describe('OfferingResultsService', () => {
   const markSeatAttended = vi.fn();
   const can = vi.fn();
   const published = vi.fn();
+  const enqueuePublication = vi.fn();
+  const publishIntent = vi.fn();
 
   const repository = {
     findOffering,
@@ -72,6 +75,7 @@ describe('OfferingResultsService', () => {
     findResult.mockResolvedValue(undefined);
     highestAttempt.mockResolvedValue(0);
     can.mockResolvedValue(true);
+    enqueuePublication.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
     upsert.mockImplementation((values: Record<string, unknown>) =>
       Promise.resolve({ id: 'result-1', ...values } as unknown as OfficialCourseResult),
     );
@@ -80,6 +84,10 @@ describe('OfferingResultsService', () => {
       { can } as unknown as AuthorizationService,
       txHost,
       { published } as unknown as GradeNotificationsService,
+      {
+        enqueuePublication,
+        publish: publishIntent,
+      } as unknown as CourseResultWriteBackService,
     );
   });
 
@@ -291,6 +299,33 @@ describe('OfferingResultsService', () => {
 
       expect(results.canPublish).toBe(false);
       expect(results.viewerRole).toBe('teacher');
+    });
+  });
+
+  describe('publishing reaches the registrar (ADR 0023 step 3)', () => {
+    it('queues the publication for the source system', async () => {
+      await record({ officialGrade: 'A' });
+
+      expect(enqueuePublication).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'result-1' }),
+        'teacher-1',
+      );
+      expect(publishIntent).toHaveBeenCalledWith('institution-1', {
+        kind: 'queued',
+        intentId: 'intent-1',
+      });
+    });
+
+    it('queues nothing for a proposal, which is not the registrar’s business yet', async () => {
+      await record({ proposedGrade: 'A' });
+
+      expect(enqueuePublication).not.toHaveBeenCalled();
+    });
+
+    it('queues nothing when a published grade is withdrawn', async () => {
+      await record({ officialGrade: null });
+
+      expect(enqueuePublication).not.toHaveBeenCalled();
     });
   });
 });

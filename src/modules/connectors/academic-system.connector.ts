@@ -37,6 +37,7 @@ export const ACADEMIC_SYSTEM_CAPABILITIES = [
   'officialResults.read',
   'examRegistration.write',
   'courseRegistration.write',
+  'officialResult.write',
 ] as const;
 export type AcademicSystemCapability = (typeof ACADEMIC_SYSTEM_CAPABILITIES)[number];
 export type AcademicSystemCapabilities = Capabilities<AcademicSystemCapability>;
@@ -66,6 +67,14 @@ export interface SisCourseWithdrawalCommand extends SisWriteCommand {
   readonly courseOfferingExternalId: string;
   readonly personExternalId: string;
   readonly enrollmentExternalId: string | null;
+}
+
+/** What the source assigned, so the next import of that domain matches our row. */
+export interface SisResultPublicationCommand extends SisWriteCommand {
+  readonly enrollmentExternalId: string;
+  readonly personExternalId: string;
+  readonly attempt: number;
+  readonly grade: string;
 }
 
 /** What the source assigned, so the next import of that domain matches our row. */
@@ -100,6 +109,7 @@ export interface AcademicSystemConnector {
   cancelExamRegistration?(command: SisExamRegistrationCancelCommand): Promise<void>;
   registerForCourse?(command: SisCourseRegistrationCommand): Promise<SisWriteAcknowledgement>;
   withdrawFromCourse?(command: SisCourseWithdrawalCommand): Promise<void>;
+  publishResult?(command: SisResultPublicationCommand): Promise<SisWriteAcknowledgement>;
 }
 
 export const ACADEMIC_SYSTEM_CONNECTORS = Symbol('ACADEMIC_SYSTEM_CONNECTORS');

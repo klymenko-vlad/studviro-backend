@@ -44,3 +44,28 @@ There is no seeding in production: `db:seed` refuses to run with `NODE_ENV=produ
 purpose. Create the first account through the client's `/sign-up` screen, which posts to
 `POST /api/v1/auth/register`. Elevated roles are granted afterwards from the institution
 roles screen.
+
+## The synchronization schedule
+
+Off by default, because a deployment that has not chosen a cadence should not
+acquire one by upgrading. Three variables turn it on:
+
+| Variable                | Default       | Meaning                                                |
+| ----------------------- | ------------- | ------------------------------------------------------ |
+| `SYNC_SCHEDULE_ENABLED` | `false`       | Register the repeatable job at all                     |
+| `SYNC_SCHEDULE_CRON`    | `0 3 * * *`   | When it fires                                          |
+| `SYNC_SCHEDULE_MODE`    | `incremental` | `full` re-reads everything and applies `accept_source` |
+
+One repeatable job serves the whole deployment: the handler fans out to every
+institution with a connector configured, queueing a run per configured source
+system. A run already in flight returns itself rather than queueing a second, so
+a schedule that fires while yesterday's run is still going is harmless.
+
+It must run where the workers do (`ROLE=worker` or `ROLE=all`). Registering it is
+deliberately not fatal: a broker briefly unreachable at boot logs and starts
+anyway, and the next deployment registers it again. Turning it off removes the
+existing job rather than merely not adding one, so the last deployment that had
+it on does not keep running it for ever.
+
+A schedule is also what the write-back outbox needs: a `pending` intent whose
+delayed job was lost waits for a human to press Retry without one.
