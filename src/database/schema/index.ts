@@ -18,3 +18,4 @@ export * from './scheduling';
 export * from './synchronization';
 export * from './user-emails';
 export * from './users';
+export * from './write-intents';

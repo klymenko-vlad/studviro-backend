@@ -7,6 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import type { ExamRegistration } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import {
   MyExamRegistrationsRepository,
@@ -19,15 +20,16 @@ export class MyExamRegistrationsService {
   constructor(
     private readonly repository: MyExamRegistrationsRepository,
     private readonly txHost: TransactionHost,
+    private readonly writeBack: ExamRegistrationWriteBackService,
   ) {}
 
-  register(
+  async register(
     institutionId: string,
     userId: string,
     examTermId: string,
     now = new Date(),
   ): Promise<ExamRegistration> {
-    return this.txHost.run(
+    const { registration, outcome } = await this.txHost.run(
       async () => {
         const term = await this.repository.findRegistrableTerm(
           institutionId,
@@ -42,19 +44,28 @@ export class MyExamRegistrationsService {
         await this.assertNotAlreadyRegistered(institutionId, userId, term);
         this.assertSeatFree(term);
 
-        return this.repository.register(institutionId, userId, examTermId, now);
+        const created = await this.repository.register(institutionId, userId, examTermId, now);
+
+        return {
+          registration: created,
+          outcome: await this.writeBack.enqueueCreate(created, userId),
+        };
       },
       { isolationLevel: 'serializable' },
     );
+
+    await this.writeBack.publish(institutionId, outcome);
+
+    return registration;
   }
 
-  cancel(
+  async cancel(
     institutionId: string,
     userId: string,
     registrationId: string,
     now = new Date(),
   ): Promise<ExamRegistration> {
-    return this.txHost.run(async () => {
+    const { registration, outcome } = await this.txHost.run(async () => {
       const existing = await this.repository.findLiveRegistrationById(
         institutionId,
         userId,
@@ -65,8 +76,19 @@ export class MyExamRegistrationsService {
 
       this.assertCancellable(existing, now);
 
-      return this.repository.cancel(registrationId, now);
+      // Enqueued before the row is soft-deleted, because the intent needs the
+      // identifiers the row carries.
+      const enqueued = await this.writeBack.enqueueCancel(existing.registration, userId);
+
+      return {
+        registration: await this.repository.cancel(registrationId, now),
+        outcome: enqueued,
+      };
     });
+
+    await this.writeBack.publish(institutionId, outcome);
+
+    return registration;
   }
 
   private assertEnrolled(term: RegistrableExamTermRow): void {

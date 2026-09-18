@@ -5,6 +5,7 @@ import type {
   ExamRegistrationStatus,
   ExamTermKind,
   SourceSystem,
+  SourceWriteIntentState,
   SynchronizationStatus,
 } from '../../database/schema';
 
@@ -31,6 +32,36 @@ export const EXAM_REGISTRATION_REASONS = [
   'full',
 ] as const;
 export type ExamRegistrationReason = (typeof EXAM_REGISTRATION_REASONS)[number];
+
+/**
+ * Where the registration stands with the university's own system. `not_relayed`
+ * is not a failure: the institution's connector cannot write, so the act is
+ * real here and the registrar has to hear about it some other way (ADR 0023).
+ */
+export const EXAM_REGISTRATION_DELIVERIES = [
+  'not_relayed',
+  'sending',
+  'relayed',
+  'refused',
+  'stuck',
+] as const;
+export type ExamRegistrationDelivery = (typeof EXAM_REGISTRATION_DELIVERIES)[number];
+
+export function deliveryOf(state: SourceWriteIntentState | null): ExamRegistrationDelivery {
+  switch (state) {
+    case 'pending':
+    case 'in_flight':
+      return 'sending';
+    case 'acknowledged':
+      return 'relayed';
+    case 'rejected':
+      return 'refused';
+    case 'abandoned':
+      return 'stuck';
+    case null:
+      return 'not_relayed';
+  }
+}
 
 export interface ExamRegistrationAvailability {
   canRegister: boolean;
@@ -59,6 +90,7 @@ export interface MyExamTerm {
     status: ExamRegistrationStatus;
     registeredAt: Date | null;
     cancelledAt: Date | null;
+    delivery: ExamRegistrationDelivery;
   } | null;
   room: { id: string; code: string; name: string | null; building: string | null } | null;
   examiner: { id: string; displayName: string } | null;
@@ -119,6 +151,7 @@ export class MyExamTermsService {
               status: row.registrationStatus,
               registeredAt: row.registeredAt,
               cancelledAt: row.registrationCancelledAt,
+              delivery: deliveryOf(row.registrationDeliveryState),
             },
       room:
         row.roomId === null

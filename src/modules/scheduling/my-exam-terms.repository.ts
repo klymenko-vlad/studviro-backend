@@ -10,11 +10,13 @@ import {
   examRegistrations,
   examTerms,
   rooms,
+  sourceWriteIntents,
   teachingAssignments,
   users,
   type ExamRegistrationStatus,
   type ExamTermKind,
   type SourceSystem,
+  type SourceWriteIntentState,
   type SynchronizationStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -41,6 +43,7 @@ export interface MyExamTermRow {
   registrationStatus: ExamRegistrationStatus | null;
   registeredAt: Date | null;
   registrationCancelledAt: Date | null;
+  registrationDeliveryState: SourceWriteIntentState | null;
   offeringId: string;
   courseId: string;
   courseCode: string;
@@ -110,6 +113,7 @@ export class MyExamTermsRepository {
         registrationStatus: examRegistrations.status,
         registeredAt: examRegistrations.registeredAt,
         registrationCancelledAt: examRegistrations.cancelledAt,
+        registrationDeliveryState: this.deliveryState(),
         offeringId: courseOfferings.id,
         courseId: courses.id,
         courseCode: courses.code,
@@ -139,6 +143,21 @@ export class MyExamTermsRepository {
       )
       .where(and(...conditions))
       .orderBy(asc(examTerms.startsAt), asc(courses.code));
+  }
+
+  /**
+   * How far the student's own act has got towards the university's system. The
+   * newest intent wins: a cancel queued behind its registration is what the
+   * student is waiting on now.
+   */
+  private deliveryState(): SQL<SourceWriteIntentState | null> {
+    return sql<SourceWriteIntentState | null>`(
+      select ${sourceWriteIntents.state} from ${sourceWriteIntents}
+      where ${sourceWriteIntents.canonicalId} = ${examRegistrations.id}
+        and ${sourceWriteIntents.deletedAt} is null
+      order by ${sourceWriteIntents.createdAt} desc
+      limit 1
+    )`;
   }
 
   private registeredCount(): SQL<number> {

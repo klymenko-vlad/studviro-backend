@@ -13,9 +13,11 @@ import {
 } from '../../../database/schema';
 import {
   EXAM_ATTENDANCES,
+  EXAM_REGISTRATION_DELIVERIES,
   EXAM_REGISTRATION_REASONS,
   EXAM_REGISTRATION_STATES,
   type ExamAttendance,
+  type ExamRegistrationDelivery,
   type ExamRegistrationReason,
   type ExamRegistrationState,
   type MyExamTerm,
@@ -50,6 +52,10 @@ export class MyExamRegistrationDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   cancelledAt!: Date | null;
+
+  @Expose()
+  @ApiProperty({ enum: EXAM_REGISTRATION_DELIVERIES })
+  delivery!: ExamRegistrationDelivery;
 }
 
 @Exclude()

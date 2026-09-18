@@ -7,6 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import type { ExamRegistration } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
+import type { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import type {
   LiveRegistrationRow,
@@ -58,6 +59,16 @@ describe(MyExamRegistrationsService.name, () => {
     run: (fn: () => Promise<unknown>) => fn(),
   } as unknown as TransactionHost;
 
+  const enqueueCreate = vi.fn();
+  const enqueueCancel = vi.fn();
+  const publish = vi.fn();
+
+  const writeBack = {
+    enqueueCreate,
+    enqueueCancel,
+    publish,
+  } as unknown as ExamRegistrationWriteBackService;
+
   let service: MyExamRegistrationsService;
 
   const registerMine = (examTermId = 'exam-1') =>
@@ -68,7 +79,10 @@ describe(MyExamRegistrationsService.name, () => {
     findLiveRegistrationForOffering.mockResolvedValue(undefined);
     register.mockResolvedValue({ id: 'registration-1' });
     cancel.mockResolvedValue({ id: 'registration-1' });
-    service = new MyExamRegistrationsService(repository, txHost);
+    enqueueCreate.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
+    enqueueCancel.mockResolvedValue({ kind: 'queued', intentId: 'intent-2' });
+    publish.mockResolvedValue(undefined);
+    service = new MyExamRegistrationsService(repository, txHost, writeBack);
   });
 
   it('registers an enrolled student while the window is open and seats remain', async () => {

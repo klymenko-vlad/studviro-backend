@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, not, notInArray, sql, type SQL } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 
 import {
@@ -8,6 +8,7 @@ import {
 import type { Entity, InsertModel } from '../../database/repository/repository.types';
 import type { ConnectorRecord } from '../connectors/connector.types';
 
+import { hasLiveWriteIntent } from './live-write-intent.predicate';
 import type { AppliedChange, SyncTarget } from './sync.types';
 
 export interface ProvenancedTable extends InstitutionScopedTable {
@@ -95,12 +96,21 @@ export class ProvenanceRepository<
     }));
   }
 
+  /**
+   * A row the platform is still delivering a write for survives, whatever the
+   * source did or did not offer: the source has not seen the write yet, so its
+   * silence is not evidence the row is gone (ADR 0023).
+   */
   tombstoneMissing(
     target: SyncTarget,
     scope: SQL,
     keepExternalIds: readonly string[],
   ): Promise<number> {
-    const conditions = [eq(this.table.sourceSystem, target.sourceSystem), scope];
+    const conditions = [
+      eq(this.table.sourceSystem, target.sourceSystem),
+      scope,
+      not(hasLiveWriteIntent(this.table.institutionId, this.table.id)),
+    ];
     if (keepExternalIds.length > 0) {
       conditions.push(notInArray(this.table.externalId, [...keepExternalIds]));
     }

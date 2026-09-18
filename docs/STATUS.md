@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (write-back is designed — ADR 0023)
+Last updated: 2026-09-18 (exam-registration write-back ships — G1 step 1 of 3)
 
 ## What this is
 
@@ -60,6 +60,17 @@ reasoning lives in `docs/adr/`. In short:
   `assignment_due_published` / `assignment_due_rescheduled` through the emitter ADR 0012 built — same
   `type:subject:day` window, same offering audience. ADR 0021.
 
+- **A registration reaches the university** (G1, step 1 of 3 — ADR 0023) — `source_write_intents` is an
+  outbox written in the same serializable transaction as the registration, gated on the connector declaring
+  `examRegistration.write`, drained by a `writeBack` job on the `synchronization` queue with the intent id as the
+  idempotency key. Acknowledgement stamps `source_system` and `external_id` on the row so the next import matches
+  rather than duplicating it; a `ConnectorRejectedError` stops the intent and withdraws the registration; a
+  transport failure backs off five times and then stops as `abandoned`, compensating nothing, because nobody knows
+  whether it landed. `tombstoneMissing` — which tombstoning _and_ child pruning both go through — never deletes a
+  row with a live intent. `mock-sis` writes both commands and refuses a retake deterministically, so the refusal
+  path is walkable. The exam card names the delivery state; the sync monitor lists every unacknowledged write with
+  retry and discard behind `sync:run`. No new permission.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -116,18 +127,18 @@ turned out not to be. Read those before starting; the headlines:
   notifications reach everyone enrolled rather than everyone holding a seat, and never the examiner
   (**B10**); a cancellation is soft-deleted so nobody can see it happened (**B11**); your own
   registration is never confirmed (**B12**).
-- **Not built at all.** No write-back, so a registration never leaves StudViro — **G1 is now designed
-  (ADR 0023) and unbuilt**; eight of
+- **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
+  (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
+  Eight of
   twenty-two permissions have no endpoint — no catalogue, no grade entry, no enrolment correction
   (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
   family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
   deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
-- **A refusal reverses the student's own act, and nothing tells them.** ADR 0023 compensates a
-  `rejected` write by cancelling the registration, which is correct and currently silent: the
-  notification families are **G9**. Worth revisiting whether the compensation should wait for the
-  message, or ship ahead of it with the sync monitor as the only witness.
+- **A refusal reverses the student's own act, and no notification tells them.** The compensation shipped
+  ahead of the message, deliberately: the exam card now says _Refused by the university_ where the registration
+  used to be, so the reversal is visible where the student looks, but nothing reaches the inbox until **G9**.
 - `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. Until a
   scheduled sync exists (**G10**) the second step is a button somebody must remember to press — but the
   row now re-reports as a decision awaiting that run rather than as a fresh conflict.
@@ -144,35 +155,47 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — deliver the exam-registration write-back (G1, step 1 of 3)
+## Next task — make the exam lifecycle mean what its enums say (B4 / B5 / B9 / B11)
 
-**Build the outbox loop end to end on one intent kind.** ADR 0023 settles the shape; this step
-makes it real for `exam_registration.create` and `.cancel`, and nothing else.
+**One step, because the four defects are one rule seen from four sides: what a result _is_ on a
+retake.** Write-back step 3 (`course_result.publish`) depends on the answer, so this comes before it.
 
-What it takes: the `source_write_intents` table (institution, target source system, connector,
-intent kind, canonical table and id, payload, actor, `pending → in_flight → acknowledged |
-rejected | abandoned`, attempts, `next_attempt_at`, last error) with a partial unique index on one
-live intent per canonical row; enqueue inside `MyExamRegistrationsService`'s existing serializable
-transaction, gated on the connector declaring `examRegistration.write`; a worker on the
-`synchronization` queue passing the intent id as the idempotency key; acknowledgement stamping
-`external_id` and `source_system` on the registration and returning it to `in_sync`; a business
-refusal cancelling the registration, a transport failure retrying then stopping as `abandoned`;
-the `DomainSynchronizer` predicate that keeps a row with a live intent out of tombstoning and
-pruning; and `mock-sis` implementing both commands with a deterministic refusal so the `rejected`
-path can actually be walked.
+What it takes:
 
-Frontend: the registration's delivery state on the exam-terms screen — _registered_, _sending to
-the university_, _refused by the university_ — plus the stuck-write list on the sync monitor under
-`sync:read`, with retry and discard under `sync:run`. Where the connector cannot write, say
-"registered in StudViro; this institution's system is not notified automatically" rather than
-hiding the difference. No new permission.
+- **B4** — `exam_term_kind` and the `attempt` columns are decorative. A `first_retake` seat must
+  require a failed previous attempt; the unique indexes on results must key on the attempt so a resit
+  no longer overwrites the failure it followed; and `FX` must count as a fail, so credit totals and
+  averages become computable at all. Put the ladder beside the enum, one copy, the way
+  `ENROLLMENT_PARTICIPATING_STATUSES` sits beside its own.
+- **B5** — `effectiveGrade` reads only the three grade columns, so an `annulled` result still shows
+  its grade. Status has to gate the effective grade, on the server, once.
+- **B9** — cancelling an exam term leaves its registrations live, so the one-registration rule blocks
+  the replacement by naming a term that no longer exists. Cancel the registrations with the term.
+- **B11** — `cancel` sets `status = 'cancelled'` _and_ `deleted_at`, and every read filters
+  `deleted_at is null`, so the status is unreadable dead data. Stop soft-deleting a cancellation, and
+  show it as history.
 
-**After that, in order:** B4/B5/B9/B11 as one exam-lifecycle step (it decides what a result is on a
-retake, which write-back step 3 depends on); G4/G8 (grade entry); the LMS write pair; B6 (make the
-flags mean something). Wiring the person directory into the grant form as a picker is small and
-falls out naturally whenever that screen is next touched.
+Frontend: the exam card and the grades screen have to render the retake ladder and an annulled result
+honestly, and a cancelled registration has to be visible rather than vanish.
+
+**After that, in order:** G4/G8 (grade entry — the eight permissions with no endpoint); G9 (the grade,
+enrolment and timetable notification families, which also fixes **B10** and **B12**); write-back step 2
+(the LMS pair) and step 3 (`course_result.publish`); B6 (make the seven feature flags gate something);
+B7 (render terminology overrides); G5 (self-service enrolment); G10 (a sync schedule); G12 (GDPR
+inventory, threat model, audit events, export).
 
 ## Caveats
+
+- **The write-back unique index is on one _queued_ intent per row, not one live one.** ADR 0023 says
+  both "one live intent" and "the new intent is queued behind it", which cannot both hold; the index
+  is `where state = 'pending'`, so an `in_flight` intent and a fresh `pending` one coexist and a
+  cancel cannot overtake its own registration. Worth folding back into the ADR.
+- **A refused _cancellation_ reverses nothing.** ADR 0023 names the compensation for a refused
+  `create`; for a refused `cancel` the student has already cancelled here, and un-cancelling because
+  the registrar refused the message would be the worse lie. It stays a stuck write on the monitor.
+- **Nothing sweeps the outbox.** A `pending` intent whose BullMQ job was lost waits for a human to
+  press Retry, because the delayed re-enqueue is the only thing that wakes the worker. A sync
+  schedule (**G10**) is where a sweeper belongs.
 
 - `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
   citation markers; prefer the code, tracker and current practice.
@@ -181,8 +204,8 @@ falls out naturally whenever that screen is next touched.
   resit is never told when that term moves — the exam flow still disagrees with itself, now only
   for retakes. Fold this into the B10 fix.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 441.05 kB gzipped against the 455 kB guard — 13.95 kB of headroom.**
-  The last step to touch the client spent 0.46 kB, the one before it 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
+- **The client bundle is at 444.36 kB gzipped against the 455 kB guard — 10.64 kB of headroom.**
+  G1 step 1 spent 3.31 kB, the step before it 0.46 kB, then 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
   `shared/ui` primitive, remember the native-`<select>` swap that freed 27.61 kB: a Radix control pulls
   in floating-ui, focus-scope, dismissable-layer and the collection helpers, and a plain HTML element
   sometimes covers the same behaviour for less.

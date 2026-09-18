@@ -9,6 +9,10 @@ export const synchronizationJobSchemas = {
     runId: z.uuid(),
     institutionId: z.uuid(),
   }),
+  writeBack: z.object({
+    intentId: z.uuid(),
+    institutionId: z.uuid(),
+  }),
 } as const;
 
 export type SynchronizationJobSchemas = typeof synchronizationJobSchemas;

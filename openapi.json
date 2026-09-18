@@ -615,6 +615,278 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/synchronization/write-intents": {
+      "get": {
+        "description": "A stuck write is a synchronization fact: an act taken in StudViro that the university’s system has not accepted. A `rejected` one was refused and has already been compensated; an `abandoned` one may or may not have landed, so nothing was reversed.",
+        "operationId": "listSourceWriteIntents",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WriteIntentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the writes the source system has not acknowledged",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/synchronization/write-intents/{id}/retry": {
+      "post": {
+        "operationId": "retrySourceWriteIntent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteIntentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Offer a stuck write to the source system again",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/synchronization/write-intents/{id}": {
+      "delete": {
+        "operationId": "discardSourceWriteIntent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Give up on a stuck write, leaving the two systems in disagreement",
+        "tags": [
+          "synchronization"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/connectors": {
       "get": {
         "operationId": "listInstitutionConnectors",
@@ -5132,6 +5404,95 @@
           "lastErrorMessage"
         ]
       },
+      "WriteIntentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetSourceSystem": {
+            "enum": [
+              "platform",
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
+          "connectorName": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "exam_registration.create",
+              "exam_registration.cancel",
+              "course_enrollment.request",
+              "course_enrollment.withdraw",
+              "course_result.publish",
+              "learning_space.provision",
+              "learning_enrollment.upsert"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "in_flight",
+              "acknowledged",
+              "rejected",
+              "abandoned"
+            ],
+            "type": "string"
+          },
+          "canonicalTable": {
+            "type": "string"
+          },
+          "canonicalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "nextAttemptAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastErrorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastErrorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "targetSourceSystem",
+          "connectorName",
+          "kind",
+          "state",
+          "canonicalTable",
+          "canonicalId",
+          "attempts",
+          "nextAttemptAt",
+          "deliveredAt",
+          "lastErrorCode",
+          "lastErrorMessage",
+          "createdAt"
+        ]
+      },
       "ConnectorStatusResponseDto": {
         "type": "object",
         "properties": {
@@ -8224,13 +8585,24 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "delivery": {
+            "enum": [
+              "not_relayed",
+              "sending",
+              "relayed",
+              "refused",
+              "stuck"
+            ],
+            "type": "string"
           }
         },
         "required": [
           "id",
           "status",
           "registeredAt",
-          "cancelledAt"
+          "cancelledAt",
+          "delivery"
         ]
       },
       "ExamRoomDto": {

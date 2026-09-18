@@ -41,14 +41,30 @@ export const ACADEMIC_SYSTEM_CAPABILITIES = [
 export type AcademicSystemCapability = (typeof ACADEMIC_SYSTEM_CAPABILITIES)[number];
 export type AcademicSystemCapabilities = Capabilities<AcademicSystemCapability>;
 
-export interface SisExamRegistrationCommand {
+export interface SisWriteCommand {
+  /** The intent's own id, redelivered unchanged so a repeat is recognised. */
+  readonly idempotencyKey: string;
+}
+
+export interface SisExamRegistrationCommand extends SisWriteCommand {
   readonly examTermExternalId: string;
   readonly personExternalId: string;
 }
 
-export interface SisCourseRegistrationCommand {
+export interface SisExamRegistrationCancelCommand extends SisWriteCommand {
+  readonly examTermExternalId: string;
+  readonly personExternalId: string;
+  readonly registrationExternalId: string | null;
+}
+
+export interface SisCourseRegistrationCommand extends SisWriteCommand {
   readonly courseOfferingExternalId: string;
   readonly personExternalId: string;
+}
+
+/** What the source assigned, so the next import of that domain matches our row. */
+export interface SisWriteAcknowledgement {
+  readonly externalId: string;
 }
 
 export interface AcademicSystemConnector {
@@ -74,8 +90,9 @@ export interface AcademicSystemConnector {
   getExamTerms(query?: ConnectorQuery): Promise<ConnectorRecord<SisExamTerm>[]>;
   getOfficialResults(query?: ConnectorQuery): Promise<ConnectorRecord<SisOfficialResult>[]>;
 
-  registerForExam?(command: SisExamRegistrationCommand): Promise<void>;
-  registerForCourse?(command: SisCourseRegistrationCommand): Promise<void>;
+  registerForExam?(command: SisExamRegistrationCommand): Promise<SisWriteAcknowledgement>;
+  cancelExamRegistration?(command: SisExamRegistrationCancelCommand): Promise<void>;
+  registerForCourse?(command: SisCourseRegistrationCommand): Promise<SisWriteAcknowledgement>;
 }
 
 export const ACADEMIC_SYSTEM_CONNECTORS = Symbol('ACADEMIC_SYSTEM_CONNECTORS');

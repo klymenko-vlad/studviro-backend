@@ -32,6 +32,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { SynchronizationModule } from './modules/synchronization/synchronization.module';
 import { UsersModule } from './modules/users/users.module';
+import { WriteBackModule } from './modules/write-back/write-back.module';
 import { QueueModule } from './queue/queue.module';
 
 /**
@@ -148,6 +149,7 @@ function workerModules(): DynamicModule[] {
     MarketingModule,
     NotificationsModule,
     SchedulingModule,
+    WriteBackModule,
     UsersModule,
     SynchronizationModule,
   ],

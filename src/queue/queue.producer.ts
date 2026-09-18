@@ -25,8 +25,12 @@ export class QueueProducer {
   ): Promise<string> {
     const data = synchronizationJobSchemas[name].parse(payload);
 
+    // A run must not be imported twice, so it deduplicates on its id. A
+    // write-back job carries no such key: the worker only ever acts on a
+    // `pending` intent, so a redelivery finds nothing to do, and a retry has to
+    // be allowed to queue while the attempt that scheduled it is still active.
     const job = await this.synchronizationQueue.add(name, data, {
-      deduplication: { id: `${name}:${data.runId}` },
+      ...('runId' in data ? { deduplication: { id: `${name}:${data.runId}` } } : {}),
       ...options,
     });
 

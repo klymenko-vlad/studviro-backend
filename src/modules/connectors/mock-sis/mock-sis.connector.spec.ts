@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { ConnectorRejectedError } from '../connector-rejected.error';
 import type { ConnectorRecord } from '../connector.types';
 
 import { MockSisConnector } from './mock-sis.connector';
 import { DEFAULT_MOCK_SIS_OPTIONS, type MockSisOptions } from './mock-sis.options';
+import { MOCK_SIS_RETAKE_REFUSAL_CODE } from './mock-sis.registrar';
 
 const connector = (overrides: Partial<MockSisOptions> = {}): MockSisConnector =>
   new MockSisConnector({ ...DEFAULT_MOCK_SIS_OPTIONS, ...overrides });
@@ -16,13 +18,60 @@ describe('MockSisConnector', () => {
     await expect(connector().healthCheck()).resolves.toMatchObject({ reachable: true });
   });
 
-  it('advertises every read capability and no write capability', () => {
+  it('advertises every read capability, and exam registration as the one it can write', () => {
     const capabilities = connector().capabilities();
 
     expect(capabilities['courses.read']).toBe(true);
     expect(capabilities['officialResults.read']).toBe(true);
-    expect(capabilities['examRegistration.write']).toBe(false);
+    expect(capabilities['examRegistration.write']).toBe(true);
     expect(capabilities['courseRegistration.write']).toBe(false);
+  });
+
+  describe('exam registration write-back', () => {
+    const command = (examTermExternalId: string) => ({
+      idempotencyKey: '5d2f7a1e-0000-4000-8000-000000000001',
+      examTermExternalId,
+      personExternalId: 'PER-1',
+    });
+
+    it('accepts a regular term and returns the identifier it assigned', async () => {
+      await expect(connector().registerForExam(command('EXT-OFF-1-regular'))).resolves.toEqual({
+        externalId: 'EXR-EXT-OFF-1-regular-PER-1',
+      });
+    });
+
+    it('assigns the same identifier for the same student and term', async () => {
+      const [first, second] = await Promise.all([
+        connector().registerForExam(command('EXT-OFF-1-regular')),
+        connector().registerForExam(command('EXT-OFF-1-regular')),
+      ]);
+
+      expect(first).toEqual(second);
+    });
+
+    it('refuses a retake term as a business answer, not a transport failure', async () => {
+      await expect(
+        connector().registerForExam(command('EXT-OFF-1-first_retake')),
+      ).rejects.toBeInstanceOf(ConnectorRejectedError);
+    });
+
+    it('accepts a cancellation of a regular term', async () => {
+      await expect(
+        connector().cancelExamRegistration({
+          ...command('EXT-OFF-1-regular'),
+          registrationExternalId: 'EXR-EXT-OFF-1-regular-PER-1',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses a cancellation of a retake term for the same reason', async () => {
+      await expect(
+        connector().cancelExamRegistration({
+          ...command('EXT-OFF-1-first_retake'),
+          registrationExternalId: null,
+        }),
+      ).rejects.toMatchObject({ code: MOCK_SIS_RETAKE_REFUSAL_CODE });
+    });
   });
 
   it('declares the one credential field it accepts', () => {
@@ -41,7 +90,6 @@ describe('MockSisConnector', () => {
   it('does not implement the optional write operations it does not advertise', () => {
     const academic = connector() as unknown as Record<string, unknown>;
 
-    expect(academic.registerForExam).toBeUndefined();
     expect(academic.registerForCourse).toBeUndefined();
   });
 

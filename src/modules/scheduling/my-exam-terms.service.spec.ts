@@ -27,6 +27,7 @@ const row = (overrides: Partial<MyExamTermRow> = {}): MyExamTermRow => ({
   registrationStatus: null,
   registeredAt: null,
   registrationCancelledAt: null,
+  registrationDeliveryState: null,
   offeringId: 'offering-1',
   courseId: 'course-1',
   courseCode: 'INF/ALG/22',
@@ -189,6 +190,7 @@ describe(MyExamTermsService.name, () => {
       status: 'registered',
       registeredAt: new Date('2026-05-14T08:00:00.000Z'),
       cancelledAt: null,
+      delivery: 'not_relayed',
     });
   });
 
@@ -368,5 +370,47 @@ describe('registration availability', () => {
         registrationCancelledAt: new Date('2026-05-14T09:00:00.000Z'),
       }),
     ).toEqual({ canRegister: true, canCancel: false, reason: 'open' });
+  });
+
+  describe('delivery state', () => {
+    it('reports a registration nobody is relaying as not relayed', async () => {
+      findMyExamTerms.mockResolvedValue([
+        row({ registrationId: 'reg-1', registrationStatus: 'registered' }),
+      ]);
+
+      const [term] = await service.listMine(
+        'institution-1',
+        'student-1',
+        {},
+        DURING_REGISTRATION,
+      );
+
+      expect(term?.myRegistration?.delivery).toBe('not_relayed');
+    });
+
+    it.each([
+      ['pending', 'sending'],
+      ['in_flight', 'sending'],
+      ['acknowledged', 'relayed'],
+      ['rejected', 'refused'],
+      ['abandoned', 'stuck'],
+    ] as const)('maps the %s intent to %s', async (state, delivery) => {
+      findMyExamTerms.mockResolvedValue([
+        row({
+          registrationId: 'reg-1',
+          registrationStatus: 'registered',
+          registrationDeliveryState: state,
+        }),
+      ]);
+
+      const [term] = await service.listMine(
+        'institution-1',
+        'student-1',
+        {},
+        DURING_REGISTRATION,
+      );
+
+      expect(term?.myRegistration?.delivery).toBe(delivery);
+    });
   });
 });
