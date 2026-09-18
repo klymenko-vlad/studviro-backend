@@ -6,6 +6,7 @@ import { DEFAULT_MOCK_SIS_OPTIONS } from '../mock-sis/mock-sis.options';
 
 import { MockLmsConnector } from './mock-lms.connector';
 import { DEFAULT_MOCK_LMS_OPTIONS, type MockLmsOptions } from './mock-lms.options';
+import { MOCK_LMS_ARCHIVED_REFUSAL_CODE } from './mock-lms.provisioner';
 
 const connector = (overrides: Partial<MockLmsOptions> = {}): MockLmsConnector =>
   new MockLmsConnector(
@@ -30,7 +31,44 @@ describe('MockLmsConnector', () => {
     expect(capabilities['submissions.read']).toBe(true);
     expect(capabilities['completion.read']).toBe(true);
     expect(capabilities['enrollments.read']).toBe(false);
-    expect(capabilities['enrollment.write']).toBe(false);
+    expect(capabilities['course.provision']).toBe(true);
+    expect(capabilities['enrollment.write']).toBe(true);
+  });
+
+  describe('provisioning write-back', () => {
+    it('provisions a course and returns the identifier the LMS assigned', async () => {
+      await expect(
+        connector().provisionCourse({
+          idempotencyKey: '5d2f7a1e-0000-4000-8000-000000000003',
+          courseOfferingExternalId: 'OFF-1',
+          code: 'INF/ALG/22',
+          name: 'Algorithms',
+        }),
+      ).resolves.toEqual({ externalId: 'LMS-OFF-1' });
+    });
+
+    it('relays an enrolment and returns the identifier it assigned', async () => {
+      await expect(
+        connector().upsertEnrollment({
+          idempotencyKey: '5d2f7a1e-0000-4000-8000-000000000004',
+          courseExternalId: 'LMS-OFF-1',
+          personExternalId: 'PER-1',
+          role: 'student',
+          active: true,
+        }),
+      ).resolves.toEqual({ externalId: 'LMSENR-LMS-OFF-1-PER-1' });
+    });
+
+    it('refuses to touch an archived course, so the rejected path can be walked', async () => {
+      await expect(
+        connector().provisionCourse({
+          idempotencyKey: '5d2f7a1e-0000-4000-8000-000000000005',
+          courseOfferingExternalId: 'OFF-1-ARCH',
+          code: 'X',
+          name: 'X',
+        }),
+      ).rejects.toMatchObject({ code: MOCK_LMS_ARCHIVED_REFUSAL_CODE });
+    });
   });
 
   it('declares the one credential field it accepts', () => {

@@ -28,17 +28,27 @@ export const LEARNING_SYSTEM_CAPABILITIES = [
 export type LearningSystemCapability = (typeof LEARNING_SYSTEM_CAPABILITIES)[number];
 export type LearningSystemCapabilities = Capabilities<LearningSystemCapability>;
 
-export interface LmsCourseProvisionCommand {
+export interface LmsWriteCommand {
+  /** The intent's own id, redelivered unchanged so a repeat is recognised. */
+  readonly idempotencyKey: string;
+}
+
+export interface LmsCourseProvisionCommand extends LmsWriteCommand {
   readonly courseOfferingExternalId: string;
   readonly code: string;
   readonly name: string;
 }
 
-export interface LmsEnrollmentCommand {
+export interface LmsEnrollmentCommand extends LmsWriteCommand {
   readonly courseExternalId: string;
   readonly personExternalId: string;
   readonly role: string;
   readonly active: boolean;
+}
+
+/** What the learning system assigned, so the next import matches our row. */
+export interface LmsWriteAcknowledgement {
+  readonly externalId: string;
 }
 
 export interface LearningSystemConnector {
@@ -56,8 +66,8 @@ export interface LearningSystemConnector {
   getGrades(query?: ConnectorQuery): Promise<ConnectorRecord<LmsGrade>[]>;
   getSubmissions(query?: ConnectorQuery): Promise<ConnectorRecord<LmsSubmission>[]>;
 
-  provisionCourse?(command: LmsCourseProvisionCommand): Promise<void>;
-  upsertEnrollment?(command: LmsEnrollmentCommand): Promise<void>;
+  provisionCourse?(command: LmsCourseProvisionCommand): Promise<LmsWriteAcknowledgement>;
+  upsertEnrollment?(command: LmsEnrollmentCommand): Promise<LmsWriteAcknowledgement>;
 }
 
 export const LEARNING_SYSTEM_CONNECTORS = Symbol('LEARNING_SYSTEM_CONNECTORS');

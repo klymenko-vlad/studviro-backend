@@ -7,6 +7,7 @@ import type { SyncRun } from '../../database/schema';
 import { ConnectorRegistry } from '../connectors/connector-registry.service';
 import type { LearningSystemConnector } from '../connectors/learning-system.connector';
 import { ExternalIdentitiesRepository } from '../identity/external-identities.repository';
+import { LearningProvisioningService } from '../write-back/learning-provisioning.service';
 
 import { SyncAlreadyRunningError } from './academic-sync.service';
 import { CanonicalRepositories } from './canonical.repositories';
@@ -32,6 +33,7 @@ export class LearningSyncService {
     private readonly domains: DomainSynchronizer,
     private readonly locks: DistributedLockService,
     @Inject(LEARNING_IMPORTERS) private readonly importers: readonly LearningImporter[],
+    private readonly provisioning: LearningProvisioningService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(LearningSyncService.name);
@@ -106,6 +108,10 @@ export class LearningSyncService {
       outcomes.push(outcome);
       await lock.extend();
     }
+
+    // A run is when the platform reconciles with the LMS, so it is also when
+    // anything the LMS has not been told about is queued (ADR 0023, step 2).
+    await this.provisioning.enqueuePending(run.institutionId);
 
     const finished = await this.runs.finish(run.id, outcomes);
     this.logger.info(

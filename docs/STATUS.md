@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (self-service enrolment — G5 closed)
+Last updated: 2026-09-18 (write-back step 2 — the LMS pair)
 
 ## What this is
 
@@ -116,6 +116,15 @@ reasoning lives in `docs/adr/`. In short:
   be given the last place; a re-request reuses the withdrawn row. The write-back pair from ADR 0023 is
   wired, so `courseRegistration` is the fourth implemented feature flag.
 
+- **The LMS is told what the registrar decided** (G1 step 2) — `learning_space.provision` and
+  `learning_enrollment.upsert` are wired through the same outbox. Unlike the exam and enrolment pairs
+  no user act creates them, so **the learning sync run originates them**: a run is when the platform
+  reconciles with the LMS, and the one-queued-intent-per-row index makes a repeat harmless. A run
+  queues at most 200 of each, so a first run against a fresh institution does not flood the queue.
+  Acknowledgement of an enrolment writes `enrollments.lms_provisioned_at` — a column nobody wrote
+  until now — and a refusal records `lms_provisioning_error` rather than reversing anything, because
+  there was nothing here to undo. `mock-lms` implements both and refuses an archived course.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -192,29 +201,27 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — the client bundle, before it breaches (and write-back step 2)
+## Next task — write-back step 3, and then a schedule (G10)
 
-**The bundle has 1.34 kB of headroom and every recent step has spent more than that.** Decide the
-budget deliberately rather than discovering it in CI:
+**`course_result.publish` is the last of the seven intents.** G8 gave it something to publish and the
+exam-lifecycle step settled what a result is on a retake, which is what it was waiting for.
 
-- Either raise the `size-limit` figure with a stated reason, or spend the step reducing it. The obvious
-  reductions: `/enroll` and `/exams` render the same card-and-reason shape twice and could share one
-  component; `/enroll`'s card duplicates `ExamTermCard`'s window and seats logic; several
-  `@/shared/ui` primitives are pulled in by one screen each.
-- Whichever way it goes, record the decision so the next step is not surprised.
+What it takes: a writer on `official_course_results`, enqueued from
+`OfferingResultsService.record` when a grade is published (the same place that already marks the seat
+attended and emits the notification); `officialResult.write` as a new academic capability; `mock-sis`
+implementing it with a deterministic refusal; and acknowledgement stamping `external_id` on the result
+so the next import matches rather than duplicating. The attempt is part of the payload — the registrar
+must be told which sitting the grade belongs to.
 
-**Then write-back step 2: the LMS pair.** `learning_space.provision` and
-`learning_enrollment.upsert`, which is where provisioning stops being a column nobody writes
-(`enrollments.lms_provisioned_at`). The outbox, worker, capability gate, retry ladder and monitor
-surface are kind-agnostic and already carry two intent kinds each for SIS reads and writes; this adds
-two writers targeting `lms` and the `mock-lms` commands they call. The one real design question: unlike
-the exam and enrolment pairs there is no user act to hang a provisioning intent on, so decide whether a
-sync run enqueues them or an administrator asks for it on the sync screen.
+**Then G10, a synchronization schedule**, which the outbox needs as much as the importers do:
+`sync_run_trigger` already has `scheduled` and the BullMQ queue exists, but nothing enqueues, so a
+`pending` intent whose job was lost waits for a human to press Retry and an `accept_source`
+reconciliation waits for somebody to remember to run a full sync. One repeatable job per institution
+fixes all three.
 
-**After that, in order:** write-back step 3 (`course_result.publish`); G10 (a sync schedule, which also
-gives the outbox the sweeper it lacks); the rest of G4 (catalogue administration, enrolment
-correction); G12 (GDPR inventory, threat model, audit events, export); the remaining terminology swaps
-(**B7**); steps 49–53 and the testing passes 57–62.
+**After that, in order:** the rest of G4 (catalogue administration, enrolment correction); G12 (GDPR
+inventory, threat model, audit events, export — steps 19, 20, 49, 50); the remaining terminology swaps
+(**B7**); step 51 (search), 52 (WCAG pass), 53 (metrics); and the testing passes 57–62.
 
 ## Caveats
 

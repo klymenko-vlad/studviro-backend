@@ -11,6 +11,9 @@ import {
   LEARNING_SYSTEM_CAPABILITIES,
   type LearningSystemCapabilities,
   type LearningSystemConnector,
+  type LmsCourseProvisionCommand,
+  type LmsEnrollmentCommand,
+  type LmsWriteAcknowledgement,
 } from '../learning-system.connector';
 import type {
   LmsActivity,
@@ -25,6 +28,7 @@ import { MockSisConnector } from '../mock-sis/mock-sis.connector';
 
 import { buildMockLmsDataset, type MockLmsDataset } from './mock-lms.dataset';
 import { MOCK_LMS_OPTIONS, type MockLmsOptions } from './mock-lms.options';
+import { provisionCourse, upsertEnrollment } from './mock-lms.provisioner';
 
 const SUPPORTED_CAPABILITIES = new Set<string>([
   'courses.read',
@@ -32,6 +36,8 @@ const SUPPORTED_CAPABILITIES = new Set<string>([
   'grades.read',
   'submissions.read',
   'completion.read',
+  'course.provision',
+  'enrollment.write',
 ]);
 
 const CREDENTIAL_FIELDS: readonly ConnectorCredentialField[] = [
@@ -60,6 +66,14 @@ export class MockLmsConnector implements LearningSystemConnector {
 
   healthCheck(): Promise<ConnectorHealth> {
     return Promise.resolve({ reachable: true, checkedAt: new Date(), detail: null });
+  }
+
+  provisionCourse(command: LmsCourseProvisionCommand): Promise<LmsWriteAcknowledgement> {
+    return provisionCourse(command);
+  }
+
+  upsertEnrollment(command: LmsEnrollmentCommand): Promise<LmsWriteAcknowledgement> {
+    return upsertEnrollment(command);
   }
 
   capabilities(): LearningSystemCapabilities {

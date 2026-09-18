@@ -7,6 +7,7 @@ import { InstitutionsModule } from '../institutions/institutions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SchedulingModule } from '../scheduling/scheduling.module';
 import { UsersModule } from '../users/users.module';
+import { WriteBackModule } from '../write-back/write-back.module';
 
 import { AcademicSyncService } from './academic-sync.service';
 import { CanonicalRepositories } from './canonical.repositories';
@@ -40,6 +41,7 @@ import { SynchronizationService } from './synchronization.service';
     CryptoModule,
     NotificationsModule,
     SchedulingModule,
+    WriteBackModule,
   ],
   controllers: [SynchronizationController],
   providers: [
