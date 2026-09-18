@@ -13,20 +13,33 @@ export class NotificationEmitterService {
   ) {}
 
   async emit(emission: NotificationEmission): Promise<number> {
-    const { courseOfferingId } = emission;
-    if (!courseOfferingId) return 0;
-
     return this.txHost.run(async () => {
-      const recipients = await this.repository.findOfferingAudience(
-        emission.target.institutionId,
-        courseOfferingId,
-      );
-
+      const recipients = await this.recipientsOf(emission);
       if (recipients.length === 0) return 0;
 
       const event = await this.repository.upsertEvent(emission, dedupeKeyOf(emission));
 
       return this.repository.deliver(event, recipients);
     });
+  }
+
+  private async recipientsOf(emission: NotificationEmission): Promise<readonly string[]> {
+    if (emission.recipients) return emission.recipients;
+
+    if (emission.audience === 'exam_term') {
+      return emission.examTermId
+        ? this.repository.findExamTermAudience(
+            emission.target.institutionId,
+            emission.examTermId,
+          )
+        : [];
+    }
+
+    return emission.courseOfferingId
+      ? this.repository.findOfferingAudience(
+          emission.target.institutionId,
+          emission.courseOfferingId,
+        )
+      : [];
   }
 }

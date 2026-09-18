@@ -57,6 +57,22 @@ export class NotificationResponseDto {
 
   @Expose() @ApiProperty({ type: String, nullable: true }) activityName!: string | null;
 
+  @Expose() @ApiProperty({ type: String, nullable: true }) grade!: string | null;
+
+  @Expose() @ApiProperty({ type: String, nullable: true }) previousGrade!: string | null;
+
+  @Expose() @ApiProperty({ type: Number, nullable: true }) attempt!: number | null;
+
+  @Expose() @ApiProperty({ type: String, nullable: true }) eventTitle!: string | null;
+
+  @Expose()
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Why the source system refused, when it did.',
+  })
+  reason!: string | null;
+
   @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
 
   static fromRow(row: MyNotificationRow): NotificationResponseDto {
@@ -77,6 +93,11 @@ export class NotificationResponseDto {
     dto.dueAt = toDate(row.payload.dueAt);
     dto.previousDueAt = toDate(row.payload.previousDueAt);
     dto.activityName = row.payload.activityName ?? null;
+    dto.grade = row.payload.grade ?? null;
+    dto.previousGrade = row.payload.previousGrade ?? null;
+    dto.attempt = row.payload.attempt ?? null;
+    dto.eventTitle = row.payload.eventTitle ?? null;
+    dto.reason = row.payload.reason ?? null;
     dto.sourceSystem = row.sourceSystem;
 
     return dto;

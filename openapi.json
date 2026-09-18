@@ -6782,7 +6782,16 @@
               "exam_term_rescheduled",
               "exam_term_cancelled",
               "assignment_due_published",
-              "assignment_due_rescheduled"
+              "assignment_due_rescheduled",
+              "grade_published",
+              "grade_corrected",
+              "enrollment_confirmed",
+              "enrollment_rejected",
+              "timetable_event_rescheduled",
+              "timetable_event_cancelled",
+              "exam_registration_confirmed",
+              "exam_registration_cancelled",
+              "exam_registration_refused"
             ],
             "type": "string"
           },
@@ -6845,6 +6854,27 @@
             "type": "string",
             "nullable": true
           },
+          "grade": {
+            "type": "string",
+            "nullable": true
+          },
+          "previousGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempt": {
+            "type": "number",
+            "nullable": true
+          },
+          "eventTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why the source system refused, when it did."
+          },
           "sourceSystem": {
             "enum": [
               "platform",
@@ -6870,6 +6900,11 @@
           "dueAt",
           "previousDueAt",
           "activityName",
+          "grade",
+          "previousGrade",
+          "attempt",
+          "eventTitle",
+          "reason",
           "sourceSystem"
         ]
       },

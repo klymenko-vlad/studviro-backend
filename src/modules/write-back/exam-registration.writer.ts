@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { DependencyUnavailableError } from '../../common/errors/domain.error';
 import type { SourceWriteIntent } from '../../database/schema';
+import { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
 
 import { ExamRegistrationWriteRepository } from './exam-registration-write.repository';
 import type {
@@ -60,6 +61,14 @@ abstract class ExamRegistrationWriter implements IntentWriter {
 export class ExamRegistrationCreateWriter extends ExamRegistrationWriter {
   readonly kind = 'exam_registration.create' as const;
 
+  constructor(
+    targets: WriteTargetService,
+    registrations: ExamRegistrationWriteRepository,
+    private readonly notifications: ExamRegistrationNotificationsService,
+  ) {
+    super(targets, registrations);
+  }
+
   async execute(intent: SourceWriteIntent): Promise<WriteAcknowledgement> {
     const connector = await this.connectorFor(intent);
     const payload = this.payloadOf(intent);
@@ -79,7 +88,15 @@ export class ExamRegistrationCreateWriter extends ExamRegistrationWriter {
   }
 
   async compensate(intent: SourceWriteIntent): Promise<void> {
-    await this.registrations.compensateCreate(intent.canonicalId, new Date());
+    const reversed = await this.registrations.compensateCreate(intent.canonicalId, new Date());
+
+    // The compensation used to be silent, which is the one cost ADR 0023 named.
+    if (reversed) {
+      await this.notifications.refused(
+        reversed,
+        intent.lastErrorMessage ?? 'The university’s system would not accept it',
+      );
+    }
   }
 }
 

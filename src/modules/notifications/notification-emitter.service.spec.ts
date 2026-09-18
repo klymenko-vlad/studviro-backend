@@ -30,9 +30,12 @@ describe(NotificationEmitterService.name, () => {
   const findOfferingAudience = vi.fn();
   const deliver = vi.fn();
 
+  const findExamTermAudience = vi.fn();
+
   const repository = {
     upsertEvent,
     findOfferingAudience,
+    findExamTermAudience,
     deliver,
   } as unknown as NotificationEmitterRepository;
 
@@ -44,6 +47,7 @@ describe(NotificationEmitterService.name, () => {
     vi.clearAllMocks();
     upsertEvent.mockResolvedValue({ id: 'event-1' });
     findOfferingAudience.mockResolvedValue(['student-1', 'student-2']);
+    findExamTermAudience.mockResolvedValue(['student-1', 'examiner-1']);
     deliver.mockResolvedValue(2);
     service = new NotificationEmitterService(repository, txHost);
   });
@@ -87,5 +91,38 @@ describe(NotificationEmitterService.name, () => {
     await expect(service.emit(emission({ courseOfferingId: null }))).resolves.toBe(0);
 
     expect(upsertEvent).not.toHaveBeenCalled();
+  });
+
+  describe('who hears about it', () => {
+    it('reaches the seat holders and the examiner for an exam term, not the whole course', async () => {
+      await service.emit(emission({ audience: 'exam_term' }));
+
+      expect(findOfferingAudience).not.toHaveBeenCalled();
+      expect(deliver).toHaveBeenCalledWith({ id: 'event-1' }, ['student-1', 'examiner-1']);
+    });
+
+    it('reaches exactly the person named when the event concerns one of them', async () => {
+      await service.emit(emission({ type: 'grade_published', recipients: ['student-9'] }));
+
+      expect(findOfferingAudience).not.toHaveBeenCalled();
+      expect(findExamTermAudience).not.toHaveBeenCalled();
+      expect(deliver).toHaveBeenCalledWith({ id: 'event-1' }, ['student-9']);
+    });
+
+    it('writes no event at all when nobody would hear it', async () => {
+      await expect(service.emit(emission({ recipients: [] }))).resolves.toBe(0);
+
+      expect(upsertEvent).not.toHaveBeenCalled();
+    });
+
+    it('writes no event for an exam-term emission that names no term', async () => {
+      await expect(
+        service.emit(emission({ audience: 'exam_term', examTermId: null })),
+      ).resolves.toBe(0);
+    });
+
+    it('writes no event for an offering emission that names no offering', async () => {
+      await expect(service.emit(emission({ courseOfferingId: null }))).resolves.toBe(0);
+    });
   });
 });

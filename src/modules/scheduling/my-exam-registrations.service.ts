@@ -7,6 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import type { ExamRegistration } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
 import { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import { attemptsRequiredFor, laddersTo } from './exam-attempt-ladder';
@@ -22,6 +23,7 @@ export class MyExamRegistrationsService {
     private readonly repository: MyExamRegistrationsRepository,
     private readonly txHost: TransactionHost,
     private readonly writeBack: ExamRegistrationWriteBackService,
+    private readonly notifications: ExamRegistrationNotificationsService,
   ) {}
 
   async register(
@@ -57,6 +59,7 @@ export class MyExamRegistrationsService {
     );
 
     await this.writeBack.publish(institutionId, outcome);
+    await this.notifications.confirmed(registration, now);
 
     return registration;
   }
@@ -89,6 +92,7 @@ export class MyExamRegistrationsService {
     });
 
     await this.writeBack.publish(institutionId, outcome);
+    await this.notifications.cancelled(registration, now);
 
     return registration;
   }

@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { AcademicSyncService } from './academic-sync.service';
 import { CanonicalRepositories } from './canonical.repositories';
 import { DomainSynchronizer } from './domain-synchronizer';
+import { GradeRecipientRepository } from './grade-recipient.repository';
 import {
   ACADEMIC_IMPORTER_CLASSES,
   academicImportersProvider,
@@ -48,6 +49,7 @@ import { SynchronizationService } from './synchronization.service';
     learningImportersProvider,
     CanonicalRepositories,
     DomainSynchronizer,
+    GradeRecipientRepository,
     AcademicSyncService,
     LearningSyncService,
     SynchronizationService,

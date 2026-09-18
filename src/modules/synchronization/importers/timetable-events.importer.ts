@@ -6,6 +6,7 @@ import type {
 } from '../../connectors/academic-system.connector';
 import type { SisTimetableEvent } from '../../connectors/academic-system.records';
 import type { ConnectorQuery, ConnectorRecord } from '../../connectors/connector.types';
+import { TimetableNotificationsService } from '../../notifications/timetable-notifications.service';
 import type { SyncSession } from '../sync-session';
 import type { ApplyOutcome } from '../sync.types';
 
@@ -23,23 +24,32 @@ export class TimetableEventsImporter extends RecordImporter<SisTimetableEvent> {
     return connector.getTimetableEvents(query);
   }
 
+  constructor(private readonly notifications: TimetableNotificationsService) {
+    super();
+  }
+
   applyRecord(
     record: ConnectorRecord<SisTimetableEvent>,
     session: SyncSession,
   ): Promise<ApplyOutcome> {
-    return session.apply('timetableEvents', record, async () => ({
-      courseOfferingId: await session.requireReference(
-        'courseOfferings',
-        record.data.courseOfferingExternalId,
-      ),
-      studyGroupId: record.data.studyGroupExternalId
-        ? await session.reference('studyGroups', record.data.studyGroupExternalId)
-        : null,
-      roomId: await session.reference('rooms', record.data.roomExternalId),
-      type: record.data.type,
-      title: record.data.title,
-      startsAt: record.data.startsAt,
-      endsAt: record.data.endsAt,
-    }));
+    return session.apply(
+      'timetableEvents',
+      record,
+      async () => ({
+        courseOfferingId: await session.requireReference(
+          'courseOfferings',
+          record.data.courseOfferingExternalId,
+        ),
+        studyGroupId: record.data.studyGroupExternalId
+          ? await session.reference('studyGroups', record.data.studyGroupExternalId)
+          : null,
+        roomId: await session.reference('rooms', record.data.roomExternalId),
+        type: record.data.type,
+        title: record.data.title,
+        startsAt: record.data.startsAt,
+        endsAt: record.data.endsAt,
+      }),
+      (change) => this.notifications.applied(session.target, change, session.startedAt),
+    );
   }
 }

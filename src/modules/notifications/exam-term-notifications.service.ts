@@ -25,6 +25,9 @@ export class ExamTermNotificationsService {
       courseOfferingId: subject.courseOfferingId,
       examTermId: subject.id,
       learningActivityId: null,
+      // A published term is news to everyone who could sit it; a move or a
+      // cancellation is news to the people who hold a seat and to the examiner.
+      audience: type === 'exam_term_published' ? 'offering' : 'exam_term',
       payload: {
         kind: subject.kind,
         startsAt: subject.startsAt.toISOString(),

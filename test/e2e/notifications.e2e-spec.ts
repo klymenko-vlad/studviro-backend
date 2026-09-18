@@ -5,6 +5,7 @@ import {
   courseOfferings,
   courses,
   enrollments,
+  examRegistrations,
   examTerms,
   institutions,
   roleAssignments,
@@ -56,6 +57,17 @@ describe('Notifications (e2e)', () => {
       courseOfferingId: offeringId,
       status: 'active',
     });
+
+  /** A moved or cancelled term reaches the people holding a seat (B10). */
+  const takeSeat = async (userId: string, examTermId: string) => {
+    await harness.db.insert(examRegistrations).values({
+      institutionId,
+      examTermId,
+      userId,
+      status: 'registered',
+      registeredAt: new Date(),
+    });
+  };
 
   const examTerm = async (startsAt: Date): Promise<ExamTerm> => {
     const [row] = await harness.db
@@ -155,6 +167,7 @@ describe('Notifications (e2e)', () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id);
     const original = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+    await takeSeat(actor.user.id, original.id);
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
     const movedAgain = { ...original, startsAt: new Date('2026-06-04T08:00:00.000Z') };
 
@@ -183,6 +196,7 @@ describe('Notifications (e2e)', () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id);
     const original = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+    await takeSeat(actor.user.id, original.id);
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
 
     await notifications.applied(
@@ -203,6 +217,7 @@ describe('Notifications (e2e)', () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id);
     const original = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+    await takeSeat(actor.user.id, original.id);
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
     await notifications.applied(
       target,
@@ -278,5 +293,90 @@ describe('Notifications (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(403);
+  });
+
+  describe('who hears that a term moved (B10)', () => {
+    const move = (term: ExamTerm) =>
+      notifications.applied(
+        target,
+        {
+          outcome: 'updated',
+          previous: term,
+          current: { ...term, startsAt: new Date('2026-06-09T08:00:00.000Z') },
+        },
+        MONDAY,
+      );
+
+    it('tells the student holding a seat', async () => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id);
+      const term = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+      await takeSeat(actor.user.id, term.id);
+
+      await move(term);
+
+      expect(await inbox(actor)).toHaveLength(1);
+    });
+
+    it('leaves a classmate who never registered out of it', async () => {
+      const seated = await actingAs('student');
+      const bystander = await actingAs('student');
+      await enrol(seated.user.id);
+      await enrol(bystander.user.id);
+      const term = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+      await takeSeat(seated.user.id, term.id);
+
+      await move(term);
+
+      expect(await inbox(bystander)).toEqual([]);
+    });
+
+    it('tells a completed student sitting a resit, who used to be left out', async () => {
+      const actor = await actingAs('student');
+      await harness.db.insert(enrollments).values({
+        institutionId,
+        userId: actor.user.id,
+        courseOfferingId: offeringId,
+        status: 'completed',
+      });
+      const term = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+      await takeSeat(actor.user.id, term.id);
+
+      await move(term);
+
+      expect(await inbox(actor)).toHaveLength(1);
+    });
+
+    it('tells the examiner, who used to hear nothing at all', async () => {
+      const examiner = await actingAs('teacher');
+      const [term] = await harness.db
+        .insert(examTerms)
+        .values({
+          institutionId,
+          courseOfferingId: offeringId,
+          kind: 'regular',
+          startsAt: new Date('2026-06-02T08:00:00.000Z'),
+          examinerId: examiner.user.id,
+        })
+        .returning();
+
+      await move(term!);
+
+      expect(await inbox(examiner)).toHaveLength(1);
+    });
+
+    it('still announces a newly published term to everyone enrolled', async () => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id);
+      const created = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+
+      await notifications.applied(
+        target,
+        { outcome: 'created', previous: null, current: created },
+        MONDAY,
+      );
+
+      expect(await inbox(actor)).toHaveLength(1);
+    });
   });
 });

@@ -7,6 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import type { ExamRegistration } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
+import type { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
 import type { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import type {
@@ -64,6 +65,8 @@ describe(MyExamRegistrationsService.name, () => {
   const enqueueCreate = vi.fn();
   const enqueueCancel = vi.fn();
   const publish = vi.fn();
+  const confirmed = vi.fn();
+  const cancelled = vi.fn();
 
   const writeBack = {
     enqueueCreate,
@@ -84,7 +87,10 @@ describe(MyExamRegistrationsService.name, () => {
     enqueueCreate.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
     enqueueCancel.mockResolvedValue({ kind: 'queued', intentId: 'intent-2' });
     publish.mockResolvedValue(undefined);
-    service = new MyExamRegistrationsService(repository, txHost, writeBack);
+    service = new MyExamRegistrationsService(repository, txHost, writeBack, {
+      confirmed,
+      cancelled,
+    } as unknown as ExamRegistrationNotificationsService);
   });
 
   it('registers an enrolled student while the window is open and seats remain', async () => {

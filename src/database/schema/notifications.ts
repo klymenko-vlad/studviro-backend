@@ -23,6 +23,15 @@ export const NOTIFICATION_TYPES = [
   'exam_term_cancelled',
   'assignment_due_published',
   'assignment_due_rescheduled',
+  'grade_published',
+  'grade_corrected',
+  'enrollment_confirmed',
+  'enrollment_rejected',
+  'timetable_event_rescheduled',
+  'timetable_event_cancelled',
+  'exam_registration_confirmed',
+  'exam_registration_cancelled',
+  'exam_registration_refused',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationType = pgEnum('notification_type', NOTIFICATION_TYPES);
@@ -35,6 +44,13 @@ export interface NotificationPayload {
   previousDueAt?: string;
   activityName?: string;
   activityType?: string;
+  grade?: string;
+  previousGrade?: string;
+  attempt?: number;
+  enrollmentStatus?: string;
+  eventTitle?: string;
+  eventType?: string;
+  reason?: string;
 }
 
 export const notificationEvents = pgTable(

@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (grades have a writer — G8 closed, G4 narrowed)
+Last updated: 2026-09-18 (the notification families land — G9 closed, B10 and B12 fixed)
 
 ## What this is
 
@@ -92,6 +92,15 @@ reasoning lives in `docs/adr/`. In short:
   only thing in the product that ever spends an attempt, which is the piece B4 left open. Editing a row
   the registrar owns marks it `pending`, so write-back step 3 has something to push.
 
+- **The inbox says what actually happened** (G9; fixes B10 and B12) — nine more families: a grade
+  published or corrected (from grade entry and from the importer, which finds the recipient through the
+  enrolment), an enrolment confirmed or refused, a class moved or cancelled, and your own exam
+  registration confirmed, cancelled or refused by the university with the reason it gave. The emitter
+  takes an explicit recipient list, because a grade concerns one person. **A term that moves or is
+  cancelled now reaches the people holding a seat and the examiner**, not everyone enrolled — so a
+  `completed` student sitting a resit is told, and the examiner hears at all; a newly _published_ term
+  still goes to everyone enrolled, because that is who could sit it.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -141,20 +150,16 @@ turned out not to be. Read those before starting; the headlines:
 - **Rules that exist only as enums.** What is left of **B4**: `no_show` and `excused` are still never
   set — publishing a grade marks a seat `attended`, but nobody can record an absence. All seven feature
   flags gate nothing (**B6**) and terminology overrides are never rendered (**B7**).
-- **Flows that end badly.** Notifications reach everyone enrolled rather than everyone holding a
-  seat, and never the examiner (**B10**); your own registration is never confirmed (**B12**). Both are
-  the same missing families as **G9**.
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
   **G8 is closed** and **G4** is down to six permissions with no endpoint — no catalogue
-  administration and no enrolment correction; no self-service enrolment (**G5**); no grade, enrolment or timetable notification
-  family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
+  administration and no enrolment correction; no self-service enrolment (**G5**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
   deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
-- **A refusal reverses the student's own act, and no notification tells them.** The compensation shipped
-  ahead of the message, deliberately: the exam card now says _Refused by the university_ where the registration
-  used to be, so the reversal is visible where the student looks, but nothing reaches the inbox until **G9**.
+- **A refused write-back now says so.** The compensation announces itself as
+  `exam_registration_refused`, carrying the reason the source gave, which closes the one cost ADR 0023
+  named.
 - `accept_source` is still a two-step operation: it clears the way, and a **full** run applies it. Until a
   scheduled sync exists (**G10**) the second step is a button somebody must remember to press — but the
   row now re-reports as a decision awaiting that run rather than as a fresh conflict.
@@ -171,34 +176,31 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — the notification families nobody has (G9, which is also B10 and B12)
+## Next task — write-back step 2: the LMS pair
 
-**Two of the five families exist. Three do not, and two long-standing defects are the same hole seen
-from inside the exam flow.**
+**`learning_space.provision` and `learning_enrollment.upsert`, which is where provisioning stops being
+a column nobody writes (`enrollments.lms_provisioned_at`).**
+
+The outbox, the worker, the capability gate, the retry ladder and the monitor surface all exist and are
+kind-agnostic; this step adds two writers and the `mock-lms` commands they call.
 
 What it takes:
 
-- **Grade publication.** `OfferingResultsService.record` is the emitter's natural home now that it
-  exists: publishing a grade is exactly the moment a student wants to hear. The importer that lands an
-  official result from the registrar should emit the same family, deduplicated the way ADR 0012 already
-  deduplicates by `type:subject:day`.
-- **Enrolment outcome** and **timetable change** — both already detected by their importers, neither
-  emitted.
-- **B10** — the exam audience is `ENROLLMENT_PARTICIPATING_STATUSES`, which is everyone enrolled rather
-  than everyone holding a seat, and never the examiner. A `completed` student who legitimately
-  registers for a resit is never told when that term moves. The audience for an exam-term event should
-  be the people with a live registration, plus the examiner.
-- **B12** — registering and cancelling emit nothing, so the inbox reports what the university changed
-  and never what you undertook. Adding those two closes the last silence in write-back: a refused
-  registration is compensated and currently only the card says so.
+- `LearningSystemConnector` gains `provisionCourse` and `upsertEnrollment` with an idempotency key and
+  an acknowledgement carrying the identifier the LMS assigned, the same shape the academic pair has.
+  `course.provision` and `enrollment.write` are already in `LEARNING_SYSTEM_CAPABILITIES`.
+- Two `IntentWriter`s registered in `WriteBackModule`, targeting `lms` rather than `sis`.
+- What _originates_ a provisioning intent: an offering with no learning space, and an active enrolment
+  with no `lms_provisioned_at`. Unlike the exam pair there is no user act to hang it on, so decide
+  whether a sync run enqueues them or an administrator asks for it on the sync screen. That is the one
+  real design question in this step.
+- `mock-lms` implements both, with a deterministic refusal so the `rejected` path stays walkable.
+- Acknowledgement stamps `lms_provisioned_at` and the space's external id.
 
-Frontend: the inbox already renders by type, so each new family needs its copy and its icon, and the
-exam notification's audience change needs no screen at all.
-
-**After that, in order:** write-back step 2 (the LMS pair) and step 3 (`course_result.publish`, which
-G8 has now given something to publish); B6 (make the seven feature flags gate something); B7 (render
-terminology overrides); G5 (self-service enrolment); the rest of G4 (catalogue administration,
-enrolment correction); G10 (a sync schedule); G12 (GDPR inventory, threat model, audit events, export).
+**After that, in order:** write-back step 3 (`course_result.publish` — G8 has given it something to
+publish); B6 (make the seven feature flags gate something); B7 (render terminology overrides); G5
+(self-service enrolment); the rest of G4 (catalogue administration, enrolment correction); G10 (a sync
+schedule); G12 (GDPR inventory, threat model, audit events, export).
 
 ## Caveats
 

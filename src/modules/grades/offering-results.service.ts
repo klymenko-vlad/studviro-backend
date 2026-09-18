@@ -16,6 +16,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
+import { GradeNotificationsService } from '../notifications/grade-notifications.service';
 
 import {
   OfferingResultsRepository,
@@ -69,6 +70,7 @@ export class OfferingResultsService {
     private readonly repository: OfferingResultsRepository,
     private readonly authorization: AuthorizationService,
     private readonly txHost: TransactionHost,
+    private readonly notifications: GradeNotificationsService,
   ) {}
 
   async findForViewer(
@@ -156,6 +158,16 @@ export class OfferingResultsService {
 
       if (publishes && input.officialGrade !== null) {
         await this.repository.markSeatAttended(offeringId, enrollment.userId, now);
+        await this.notifications.published(
+          { institutionId, sourceSystem: 'platform', connectorName: 'platform' },
+          {
+            result: written,
+            recipientId: enrollment.userId,
+            courseOfferingId: offeringId,
+            previousGrade: existing?.officialGrade ?? null,
+          },
+          now,
+        );
       }
 
       return written;

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { ConnectorsModule } from '../connectors/connectors.module';
 import { InstitutionsModule } from '../institutions/institutions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { ExamRegistrationWriteBackService } from './exam-registration-write-back.service';
 import { ExamRegistrationWriteRepository } from './exam-registration-write.repository';
@@ -20,7 +21,7 @@ import { WriteTargetService } from './write-target.service';
 const WRITER_CLASSES = [ExamRegistrationCreateWriter, ExamRegistrationCancelWriter];
 
 @Module({
-  imports: [ConnectorsModule, InstitutionsModule],
+  imports: [ConnectorsModule, InstitutionsModule, NotificationsModule],
   controllers: [WriteBackController],
   providers: [
     ...WRITER_CLASSES,

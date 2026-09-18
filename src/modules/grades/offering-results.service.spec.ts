@@ -9,6 +9,7 @@ import {
 import type { OfficialCourseResult } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { AuthorizationService } from '../authorization/authorization.service';
+import type { GradeNotificationsService } from '../notifications/grade-notifications.service';
 
 import type { OfferingResultsRepository } from './offering-results.repository';
 import { OfferingResultsService, type RecordGradeInput } from './offering-results.service';
@@ -34,6 +35,7 @@ describe('OfferingResultsService', () => {
   const upsert = vi.fn();
   const markSeatAttended = vi.fn();
   const can = vi.fn();
+  const published = vi.fn();
 
   const repository = {
     findOffering,
@@ -77,6 +79,7 @@ describe('OfferingResultsService', () => {
       repository,
       { can } as unknown as AuthorizationService,
       txHost,
+      { published } as unknown as GradeNotificationsService,
     );
   });
 
