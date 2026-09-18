@@ -21,7 +21,6 @@ import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.c
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { CatalogueModule } from './modules/catalogue/catalogue.module';
-import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { GradesModule } from './modules/grades/grades.module';
@@ -33,9 +32,7 @@ import { LearningModule } from './modules/learning/learning.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
-import { SynchronizationModule } from './modules/synchronization/synchronization.module';
 import { UsersModule } from './modules/users/users.module';
-import { WriteBackModule } from './modules/write-back/write-back.module';
 import { QueueModule } from './queue/queue.module';
 
 /**
@@ -142,7 +139,6 @@ function workerModules(): DynamicModule[] {
     HealthModule,
     AuthModule,
     AuthorizationModule,
-    ConnectorsModule,
     CoursesModule,
     GradesModule,
     IdentityModule,
@@ -154,9 +150,7 @@ function workerModules(): DynamicModule[] {
     SchedulingModule,
     EnrollmentModule,
     CatalogueModule,
-    WriteBackModule,
     UsersModule,
-    SynchronizationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -13,7 +13,6 @@ import {
   type ExamTerm,
 } from '../../src/database/schema';
 import { ExamTermNotificationsService } from '../../src/modules/notifications/exam-term-notifications.service';
-import type { SyncTarget } from '../../src/modules/synchronization/sync.types';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
 interface NotificationBody {
@@ -35,7 +34,6 @@ describe('Notifications (e2e)', () => {
   let notifications: ExamTermNotificationsService;
   let institutionId: string;
   let offeringId: string;
-  let target: SyncTarget;
 
   const actingAs = async (role: CanonicalRole) => {
     const actor = await harness.actingAs();
@@ -115,7 +113,6 @@ describe('Notifications (e2e)', () => {
       .values({ code: 'upjs', name: 'UPJŠ' })
       .returning();
     institutionId = institution!.id;
-    target = { institutionId, sourceSystem: 'sis', connectorName: 'mock-sis' };
 
     const [term] = await harness.db
       .insert(academicTerms)
@@ -151,11 +148,7 @@ describe('Notifications (e2e)', () => {
     await enrol(actor.user.id);
     const created = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
 
-    await notifications.applied(
-      target,
-      { outcome: 'created', previous: null, current: created },
-      MONDAY,
-    );
+    await notifications.applied(institutionId, { previous: null, current: created }, MONDAY);
 
     expect(await inbox(actor)).toMatchObject([
       { type: 'exam_term_published', courseCode: 'INF/ALG/22', occurrenceCount: 1 },
@@ -171,14 +164,10 @@ describe('Notifications (e2e)', () => {
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
     const movedAgain = { ...original, startsAt: new Date('2026-06-04T08:00:00.000Z') };
 
+    await notifications.applied(institutionId, { previous: original, current: moved }, MONDAY);
     await notifications.applied(
-      target,
-      { outcome: 'updated', previous: original, current: moved },
-      MONDAY,
-    );
-    await notifications.applied(
-      target,
-      { outcome: 'updated', previous: moved, current: movedAgain },
+      institutionId,
+      { previous: moved, current: movedAgain },
       MONDAY_EVENING,
     );
 
@@ -199,16 +188,8 @@ describe('Notifications (e2e)', () => {
     await takeSeat(actor.user.id, original.id);
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
 
-    await notifications.applied(
-      target,
-      { outcome: 'updated', previous: original, current: moved },
-      MONDAY,
-    );
-    await notifications.applied(
-      target,
-      { outcome: 'updated', previous: moved, current: original },
-      TUESDAY,
-    );
+    await notifications.applied(institutionId, { previous: original, current: moved }, MONDAY);
+    await notifications.applied(institutionId, { previous: moved, current: original }, TUESDAY);
 
     expect(await inbox(actor)).toHaveLength(2);
   });
@@ -219,11 +200,7 @@ describe('Notifications (e2e)', () => {
     const original = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
     await takeSeat(actor.user.id, original.id);
     const moved = { ...original, startsAt: new Date('2026-06-03T08:00:00.000Z') };
-    await notifications.applied(
-      target,
-      { outcome: 'updated', previous: original, current: moved },
-      MONDAY,
-    );
+    await notifications.applied(institutionId, { previous: original, current: moved }, MONDAY);
     const [delivered] = await inbox(actor);
 
     const read = await harness.inject({
@@ -235,9 +212,8 @@ describe('Notifications (e2e)', () => {
     expect(await unreadCount(actor)).toBe(0);
 
     await notifications.applied(
-      target,
+      institutionId,
       {
-        outcome: 'updated',
         previous: moved,
         current: { ...original, startsAt: new Date('2026-06-05T08:00:00.000Z') },
       },
@@ -251,11 +227,7 @@ describe('Notifications (e2e)', () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id);
     const created = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
-    await notifications.applied(
-      target,
-      { outcome: 'created', previous: null, current: created },
-      MONDAY,
-    );
+    await notifications.applied(institutionId, { previous: null, current: created }, MONDAY);
 
     const response = await harness.inject({
       method: 'POST',
@@ -274,11 +246,7 @@ describe('Notifications (e2e)', () => {
     const stranger = await actingAs('student');
     const created = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
 
-    await notifications.applied(
-      target,
-      { outcome: 'created', previous: null, current: created },
-      MONDAY,
-    );
+    await notifications.applied(institutionId, { previous: null, current: created }, MONDAY);
 
     expect(await inbox(stranger)).toEqual([]);
   });
@@ -298,9 +266,8 @@ describe('Notifications (e2e)', () => {
   describe('who hears that a term moved (B10)', () => {
     const move = (term: ExamTerm) =>
       notifications.applied(
-        target,
+        institutionId,
         {
-          outcome: 'updated',
           previous: term,
           current: { ...term, startsAt: new Date('2026-06-09T08:00:00.000Z') },
         },
@@ -370,11 +337,7 @@ describe('Notifications (e2e)', () => {
       await enrol(actor.user.id);
       const created = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
 
-      await notifications.applied(
-        target,
-        { outcome: 'created', previous: null, current: created },
-        MONDAY,
-      );
+      await notifications.applied(institutionId, { previous: null, current: created }, MONDAY);
 
       expect(await inbox(actor)).toHaveLength(1);
     });

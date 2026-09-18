@@ -13,8 +13,6 @@ import {
   teachingAssignments,
   type LearningActivityType,
   type SubmissionState,
-  type SourceSystem,
-  type SynchronizationStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -39,10 +37,6 @@ export interface MyDeadlineRow {
   termId: string;
   termCode: string;
   termName: string;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
 }
 
 export interface MyDeadlineFilter {
@@ -102,10 +96,6 @@ export class MyDeadlinesRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
-        sourceSystem: learningActivities.sourceSystem,
-        externalId: learningActivities.externalId,
-        lastSynchronizedAt: learningActivities.lastSynchronizedAt,
-        synchronizationStatus: learningActivities.synchronizationStatus,
       })
       .from(learningActivities)
       .leftJoin(

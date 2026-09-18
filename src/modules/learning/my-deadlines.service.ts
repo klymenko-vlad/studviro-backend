@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { InvalidInputError } from '../../common/errors/domain.error';
-import type {
-  LearningActivityType,
-  SourceSystem,
-  SubmissionState,
-  SynchronizationStatus,
-} from '../../database/schema';
+import type { LearningActivityType, SubmissionState } from '../../database/schema';
 
 import {
   MyDeadlinesRepository,
@@ -43,12 +38,6 @@ export interface MyDeadline {
   offering: { id: string };
   course: { id: string; code: string; title: string };
   term: { id: string; code: string; name: string };
-  provenance: {
-    sourceSystem: SourceSystem;
-    externalId: string | null;
-    lastSynchronizedAt: Date | null;
-    synchronizationStatus: SynchronizationStatus;
-  };
 }
 
 @Injectable()
@@ -94,12 +83,6 @@ function compose(row: MyDeadlineRow, now: Date): MyDeadline {
     offering: { id: row.offeringId },
     course: { id: row.courseId, code: row.courseCode, title: row.courseTitle },
     term: { id: row.termId, code: row.termCode, name: row.termName },
-    provenance: {
-      sourceSystem: row.sourceSystem,
-      externalId: row.externalId,
-      lastSynchronizedAt: row.lastSynchronizedAt,
-      synchronizationStatus: row.synchronizationStatus,
-    },
   };
 }
 

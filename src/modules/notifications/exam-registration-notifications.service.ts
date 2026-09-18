@@ -1,15 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
 import type { ExamRegistration, NotificationType } from '../../database/schema';
-import type { SyncTarget } from '../synchronization/sync.types';
 
 import { NotificationEmitterService } from './notification-emitter.service';
-
-const PLATFORM_TARGET = (institutionId: string): SyncTarget => ({
-  institutionId,
-  sourceSystem: 'platform',
-  connectorName: 'platform',
-});
 
 /**
  * The inbox used to report only what the university changed, never what the
@@ -43,7 +36,7 @@ export class ExamRegistrationNotificationsService {
     reason?: string,
   ): Promise<void> {
     await this.emitter.emit({
-      target: PLATFORM_TARGET(registration.institutionId),
+      institutionId: registration.institutionId,
       type,
       subjectId: registration.id,
       courseOfferingId: null,

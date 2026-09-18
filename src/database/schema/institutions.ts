@@ -9,7 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { deletedAt, externalIdUnique, provenance, timestamps } from './_shared';
+import { deletedAt, timestamps } from './_shared';
 
 export const institutions = pgTable(
   'institutions',
@@ -54,14 +54,12 @@ export const orgUnits = pgTable(
     code: text('code').notNull(),
     name: text('name').notNull(),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('org_units_code_unique_idx')
       .on(table.institutionId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('org_units_external_id_unique_idx', table),
     index('org_units_parent_id_idx').on(table.parentId),
   ],
 );

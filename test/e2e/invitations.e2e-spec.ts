@@ -269,7 +269,6 @@ describe('Invitations (e2e)', () => {
       await harness.db.insert(externalIdentities).values({
         institutionId,
         userId: shadow!.id,
-        sourceSystem: 'sis',
         issuer: 'mock-sis',
         subject: 'ext-1',
         assertedEmail: 'imported@upjs.sk',
@@ -325,7 +324,6 @@ describe('Invitations (e2e)', () => {
       await harness.db.insert(externalIdentities).values({
         institutionId,
         userId: shadowId,
-        sourceSystem: 'sis',
         issuer: 'mock-sis',
         subject: 'ext-merge',
         assertedEmail: address,

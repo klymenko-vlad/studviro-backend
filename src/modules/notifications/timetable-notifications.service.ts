@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 
 import type { NotificationType, TimetableEvent } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
 @Injectable()
 export class TimetableNotificationsService {
   constructor(private readonly emitter: NotificationEmitterService) {}
 
   async applied(
-    target: SyncTarget,
-    change: AppliedChange<TimetableEvent>,
+    institutionId: string,
+    change: NotificationChange<TimetableEvent>,
     occurredAt: Date,
   ): Promise<void> {
     const subject = change.current ?? change.previous;
@@ -19,7 +19,7 @@ export class TimetableNotificationsService {
     if (!subject || !type) return;
 
     await this.emitter.emit({
-      target,
+      institutionId,
       type,
       subjectId: subject.id,
       courseOfferingId: subject.courseOfferingId,
@@ -42,9 +42,9 @@ export class TimetableNotificationsService {
  * A new class on the timetable is not news — a term's worth of them lands in
  * one import. A class that moved or was called off is.
  */
-function typeOf(change: AppliedChange<TimetableEvent>): NotificationType | null {
-  if (change.outcome === 'deleted') return 'timetable_event_cancelled';
-  if (change.outcome !== 'updated' || !change.previous || !change.current) return null;
+function typeOf(change: NotificationChange<TimetableEvent>): NotificationType | null {
+  if (change.removed) return 'timetable_event_cancelled';
+  if (!change.previous || !change.current) return null;
 
   const { previous, current } = change;
   if (!previous.cancelledAt && current.cancelledAt) return 'timetable_event_cancelled';

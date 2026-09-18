@@ -7,7 +7,7 @@ import {
 } from '../../common/errors/domain.error';
 import { ENROLLMENT_WITHDRAWABLE_STATUSES, type Enrollment } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
-import { CourseEnrollmentWriteBackService } from '../write-back/course-enrollment-write-back.service';
+import { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
 
 import { windowState } from './enrollable-offerings.service';
 import { MyEnrollmentsRepository, type EnrollableRow } from './my-enrollments.repository';
@@ -19,7 +19,7 @@ export class MyEnrollmentsService {
   constructor(
     private readonly repository: MyEnrollmentsRepository,
     private readonly txHost: TransactionHost,
-    private readonly writeBack: CourseEnrollmentWriteBackService,
+    private readonly notifications: EnrollmentNotificationsService,
   ) {}
 
   /**
@@ -33,7 +33,7 @@ export class MyEnrollmentsService {
     offeringId: string,
     now = new Date(),
   ): Promise<Enrollment> {
-    const { enrollment, outcome } = await this.txHost.run(
+    const enrollment = await this.txHost.run(
       async () => {
         const offering = await this.repository.findEnrollable(
           institutionId,
@@ -48,27 +48,23 @@ export class MyEnrollmentsService {
         await this.assertStudent(institutionId, userId);
         this.assertSeatFree(offering);
 
-        const created = offering.myEnrollmentId
-          ? await this.repository.reopen(offering.myEnrollmentId, now)
-          : await this.repository.request(institutionId, userId, offeringId, now);
-
-        return {
-          enrollment: created,
-          outcome: await this.writeBack.enqueueRequest(created, userId),
-        };
+        return offering.myEnrollmentId
+          ? this.repository.reopen(offering.myEnrollmentId, now)
+          : this.repository.request(institutionId, userId, offeringId, now);
       },
       { isolationLevel: 'serializable' },
     );
 
-    if (outcome.kind === 'not_writable') {
-      await this.repository.activate(enrollment.id, now);
+    // StudViro is the system of record, so a place asked for is a place given:
+    // there is nobody upstream to approve it (ADR 0024).
+    await this.repository.activate(enrollment.id, now);
+    await this.notifications.applied(
+      institutionId,
+      { previous: enrollment, current: { ...enrollment, status: 'active' } },
+      now,
+    );
 
-      return { ...enrollment, status: 'active', synchronizationStatus: 'in_sync' };
-    }
-
-    await this.writeBack.publish(institutionId, outcome);
-
-    return enrollment;
+    return { ...enrollment, status: 'active' };
   }
 
   async withdraw(
@@ -77,7 +73,7 @@ export class MyEnrollmentsService {
     enrollmentId: string,
     now = new Date(),
   ): Promise<Enrollment> {
-    const { enrollment, outcome } = await this.txHost.run(async () => {
+    return this.txHost.run(async () => {
       const existing = await this.repository.findMine(institutionId, userId, enrollmentId);
       if (!existing) throw new EntityNotFoundError('enrollment', enrollmentId);
 
@@ -96,17 +92,8 @@ export class MyEnrollmentsService {
       );
       if (offering) this.assertOpen(offering, now);
 
-      const enqueued = await this.writeBack.enqueueWithdrawal(existing, userId);
-
-      return {
-        enrollment: await this.repository.withdraw(enrollmentId, now),
-        outcome: enqueued,
-      };
+      return this.repository.withdraw(enrollmentId, now);
     });
-
-    await this.writeBack.publish(institutionId, outcome);
-
-    return enrollment;
   }
 
   private assertOnOffer(offering: EnrollableRow): void {

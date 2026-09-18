@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 
 import { NotificationsModule } from '../notifications/notifications.module';
-import { WriteBackModule } from '../write-back/write-back.module';
 
 import { ExamTermCancellationService } from './exam-term-cancellation.service';
 import { MyExamRegistrationsController } from './my-exam-registrations.controller';
@@ -15,7 +14,7 @@ import { MyTimetableEventsRepository } from './my-timetable-events.repository';
 import { MyTimetableEventsService } from './my-timetable-events.service';
 
 @Module({
-  imports: [WriteBackModule, NotificationsModule],
+  imports: [NotificationsModule],
   controllers: [
     MyTimetableEventsController,
     MyExamTermsController,

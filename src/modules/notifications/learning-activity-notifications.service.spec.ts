@@ -1,17 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LearningActivity } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import type { LearningActivityAudienceRepository } from './learning-activity-audience.repository';
 import { LearningActivityNotificationsService } from './learning-activity-notifications.service';
 import type { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
-const TARGET: SyncTarget = {
-  institutionId: 'institution-1',
-  sourceSystem: 'lms',
-  connectorName: 'mock-lms',
-};
+const INSTITUTION = 'institution-1';
 
 const activity = (overrides: Partial<LearningActivity> = {}): LearningActivity =>
   ({
@@ -26,9 +22,8 @@ const activity = (overrides: Partial<LearningActivity> = {}): LearningActivity =
   }) as LearningActivity;
 
 const change = (
-  overrides: Partial<AppliedChange<LearningActivity>>,
-): AppliedChange<LearningActivity> => ({
-  outcome: 'updated',
+  overrides: Partial<NotificationChange<LearningActivity>>,
+): NotificationChange<LearningActivity> => ({
   previous: activity(),
   current: activity(),
   ...overrides,
@@ -51,11 +46,11 @@ describe(LearningActivityNotificationsService.name, () => {
     service = new LearningActivityNotificationsService(emitter, audience);
   });
 
-  const applied = (overrides: Partial<AppliedChange<LearningActivity>>) =>
-    service.applied(TARGET, change(overrides), new Date('2026-10-20T09:00:00.000Z'));
+  const applied = (overrides: Partial<NotificationChange<LearningActivity>>) =>
+    service.applied(INSTITUTION, change(overrides), new Date('2026-10-20T09:00:00.000Z'));
 
   it('announces a newly imported deadline against the offering its space belongs to', async () => {
-    await applied({ outcome: 'created', previous: null, current: activity() });
+    await applied({ previous: null, current: activity() });
 
     expect(emit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -99,7 +94,6 @@ describe(LearningActivityNotificationsService.name, () => {
 
   it('says nothing about an activity that carries no deadline', async () => {
     await applied({
-      outcome: 'created',
       previous: null,
       current: activity({ dueAt: null, type: 'resource' }),
     });
@@ -115,7 +109,6 @@ describe(LearningActivityNotificationsService.name, () => {
 
   it('says nothing about a hidden activity students cannot see', async () => {
     await applied({
-      outcome: 'created',
       previous: null,
       current: activity({ visible: false }),
     });
@@ -123,14 +116,14 @@ describe(LearningActivityNotificationsService.name, () => {
     expect(emit).not.toHaveBeenCalled();
   });
 
-  it('says nothing when the record was skipped by the stale-write guard', async () => {
-    await applied({ outcome: 'skipped', previous: activity(), current: null });
+  it('says nothing about a change with nothing on either side', async () => {
+    await applied({ previous: activity(), current: null });
 
     expect(emit).not.toHaveBeenCalled();
   });
 
   it('says nothing about a tombstoned activity', async () => {
-    await applied({ outcome: 'deleted', previous: activity(), current: null });
+    await applied({ removed: true, previous: activity(), current: null });
 
     expect(emit).not.toHaveBeenCalled();
   });
@@ -138,7 +131,7 @@ describe(LearningActivityNotificationsService.name, () => {
   it('says nothing when the learning space is matched to no course offering', async () => {
     findOfferingOfSpace.mockResolvedValue(null);
 
-    await applied({ outcome: 'created', previous: null, current: activity() });
+    await applied({ previous: null, current: activity() });
 
     expect(emit).not.toHaveBeenCalled();
   });

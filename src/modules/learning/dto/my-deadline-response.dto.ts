@@ -3,13 +3,9 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
   LEARNING_ACTIVITY_TYPES,
-  SOURCE_SYSTEMS,
   SUBMISSION_STATES,
-  SYNCHRONIZATION_STATUSES,
   type LearningActivityType,
-  type SourceSystem,
   type SubmissionState,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 import {
   DEADLINE_ATTENDANCES,
@@ -41,20 +37,6 @@ export class DeadlineTermDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() code!: string;
   @Expose() @ApiProperty() name!: string;
-}
-
-@Exclude()
-export class DeadlineProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 }
 
 @Exclude()
@@ -100,11 +82,6 @@ export class MyDeadlineResponseDto {
   @Expose() @Type(() => DeadlineOfferingDto) @ApiProperty() offering!: DeadlineOfferingDto;
   @Expose() @Type(() => DeadlineCourseDto) @ApiProperty() course!: DeadlineCourseDto;
   @Expose() @Type(() => DeadlineTermDto) @ApiProperty() term!: DeadlineTermDto;
-
-  @Expose()
-  @Type(() => DeadlineProvenanceDto)
-  @ApiProperty()
-  provenance!: DeadlineProvenanceDto;
 
   static fromMyDeadline(deadline: MyDeadline): MyDeadlineResponseDto {
     return Object.assign(new MyDeadlineResponseDto(), deadline);

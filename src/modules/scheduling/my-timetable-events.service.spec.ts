@@ -31,11 +31,6 @@ const row = (overrides: Partial<MyTimetableEventRow> = {}): MyTimetableEventRow 
   termId: 'term-1',
   termCode: '2026-SS',
   termName: 'Summer 2026',
-  sourceSystem: 'sis',
-  externalId: 'TTE-1',
-  sourceUpdatedAt: new Date('2026-02-20T00:00:00.000Z'),
-  lastSynchronizedAt: new Date('2026-02-21T00:00:00.000Z'),
-  synchronizationStatus: 'in_sync',
   ...overrides,
 });
 
@@ -118,20 +113,6 @@ describe(MyTimetableEventsService.name, () => {
     const [event] = await service.listMine('institution-1', 'student-1', range);
 
     expect(event!.isCancelled).toBe(true);
-  });
-
-  it('carries the provenance of the imported event', async () => {
-    findMyEvents.mockResolvedValue([row()]);
-
-    const [event] = await service.listMine('institution-1', 'student-1', range);
-
-    expect(event!.provenance).toEqual({
-      sourceSystem: 'sis',
-      externalId: 'TTE-1',
-      sourceUpdatedAt: new Date('2026-02-20T00:00:00.000Z'),
-      lastSynchronizedAt: new Date('2026-02-21T00:00:00.000Z'),
-      synchronizationStatus: 'in_sync',
-    });
   });
 
   it('passes the caller’s filter through to the repository', async () => {

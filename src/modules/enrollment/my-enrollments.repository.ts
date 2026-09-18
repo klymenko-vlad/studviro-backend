@@ -115,8 +115,6 @@ export class MyEnrollmentsRepository {
         status: 'requested',
         requirementType: 'elective',
         enrolledAt: now,
-        sourceSystem: 'platform',
-        synchronizationStatus: 'pending',
       })
       .returning();
 
@@ -133,7 +131,6 @@ export class MyEnrollmentsRepository {
         status: 'requested',
         enrolledAt: now,
         withdrawnAt: null,
-        synchronizationStatus: 'pending',
       })
       .where(eq(enrollments.id, enrollmentId))
       .returning();
@@ -158,7 +155,7 @@ export class MyEnrollmentsRepository {
   async activate(enrollmentId: string, now: Date): Promise<void> {
     await this.writer
       .update(enrollments)
-      .set({ status: 'active', enrolledAt: now, synchronizationStatus: 'in_sync' })
+      .set({ status: 'active', enrolledAt: now })
       .where(eq(enrollments.id, enrollmentId));
   }
 

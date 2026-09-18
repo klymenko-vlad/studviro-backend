@@ -1,8 +1,18 @@
 import type { NotificationPayload, NotificationType } from '../../database/schema';
-import type { SyncTarget } from '../synchronization/sync.types';
+
+/**
+ * A change worth telling somebody about. Both sides may be null: a thing that
+ * did not exist before was created, and a thing that has no `current` was
+ * removed.
+ */
+export interface NotificationChange<TSubject> {
+  readonly previous: TSubject | null;
+  readonly current: TSubject | null;
+  readonly removed?: boolean;
+}
 
 export interface NotificationEmission {
-  readonly target: SyncTarget;
+  readonly institutionId: string;
   readonly type: NotificationType;
   readonly subjectId: string;
   readonly courseOfferingId: string | null;

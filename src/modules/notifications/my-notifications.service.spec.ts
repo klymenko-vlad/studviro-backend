@@ -22,7 +22,6 @@ const row = (overrides: Partial<MyNotificationRow> = {}): MyNotificationRow => (
   courseOfferingId: 'offering-1',
   courseCode: 'PF-P106',
   courseTitle: 'Programming',
-  sourceSystem: 'sis',
   ...overrides,
 });
 

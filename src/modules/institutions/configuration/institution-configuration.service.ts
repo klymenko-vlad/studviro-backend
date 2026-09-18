@@ -52,14 +52,6 @@ export class InstitutionConfigurationService {
           institutionId,
           terminology: mergeTerminology(stored?.terminology ?? {}, changes.terminology ?? {}),
           features: mergeFeatures(stored?.features ?? {}, changes.features ?? {}),
-          academicSystemConnector: connectorOf(
-            changes.academicSystemConnector,
-            stored?.academicSystemConnector,
-          ),
-          learningSystemConnector: connectorOf(
-            changes.learningSystemConnector,
-            stored?.learningSystemConnector,
-          ),
         },
         this.settings.conflictTarget,
         tx,
@@ -85,12 +77,6 @@ export class InstitutionConfigurationService {
   }
 }
 
-function connectorOf(change: string | null | undefined, current: string | null | undefined) {
-  if (change === undefined) return current ?? null;
-
-  return change === null || change.trim() === '' ? null : change.trim();
-}
-
 function combine(
   institution: Institution,
   settings: InstitutionSettings | undefined,
@@ -103,9 +89,5 @@ function combine(
     timezone: institution.timezone,
     terminology: resolveTerminology(settings?.terminology ?? {}),
     features: resolveFeatures(settings?.features ?? {}),
-    connectors: {
-      academicSystem: settings?.academicSystemConnector ?? null,
-      learningSystem: settings?.learningSystemConnector ?? null,
-    },
   };
 }

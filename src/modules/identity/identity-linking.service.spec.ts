@@ -15,7 +15,6 @@ const USER = '44444444-4444-4444-4444-444444444444';
 
 const provider = (overrides: Partial<ProviderIdentity> = {}): ProviderIdentity => ({
   institutionId: INSTITUTION,
-  sourceSystem: 'sis',
   issuer: 'https://login.upjs.sk',
   subject: 'subject-123',
   email: 'jana@upjs.sk',
@@ -128,7 +127,6 @@ describe('IdentityLinkingService', () => {
         userId: resolved.id,
         issuer: 'https://login.upjs.sk',
         subject: 'subject-123',
-        sourceSystem: 'sis',
       }),
       undefined,
     );

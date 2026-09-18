@@ -32,10 +32,10 @@ describe('CatalogueService', () => {
     vi.clearAllMocks();
     programCalls.create.mockImplementation((v: unknown) => Promise.resolve(v));
     programCalls.update.mockImplementation((_id: string, v: unknown) => Promise.resolve(v));
-    programCalls.findByIdIn.mockResolvedValue({ id: 'program-1', sourceSystem: 'platform' });
+    programCalls.findByIdIn.mockResolvedValue({ id: 'program-1' });
     courseCalls.create.mockImplementation((v: unknown) => Promise.resolve(v));
     courseCalls.update.mockImplementation((_id: string, v: unknown) => Promise.resolve(v));
-    courseCalls.findByIdIn.mockResolvedValue({ id: 'course-1', sourceSystem: 'platform' });
+    courseCalls.findByIdIn.mockResolvedValue({ id: 'course-1' });
 
     service = new CatalogueService(
       programCalls as unknown as ProgramsCatalogueRepository,
@@ -44,11 +44,11 @@ describe('CatalogueService', () => {
   });
 
   describe('programmes', () => {
-    it('authors a new programme on the platform, so no import ever matches it', async () => {
+    it('creates the programme the institution asked for', async () => {
       await service.createProgram('institution-1', { code: 'INF-BC', name: 'Informatics' });
 
       expect(programCalls.create).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceSystem: 'platform', code: 'INF-BC' }),
+        expect.objectContaining({ code: 'INF-BC', name: 'Informatics' }),
       );
     });
 
@@ -66,26 +66,6 @@ describe('CatalogueService', () => {
       await expect(
         service.updateProgram('institution-1', 'program-1', { name: 'X' }),
       ).rejects.toBeInstanceOf(EntityNotFoundError);
-    });
-
-    it('marks a row the registrar owns pending when the platform edits it', async () => {
-      programCalls.findByIdIn.mockResolvedValue({ id: 'program-1', sourceSystem: 'sis' });
-
-      await service.updateProgram('institution-1', 'program-1', { name: 'Renamed' });
-
-      expect(programCalls.update).toHaveBeenCalledWith(
-        'program-1',
-        expect.objectContaining({ name: 'Renamed', synchronizationStatus: 'pending' }),
-      );
-    });
-
-    it('leaves a platform-authored row’s sync state alone', async () => {
-      await service.updateProgram('institution-1', 'program-1', { name: 'Renamed' });
-
-      expect(programCalls.update).toHaveBeenCalledWith(
-        'program-1',
-        expect.not.objectContaining({ synchronizationStatus: expect.anything() }),
-      );
     });
 
     it('sends only the fields the caller actually named', async () => {

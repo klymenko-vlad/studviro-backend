@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Enrollment } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import { EnrollmentNotificationsService } from './enrollment-notifications.service';
 import type { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
-const TARGET: SyncTarget = {
-  institutionId: 'institution-1',
-  sourceSystem: 'sis',
-  connectorName: 'mock-sis',
-};
+const INSTITUTION = 'institution-1';
 const NOW = new Date('2026-02-01T00:00:00.000Z');
 
 const enrollment = (status: Enrollment['status']) =>
@@ -25,8 +21,8 @@ describe('EnrollmentNotificationsService', () => {
   const emit = vi.fn();
   let service: EnrollmentNotificationsService;
 
-  const apply = (change: Partial<AppliedChange<Enrollment>>) =>
-    service.applied(TARGET, change as AppliedChange<Enrollment>, NOW);
+  const apply = (change: Partial<NotificationChange<Enrollment>>) =>
+    service.applied(INSTITUTION, change as NotificationChange<Enrollment>, NOW);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -37,7 +33,6 @@ describe('EnrollmentNotificationsService', () => {
 
   it('tells the student their place is confirmed', async () => {
     await apply({
-      outcome: 'updated',
       previous: enrollment('requested'),
       current: enrollment('active'),
     });
@@ -49,7 +44,6 @@ describe('EnrollmentNotificationsService', () => {
 
   it('tells the student their request was refused', async () => {
     await apply({
-      outcome: 'updated',
       previous: enrollment('requested'),
       current: enrollment('rejected'),
     });
@@ -59,7 +53,6 @@ describe('EnrollmentNotificationsService', () => {
 
   it('says nothing when the outcome has not moved', async () => {
     await apply({
-      outcome: 'updated',
       previous: enrollment('active'),
       current: enrollment('active'),
     });
@@ -68,13 +61,13 @@ describe('EnrollmentNotificationsService', () => {
   });
 
   it('says nothing about a status that is not an outcome', async () => {
-    await apply({ outcome: 'updated', previous: null, current: enrollment('provisioning') });
+    await apply({ previous: null, current: enrollment('provisioning') });
 
     expect(emit).not.toHaveBeenCalled();
   });
 
   it('says nothing about a row that was removed', async () => {
-    await apply({ outcome: 'deleted', previous: enrollment('active'), current: null });
+    await apply({ removed: true, previous: enrollment('active'), current: null });
 
     expect(emit).not.toHaveBeenCalled();
   });

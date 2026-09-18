@@ -4,14 +4,10 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   ACTIVITY_COMPLETION_STATES,
   LEARNING_ACTIVITY_TYPES,
-  SOURCE_SYSTEMS,
   SUBMISSION_STATES,
-  SYNCHRONIZATION_STATUSES,
   type ActivityCompletionState,
   type LearningActivityType,
-  type SourceSystem,
   type SubmissionState,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 import type { MyAssessmentResult } from '../my-assessment-results.service';
 
@@ -58,20 +54,6 @@ export class AssessmentOfferingDto {
 }
 
 @Exclude()
-export class AssessmentProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
-}
-
-@Exclude()
 export class MyAssessmentResultResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() name!: string;
@@ -100,11 +82,6 @@ export class MyAssessmentResultResponseDto {
   @Type(() => AssessmentOfferingDto)
   @ApiProperty({ type: AssessmentOfferingDto, nullable: true })
   offering!: AssessmentOfferingDto | null;
-
-  @Expose()
-  @Type(() => AssessmentProvenanceDto)
-  @ApiProperty()
-  provenance!: AssessmentProvenanceDto;
 
   static fromMyAssessmentResult(result: MyAssessmentResult): MyAssessmentResultResponseDto {
     return Object.assign(new MyAssessmentResultResponseDto(), result);

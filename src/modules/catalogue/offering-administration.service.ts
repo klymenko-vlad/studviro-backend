@@ -39,7 +39,7 @@ export class OfferingAdministrationService {
     changes: OfferingChanges,
   ): Promise<CourseOffering> {
     return this.txHost.run(async () => {
-      const existing = await this.offering(institutionId, offeringId);
+      await this.offering(institutionId, offeringId);
 
       if (changes.capacity !== undefined && changes.capacity !== null) {
         await this.assertCapacityFits(offeringId, changes.capacity);
@@ -51,11 +51,6 @@ export class OfferingAdministrationService {
           ...(changes.capacity === undefined ? {} : { capacity: changes.capacity }),
           ...(changes.status === undefined ? {} : { status: changes.status }),
           ...(changes.language === undefined ? {} : { language: changes.language }),
-          // An edit to a row the registrar owns is a disagreement until a run
-          // settles it.
-          ...(existing.sourceSystem === 'platform'
-            ? {}
-            : { synchronizationStatus: 'pending' as const }),
         })
         .where(eq(courseOfferings.id, offeringId))
         .returning();
@@ -101,9 +96,6 @@ export class OfferingAdministrationService {
           ...(status === 'withdrawn' || status === 'rejected'
             ? { withdrawnAt: now }
             : { withdrawnAt: null, enrolledAt: existing.enrolledAt ?? now }),
-          ...(existing.sourceSystem === 'platform'
-            ? {}
-            : { synchronizationStatus: 'pending' as const }),
         })
         .where(eq(enrollments.id, enrollmentId))
         .returning();

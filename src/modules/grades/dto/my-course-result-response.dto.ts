@@ -4,12 +4,8 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   COURSE_GRADES,
   OFFICIAL_COURSE_RESULT_STATUSES,
-  SOURCE_SYSTEMS,
-  SYNCHRONIZATION_STATUSES,
   type CourseGrade,
   type OfficialCourseResultStatus,
-  type SourceSystem,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 import {
   COURSE_RESULT_KINDS,
@@ -52,24 +48,6 @@ export class OfficialCourseResultDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   recordedAt!: Date | null;
-}
-
-@Exclude()
-export class CourseResultProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  sourceUpdatedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 }
 
 @Exclude()
@@ -129,11 +107,6 @@ export class MyCourseResultResponseDto {
   @Type(() => OfficialCourseResultDto)
   @ApiProperty()
   official!: OfficialCourseResultDto;
-
-  @Expose()
-  @Type(() => CourseResultProvenanceDto)
-  @ApiProperty()
-  provenance!: CourseResultProvenanceDto;
 
   @Expose() @ApiProperty({ format: 'uuid' }) enrollmentId!: string;
 

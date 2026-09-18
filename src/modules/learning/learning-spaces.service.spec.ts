@@ -11,8 +11,6 @@ const row = (overrides: Partial<LearningSpaceRow> = {}): LearningSpaceRow => ({
   shortName: 'ALG/WS26',
   url: 'https://moodle.example/course/view.php?id=1',
   visible: true,
-  externalId: 'LMS-1',
-  lastSynchronizedAt: new Date('2026-09-14T00:00:00.000Z'),
   offeringId: 'offering',
   courseCode: 'ALG',
   courseTitle: 'Algorithms',

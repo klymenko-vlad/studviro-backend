@@ -21,8 +21,6 @@ export interface LearningSpaceRow {
   shortName: string | null;
   url: string | null;
   visible: boolean;
-  externalId: string | null;
-  lastSynchronizedAt: Date | null;
   offeringId: string | null;
   courseCode: string | null;
   courseTitle: string | null;
@@ -48,8 +46,6 @@ export class LearningSpacesRepository {
         shortName: learningSpaces.shortName,
         url: learningSpaces.url,
         visible: learningSpaces.visible,
-        externalId: learningSpaces.externalId,
-        lastSynchronizedAt: learningSpaces.lastSynchronizedAt,
         offeringId: courseOfferings.id,
         courseCode: courses.code,
         courseTitle: courses.title,

@@ -17,7 +17,6 @@ import {
   type EnrollmentStatus,
   type OfficialCourseResult,
   type OfficialCourseResultStatus,
-  type SourceSystem,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -44,8 +43,6 @@ export interface OfferingResultRow {
   proposedAt: Date | null;
   officialGrade: CourseGrade | null;
   officialRecordedAt: Date | null;
-  sourceSystem: SourceSystem | null;
-  externalId: string | null;
 }
 
 @Injectable()
@@ -113,8 +110,6 @@ export class OfferingResultsRepository {
         proposedAt: officialCourseResults.proposedAt,
         officialGrade: officialCourseResults.officialGrade,
         officialRecordedAt: officialCourseResults.officialRecordedAt,
-        sourceSystem: officialCourseResults.sourceSystem,
-        externalId: officialCourseResults.externalId,
       })
       .from(enrollments)
       .innerJoin(users, eq(users.id, enrollments.userId))

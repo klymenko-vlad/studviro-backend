@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { WriteBackModule } from '../write-back/write-back.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { EnrollableOfferingsRepository } from './enrollable-offerings.repository';
 import { EnrollableOfferingsService } from './enrollable-offerings.service';
@@ -9,7 +9,7 @@ import { MyEnrollmentsRepository } from './my-enrollments.repository';
 import { MyEnrollmentsService } from './my-enrollments.service';
 
 @Module({
-  imports: [WriteBackModule],
+  imports: [NotificationsModule],
   controllers: [MyEnrollmentsController],
   providers: [
     EnrollableOfferingsService,

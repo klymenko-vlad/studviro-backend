@@ -1,7 +1,6 @@
 export * from './_relations';
 export * from './_shared';
 export * from './academic-structure';
-export * from './connector-credentials';
 export * from './course-results';
 export * from './demo-requests';
 export * from './enrollments';
@@ -15,7 +14,5 @@ export * from './password-reset-tokens';
 export * from './refresh-tokens';
 export * from './role-assignments';
 export * from './scheduling';
-export * from './synchronization';
 export * from './user-emails';
 export * from './users';
-export * from './write-intents';

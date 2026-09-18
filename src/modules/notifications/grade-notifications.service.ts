@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
 import type { OfficialCourseResult } from '../../database/schema';
-import type { SyncTarget } from '../synchronization/sync.types';
 
 import { NotificationEmitterService } from './notification-emitter.service';
 
@@ -21,7 +20,7 @@ export class GradeNotificationsService {
   constructor(private readonly emitter: NotificationEmitterService) {}
 
   async published(
-    target: SyncTarget,
+    institutionId: string,
     publication: GradePublication,
     occurredAt: Date,
   ): Promise<void> {
@@ -29,7 +28,7 @@ export class GradeNotificationsService {
     if (result.officialGrade === null) return;
 
     await this.emitter.emit({
-      target,
+      institutionId,
       type: previousGrade === null ? 'grade_published' : 'grade_corrected',
       subjectId: result.id,
       courseOfferingId: publication.courseOfferingId,

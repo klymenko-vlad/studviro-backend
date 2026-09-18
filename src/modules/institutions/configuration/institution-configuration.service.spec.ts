@@ -24,8 +24,6 @@ const settings = (overrides: Partial<InstitutionSettings> = {}): InstitutionSett
     institutionId: UPJS,
     terminology: {},
     features: {},
-    academicSystemConnector: null,
-    learningSystemConnector: null,
     ...overrides,
   }) as InstitutionSettings;
 
@@ -75,7 +73,6 @@ describe('InstitutionConfigurationService', () => {
       expect(configuration.features.examRegistration).toBe(true);
       expect(configuration.features.fees).toBe(false);
       expect(configuration.terminology.faculty).toBeNull();
-      expect(configuration.connectors).toEqual({ academicSystem: null, learningSystem: null });
     });
 
     it('reports every terminology key and every feature flag, overridden or not', async () => {
@@ -89,17 +86,6 @@ describe('InstitutionConfigurationService', () => {
       expect(configuration.terminology.course).toBeNull();
       expect(configuration.features.fees).toBe(true);
       expect(configuration.features.grades).toBe(true);
-    });
-
-    it('exposes the connectors the institution selected', async () => {
-      const { service } = serviceWith(settings({ academicSystemConnector: 'mock-sis' }));
-
-      const configuration = await service.resolve(UPJS);
-
-      expect(configuration.connectors).toEqual({
-        academicSystem: 'mock-sis',
-        learningSystem: null,
-      });
     });
   });
 
@@ -185,11 +171,9 @@ describe('InstitutionConfigurationService', () => {
 
       const configuration = await service.update(UPJS, {
         terminology: { faculty: 'School' },
-        academicSystemConnector: 'mock-sis',
       });
 
       expect(configuration.terminology.faculty).toBe('School');
-      expect(configuration.connectors.academicSystem).toBe('mock-sis');
     });
 
     it('rejects a terminology key outside the catalogue', async () => {

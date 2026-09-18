@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 import type { LearningActivity, NotificationType } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import { LearningActivityAudienceRepository } from './learning-activity-audience.repository';
 import { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
 @Injectable()
 export class LearningActivityNotificationsService {
@@ -14,8 +14,8 @@ export class LearningActivityNotificationsService {
   ) {}
 
   async applied(
-    target: SyncTarget,
-    change: AppliedChange<LearningActivity>,
+    institutionId: string,
+    change: NotificationChange<LearningActivity>,
     occurredAt: Date,
   ): Promise<void> {
     const activity = change.current;
@@ -23,13 +23,13 @@ export class LearningActivityNotificationsService {
     if (!activity?.dueAt || !type) return;
 
     const courseOfferingId = await this.audience.findOfferingOfSpace(
-      target.institutionId,
+      institutionId,
       activity.learningSpaceId,
     );
     if (!courseOfferingId) return;
 
     await this.emitter.emit({
-      target,
+      institutionId,
       type,
       subjectId: activity.id,
       courseOfferingId,
@@ -48,13 +48,13 @@ export class LearningActivityNotificationsService {
     });
   }
 
-  private typeOf(change: AppliedChange<LearningActivity>): NotificationType | null {
+  private typeOf(change: NotificationChange<LearningActivity>): NotificationType | null {
     const { current } = change;
     if (!current?.visible || !current.dueAt) return null;
-    if (change.outcome === 'created') return 'assignment_due_published';
-    if (change.outcome !== 'updated') return null;
+    if (change.removed) return null;
+    if (!change.previous) return 'assignment_due_published';
 
-    const previousDueAt = change.previous?.dueAt ?? null;
+    const previousDueAt = change.previous.dueAt;
     if (previousDueAt === null) return 'assignment_due_published';
     if (previousDueAt.getTime() === current.dueAt.getTime()) return null;
 

@@ -10,7 +10,6 @@ import type { OfficialCourseResult } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { AuthorizationService } from '../authorization/authorization.service';
 import type { GradeNotificationsService } from '../notifications/grade-notifications.service';
-import type { CourseResultWriteBackService } from '../write-back/course-result-write-back.service';
 
 import type { OfferingResultsRepository } from './offering-results.repository';
 import { OfferingResultsService, type RecordGradeInput } from './offering-results.service';
@@ -37,8 +36,6 @@ describe('OfferingResultsService', () => {
   const markSeatAttended = vi.fn();
   const can = vi.fn();
   const published = vi.fn();
-  const enqueuePublication = vi.fn();
-  const publishIntent = vi.fn();
 
   const repository = {
     findOffering,
@@ -75,7 +72,6 @@ describe('OfferingResultsService', () => {
     findResult.mockResolvedValue(undefined);
     highestAttempt.mockResolvedValue(0);
     can.mockResolvedValue(true);
-    enqueuePublication.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
     upsert.mockImplementation((values: Record<string, unknown>) =>
       Promise.resolve({ id: 'result-1', ...values } as unknown as OfficialCourseResult),
     );
@@ -84,10 +80,6 @@ describe('OfferingResultsService', () => {
       { can } as unknown as AuthorizationService,
       txHost,
       { published } as unknown as GradeNotificationsService,
-      {
-        enqueuePublication,
-        publish: publishIntent,
-      } as unknown as CourseResultWriteBackService,
     );
   });
 
@@ -165,7 +157,6 @@ describe('OfferingResultsService', () => {
         id: 'result-1',
         status: 'official',
         officialGrade: 'B',
-        sourceSystem: 'platform',
       });
       await record({ officialGrade: 'A' });
       expect(upsert).toHaveBeenLastCalledWith(
@@ -234,40 +225,6 @@ describe('OfferingResultsService', () => {
     });
   });
 
-  describe('a grade the registrar owns', () => {
-    it('is marked pending when the platform overwrites it, so a run settles it', async () => {
-      findResult.mockResolvedValue({
-        id: 'result-1',
-        status: 'official',
-        officialGrade: null,
-        sourceSystem: 'sis',
-      });
-
-      await record({ proposedGrade: 'B' });
-
-      expect(upsert).toHaveBeenLastCalledWith(
-        expect.objectContaining({ synchronizationStatus: 'pending' }),
-        'result-1',
-      );
-    });
-
-    it('leaves a platform-authored row alone', async () => {
-      findResult.mockResolvedValue({
-        id: 'result-1',
-        status: 'proposed',
-        officialGrade: null,
-        sourceSystem: 'platform',
-      });
-
-      await record({ proposedGrade: 'B' });
-
-      expect(upsert).toHaveBeenLastCalledWith(
-        expect.not.objectContaining({ synchronizationStatus: expect.anything() }),
-        'result-1',
-      );
-    });
-  });
-
   describe('reading the offering', () => {
     it('groups every attempt under the student who holds it', async () => {
       findResults.mockResolvedValue([
@@ -301,33 +258,6 @@ describe('OfferingResultsService', () => {
       expect(results.viewerRole).toBe('teacher');
     });
   });
-
-  describe('publishing reaches the registrar (ADR 0023 step 3)', () => {
-    it('queues the publication for the source system', async () => {
-      await record({ officialGrade: 'A' });
-
-      expect(enqueuePublication).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'result-1' }),
-        'teacher-1',
-      );
-      expect(publishIntent).toHaveBeenCalledWith('institution-1', {
-        kind: 'queued',
-        intentId: 'intent-1',
-      });
-    });
-
-    it('queues nothing for a proposal, which is not the registrar’s business yet', async () => {
-      await record({ proposedGrade: 'A' });
-
-      expect(enqueuePublication).not.toHaveBeenCalled();
-    });
-
-    it('queues nothing when a published grade is withdrawn', async () => {
-      await record({ officialGrade: null });
-
-      expect(enqueuePublication).not.toHaveBeenCalled();
-    });
-  });
 });
 
 function attemptRow(overrides: Record<string, unknown> = {}) {
@@ -346,8 +276,6 @@ function attemptRow(overrides: Record<string, unknown> = {}) {
     proposedAt: null,
     officialGrade: 'A',
     officialRecordedAt: null,
-    sourceSystem: 'platform',
-    externalId: null,
     ...overrides,
   };
 }

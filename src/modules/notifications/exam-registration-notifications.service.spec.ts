@@ -60,13 +60,11 @@ describe('ExamRegistrationNotificationsService', () => {
     );
   });
 
-  it('is a platform event, not one the source system authored', async () => {
+  it('is scoped to the registration’s own institution', async () => {
     await service.confirmed(registration, NOW);
 
     expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: expect.objectContaining({ sourceSystem: 'platform' }),
-      }),
+      expect.objectContaining({ institutionId: 'institution-1' }),
     );
   });
 });

@@ -239,36 +239,6 @@ describe('My exam terms (e2e)', () => {
     },
   );
 
-  it('returns the caller’s exam terms with room, examiner, course and provenance', async () => {
-    const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
-    await examTerm({ roomId, examinerId, sourceSystem: 'sis', externalId: 'EXT-1' });
-
-    const response = await listMine(actor);
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toHaveLength(1);
-    expect(response.json()[0]).toMatchObject({
-      kind: 'regular',
-      startsAt: '2026-06-02T09:00:00.000Z',
-      endsAt: '2026-06-02T12:00:00.000Z',
-      isCancelled: false,
-      attendance: 'enrolled',
-      capacity: 30,
-      registeredCount: 0,
-      seatsRemaining: 30,
-      isFull: false,
-      registrationState: 'open',
-      myRegistration: null,
-      room: { code: 'P1', name: 'Lecture hall', building: 'Jesenná 5' },
-      examiner: { displayName: 'Dr Novák' },
-      course: { code: 'INF/ALG/22', title: 'Algorithms' },
-      term: { code: '2026-SS' },
-      offering: { id: algorithmsOfferingId },
-      provenance: { sourceSystem: 'sis', externalId: 'EXT-1' },
-    });
-  });
-
   it('never returns an exam of a course the caller has nothing to do with', async () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id, algorithmsOfferingId);

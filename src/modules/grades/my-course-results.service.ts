@@ -6,8 +6,6 @@ import {
   isVoidedResult,
   type CourseGrade,
   type OfficialCourseResultStatus,
-  type SourceSystem,
-  type SynchronizationStatus,
 } from '../../database/schema';
 
 import {
@@ -37,13 +35,6 @@ export interface MyCourseResult {
   calculated: { grade: CourseGrade | null; points: number | null };
   proposed: { grade: CourseGrade | null; at: Date | null };
   official: { grade: CourseGrade | null; recordedAt: Date | null };
-  provenance: {
-    sourceSystem: SourceSystem;
-    externalId: string | null;
-    sourceUpdatedAt: Date | null;
-    lastSynchronizedAt: Date | null;
-    synchronizationStatus: SynchronizationStatus;
-  };
   enrollmentId: string;
   offering: { id: string };
   course: { id: string; code: string; title: string; credits: number | null };
@@ -79,13 +70,6 @@ export class MyCourseResultsService {
       calculated: { grade: row.calculatedGrade, points: toNumber(row.calculatedPoints) },
       proposed: { grade: row.proposedGrade, at: row.proposedAt },
       official: { grade: row.officialGrade, recordedAt: row.officialRecordedAt },
-      provenance: {
-        sourceSystem: row.sourceSystem,
-        externalId: row.externalId,
-        sourceUpdatedAt: row.sourceUpdatedAt,
-        lastSynchronizedAt: row.lastSynchronizedAt,
-        synchronizationStatus: row.synchronizationStatus,
-      },
       enrollmentId: row.enrollmentId,
       offering: { id: row.offeringId },
       course: {

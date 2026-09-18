@@ -8,7 +8,6 @@ import {
   notificationEvents,
   type NotificationPayload,
   type NotificationType,
-  type SourceSystem,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -24,7 +23,6 @@ export interface MyNotificationRow {
   courseOfferingId: string | null;
   courseCode: string | null;
   courseTitle: string | null;
-  sourceSystem: SourceSystem;
 }
 
 export interface MyNotificationFilter {
@@ -113,7 +111,6 @@ export class MyNotificationsRepository {
         courseOfferingId: notificationEvents.courseOfferingId,
         courseCode: courses.code,
         courseTitle: courses.title,
-        sourceSystem: notificationEvents.sourceSystem,
       })
       .from(notificationDeliveries)
       .innerJoin(

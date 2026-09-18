@@ -22,7 +22,6 @@ describe('Identity linking (e2e)', () => {
 
   const provider = (overrides: Partial<ProviderIdentity> = {}): ProviderIdentity => ({
     institutionId,
-    sourceSystem: 'sis',
     issuer: 'https://login.upjs.sk',
     subject: 'subject-123',
     email: 'jana@upjs.sk',
@@ -58,7 +57,6 @@ describe('Identity linking (e2e)', () => {
     expect(stored).toMatchObject({
       institutionId,
       subject: 'subject-123',
-      sourceSystem: 'sis',
     });
   });
 
@@ -120,9 +118,7 @@ describe('Identity linking (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject([
-      { institutionId, sourceSystem: 'sis', externalUsername: 'jnovakova' },
-    ]);
+    expect(response.json()).toMatchObject([{ institutionId, externalUsername: 'jnovakova' }]);
   });
 
   it('never reports another account linked identities', async () => {
@@ -148,7 +144,6 @@ describe('Identity linking (e2e)', () => {
     await harness.db.insert(externalIdentities).values({
       institutionId,
       userId: invited!.id,
-      sourceSystem: 'sis',
       issuer: 'https://login.upjs.sk',
       subject: 'subject-123',
       assertedEmail: 'jana@upjs.sk',

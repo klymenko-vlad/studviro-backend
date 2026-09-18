@@ -161,7 +161,6 @@ describe('My enrollments (e2e)', () => {
       // the request is not left hanging on an answer that will never come.
       expect(response.json()).toMatchObject({
         status: 'active',
-        synchronizationStatus: 'in_sync',
       });
     });
 

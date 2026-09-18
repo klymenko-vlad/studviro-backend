@@ -11,13 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { institutionId, orgUnits } from './institutions';
 import { users } from './users';
 
@@ -45,14 +39,12 @@ export const academicTerms = pgTable(
     enrollmentOpensAt: timestampColumn('enrollment_opens_at'),
     enrollmentClosesAt: timestampColumn('enrollment_closes_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('academic_terms_code_unique_idx')
       .on(table.institutionId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('academic_terms_external_id_unique_idx', table),
     index('academic_terms_starts_at_idx').on(table.institutionId, table.startsAt),
   ],
 );
@@ -77,14 +69,12 @@ export const programs = pgTable(
     studyForm: studyForm('study_form').notNull().default('full_time'),
     standardLengthSemesters: integer('standard_length_semesters'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('programs_code_unique_idx')
       .on(table.institutionId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('programs_external_id_unique_idx', table),
     index('programs_org_unit_id_idx').on(table.orgUnitId),
   ],
 );
@@ -100,14 +90,12 @@ export const courses = pgTable(
     description: text('description'),
     credits: numeric('credits', { precision: 6, scale: 2 }),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('courses_code_unique_idx')
       .on(table.institutionId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('courses_external_id_unique_idx', table),
     index('courses_org_unit_id_idx').on(table.orgUnitId),
   ],
 );
@@ -138,14 +126,12 @@ export const courseOfferings = pgTable(
     language: text('language'),
     capacity: integer('capacity'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('course_offerings_course_term_unique_idx')
       .on(table.courseId, table.academicTermId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('course_offerings_external_id_unique_idx', table),
     index('course_offerings_term_idx')
       .on(table.institutionId, table.academicTermId)
       .where(isNull(table.deletedAt)),
@@ -176,14 +162,12 @@ export const teachingAssignments = pgTable(
     role: teachingRole('role').notNull().default('lecturer'),
     isPrimary: boolean('is_primary').notNull().default(false),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('teaching_assignments_unique_idx')
       .on(table.courseOfferingId, table.userId, table.role)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('teaching_assignments_external_id_unique_idx', table),
     index('teaching_assignments_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );

@@ -5,16 +5,9 @@ import { FEATURE_FLAGS, TERMINOLOGY_KEYS, type FeatureFlag } from '../../../../d
 import { IMPLEMENTED_FEATURES } from '../institution-configuration.defaults';
 import type {
   InstitutionConfiguration,
-  ResolvedConnectors,
   ResolvedFeatures,
   ResolvedTerminology,
 } from '../institution-configuration.types';
-
-@Exclude()
-export class InstitutionConnectorsDto {
-  @Expose() @ApiProperty({ type: String, nullable: true }) academicSystem!: string | null;
-  @Expose() @ApiProperty({ type: String, nullable: true }) learningSystem!: string | null;
-}
 
 @Exclude()
 export class InstitutionConfigurationResponseDto {
@@ -49,8 +42,6 @@ export class InstitutionConfigurationResponseDto {
   })
   implementedFeatures!: readonly FeatureFlag[];
 
-  @Expose() @ApiProperty({ type: InstitutionConnectorsDto }) connectors!: ResolvedConnectors;
-
   static fromConfiguration(
     configuration: InstitutionConfiguration,
   ): InstitutionConfigurationResponseDto {
@@ -64,7 +55,6 @@ export class InstitutionConfigurationResponseDto {
     dto.terminology = configuration.terminology;
     dto.features = configuration.features;
     dto.implementedFeatures = IMPLEMENTED_FEATURES;
-    dto.connectors = configuration.connectors;
 
     return dto;
   }

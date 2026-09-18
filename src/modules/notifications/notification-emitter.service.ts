@@ -28,18 +28,12 @@ export class NotificationEmitterService {
 
     if (emission.audience === 'exam_term') {
       return emission.examTermId
-        ? this.repository.findExamTermAudience(
-            emission.target.institutionId,
-            emission.examTermId,
-          )
+        ? this.repository.findExamTermAudience(emission.institutionId, emission.examTermId)
         : [];
     }
 
     return emission.courseOfferingId
-      ? this.repository.findOfferingAudience(
-          emission.target.institutionId,
-          emission.courseOfferingId,
-        )
+      ? this.repository.findOfferingAudience(emission.institutionId, emission.courseOfferingId)
       : [];
   }
 }

@@ -1,13 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { InvalidInputError } from '../../common/errors/domain.error';
-import type {
-  ExamRegistrationStatus,
-  ExamTermKind,
-  SourceSystem,
-  SourceWriteIntentState,
-  SynchronizationStatus,
-} from '../../database/schema';
+import type { ExamRegistrationStatus, ExamTermKind } from '../../database/schema';
 
 import { laddersTo } from './exam-attempt-ladder';
 import {
@@ -34,36 +28,6 @@ export const EXAM_REGISTRATION_REASONS = [
   'attempt_not_earned',
 ] as const;
 export type ExamRegistrationReason = (typeof EXAM_REGISTRATION_REASONS)[number];
-
-/**
- * Where the registration stands with the university's own system. `not_relayed`
- * is not a failure: the institution's connector cannot write, so the act is
- * real here and the registrar has to hear about it some other way (ADR 0023).
- */
-export const EXAM_REGISTRATION_DELIVERIES = [
-  'not_relayed',
-  'sending',
-  'relayed',
-  'refused',
-  'stuck',
-] as const;
-export type ExamRegistrationDelivery = (typeof EXAM_REGISTRATION_DELIVERIES)[number];
-
-export function deliveryOf(state: SourceWriteIntentState | null): ExamRegistrationDelivery {
-  switch (state) {
-    case 'pending':
-    case 'in_flight':
-      return 'sending';
-    case 'acknowledged':
-      return 'relayed';
-    case 'rejected':
-      return 'refused';
-    case 'abandoned':
-      return 'stuck';
-    case null:
-      return 'not_relayed';
-  }
-}
 
 export interface ExamRegistrationAvailability {
   canRegister: boolean;
@@ -92,20 +56,12 @@ export interface MyExamTerm {
     status: ExamRegistrationStatus;
     registeredAt: Date | null;
     cancelledAt: Date | null;
-    delivery: ExamRegistrationDelivery;
   } | null;
   room: { id: string; code: string; name: string | null; building: string | null } | null;
   examiner: { id: string; displayName: string } | null;
   offering: { id: string };
   course: { id: string; code: string; title: string };
   term: { id: string; code: string; name: string };
-  provenance: {
-    sourceSystem: SourceSystem;
-    externalId: string | null;
-    sourceUpdatedAt: Date | null;
-    lastSynchronizedAt: Date | null;
-    synchronizationStatus: SynchronizationStatus;
-  };
 }
 
 @Injectable()
@@ -153,7 +109,6 @@ export class MyExamTermsService {
               status: row.registrationStatus,
               registeredAt: row.registeredAt,
               cancelledAt: row.registrationCancelledAt,
-              delivery: deliveryOf(row.registrationDeliveryState),
             },
       room:
         row.roomId === null
@@ -171,13 +126,6 @@ export class MyExamTermsService {
       offering: { id: row.offeringId },
       course: { id: row.courseId, code: row.courseCode, title: row.courseTitle },
       term: { id: row.termId, code: row.termCode, name: row.termName },
-      provenance: {
-        sourceSystem: row.sourceSystem,
-        externalId: row.externalId,
-        sourceUpdatedAt: row.sourceUpdatedAt,
-        lastSynchronizedAt: row.lastSynchronizedAt,
-        synchronizationStatus: row.synchronizationStatus,
-      },
     };
   }
 }

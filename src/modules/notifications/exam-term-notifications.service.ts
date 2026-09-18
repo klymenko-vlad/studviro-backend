@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 
 import type { ExamTerm, NotificationType } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
 @Injectable()
 export class ExamTermNotificationsService {
   constructor(private readonly emitter: NotificationEmitterService) {}
 
   async applied(
-    target: SyncTarget,
-    change: AppliedChange<ExamTerm>,
+    institutionId: string,
+    change: NotificationChange<ExamTerm>,
     occurredAt: Date,
   ): Promise<void> {
     const subject = change.current ?? change.previous;
@@ -19,7 +19,7 @@ export class ExamTermNotificationsService {
     if (!subject || !type) return;
 
     await this.emitter.emit({
-      target,
+      institutionId,
       type,
       subjectId: subject.id,
       courseOfferingId: subject.courseOfferingId,
@@ -40,12 +40,14 @@ export class ExamTermNotificationsService {
     });
   }
 
-  private typeOf(change: AppliedChange<ExamTerm>): NotificationType | null {
-    if (change.outcome === 'deleted') return 'exam_term_cancelled';
-    if (change.outcome === 'created') {
-      return change.current?.cancelledAt ? null : 'exam_term_published';
+  private typeOf(change: NotificationChange<ExamTerm>): NotificationType | null {
+    if (change.removed) return 'exam_term_cancelled';
+    if (!change.previous) {
+      return change.current === null || change.current.cancelledAt
+        ? null
+        : 'exam_term_published';
     }
-    if (change.outcome !== 'updated' || !change.previous || !change.current) return null;
+    if (!change.current) return null;
 
     const { previous, current } = change;
     if (!previous.cancelledAt && current.cancelledAt) return 'exam_term_cancelled';

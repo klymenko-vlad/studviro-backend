@@ -1,13 +1,7 @@
 import { isNull } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings, programs } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -40,14 +34,12 @@ export const programMemberships = pgTable(
     startedAt: timestampColumn('started_at'),
     endedAt: timestampColumn('ended_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('program_memberships_unique_idx')
       .on(table.programId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('program_memberships_external_id_unique_idx', table),
     index('program_memberships_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -130,14 +122,12 @@ export const enrollments = pgTable(
     lmsProvisionedAt: timestampColumn('lms_provisioned_at'),
     lmsProvisioningError: text('lms_provisioning_error'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('enrollments_unique_idx')
       .on(table.courseOfferingId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('enrollments_external_id_unique_idx', table),
     index('enrollments_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
     index('enrollments_offering_status_idx')
       .on(table.courseOfferingId, table.status)
@@ -162,14 +152,12 @@ export const studyGroups = pgTable(
     name: text('name'),
     capacity: integer('capacity'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('study_groups_code_unique_idx')
       .on(table.courseOfferingId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('study_groups_external_id_unique_idx', table),
   ],
 );
 
@@ -185,14 +173,12 @@ export const studyGroupMemberships = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('study_group_memberships_unique_idx')
       .on(table.studyGroupId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('study_group_memberships_external_id_unique_idx', table),
     index('study_group_memberships_user_id_idx')
       .on(table.userId)
       .where(isNull(table.deletedAt)),

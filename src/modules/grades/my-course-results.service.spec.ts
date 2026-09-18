@@ -16,11 +16,6 @@ const row = (overrides: Partial<MyCourseResultRow> = {}): MyCourseResultRow => (
   officialGrade: 'A',
   officialRecordedAt: new Date('2026-06-10T00:00:00.000Z'),
   conflictNote: null,
-  sourceSystem: 'sis',
-  externalId: 'sis-result-1',
-  sourceUpdatedAt: new Date('2026-06-11T00:00:00.000Z'),
-  lastSynchronizedAt: new Date('2026-06-12T00:00:00.000Z'),
-  synchronizationStatus: 'in_sync',
   enrollmentId: 'enrollment-1',
   attempt: 1,
   offeringId: 'offering-1',
@@ -112,20 +107,6 @@ describe(MyCourseResultsService.name, () => {
     const [result] = await service.listMine('institution-1', 'student-1');
 
     expect(result!.effective).toBeNull();
-  });
-
-  it('carries the provenance of the record so a reader can see where the grade came from', async () => {
-    findMyResults.mockResolvedValue([row()]);
-
-    const [result] = await service.listMine('institution-1', 'student-1');
-
-    expect(result!.provenance).toEqual({
-      sourceSystem: 'sis',
-      externalId: 'sis-result-1',
-      sourceUpdatedAt: new Date('2026-06-11T00:00:00.000Z'),
-      lastSynchronizedAt: new Date('2026-06-12T00:00:00.000Z'),
-      synchronizationStatus: 'in_sync',
-    });
   });
 
   it('passes the caller’s filter through to the repository', async () => {

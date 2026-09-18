@@ -10,13 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { enrollments } from './enrollments';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -109,7 +103,6 @@ export const officialCourseResults = pgTable(
     officialRecordedAt: timestampColumn('official_recorded_at'),
     conflictNote: text('conflict_note'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
@@ -118,7 +111,6 @@ export const officialCourseResults = pgTable(
     uniqueIndex('official_course_results_enrollment_attempt_unique_idx')
       .on(table.enrollmentId, table.attempt)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('official_course_results_external_id_unique_idx', table),
     index('official_course_results_status_idx')
       .on(table.institutionId, table.status)
       .where(isNull(table.deletedAt)),

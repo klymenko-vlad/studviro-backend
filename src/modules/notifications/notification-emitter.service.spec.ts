@@ -1,20 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TransactionHost } from '../../database/transaction.host';
-import type { SyncTarget } from '../synchronization/sync.types';
 
 import type { NotificationEmitterRepository } from './notification-emitter.repository';
 import { NotificationEmitterService } from './notification-emitter.service';
 import { dedupeKeyOf, type NotificationEmission } from './notification-emitter.types';
 
-const TARGET: SyncTarget = {
-  institutionId: 'institution-1',
-  sourceSystem: 'sis',
-  connectorName: 'mock-sis',
-};
+const INSTITUTION = 'institution-1';
 
 const emission = (overrides: Partial<NotificationEmission> = {}): NotificationEmission => ({
-  target: TARGET,
+  institutionId: INSTITUTION,
   type: 'exam_term_rescheduled',
   subjectId: 'exam-1',
   courseOfferingId: 'offering-1',

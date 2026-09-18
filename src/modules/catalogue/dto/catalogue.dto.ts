@@ -18,9 +18,7 @@ import {
   COURSE_OFFERING_STATUSES,
   DEGREE_LEVELS,
   ENROLLMENT_STATUSES,
-  SOURCE_SYSTEMS,
   STUDY_FORMS,
-  SYNCHRONIZATION_STATUSES,
   type Course,
   type CourseOffering,
   type CourseOfferingStatus,
@@ -28,9 +26,7 @@ import {
   type Enrollment,
   type EnrollmentStatus,
   type Program,
-  type SourceSystem,
   type StudyForm,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 
 const MAX_CODE = 64;
@@ -159,11 +155,6 @@ export class ProgramResponseDto {
   standardLengthSemesters!: number | null;
 
   @Expose() @ApiProperty({ format: 'uuid', nullable: true }) orgUnitId!: string | null;
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 
   static fromEntity(entity: Program): ProgramResponseDto {
     return Object.assign(new ProgramResponseDto(), entity);
@@ -178,11 +169,6 @@ export class CourseResponseDto {
   @Expose() @ApiProperty({ type: String, nullable: true }) description!: string | null;
   @Expose() @ApiProperty({ type: Number, nullable: true }) credits!: number | null;
   @Expose() @ApiProperty({ format: 'uuid', nullable: true }) orgUnitId!: string | null;
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 
   static fromEntity(entity: Course): CourseResponseDto {
     return Object.assign(new CourseResponseDto(), {
@@ -199,10 +185,6 @@ export class CourseOfferingAdminResponseDto {
   @Expose() @ApiProperty({ enum: COURSE_OFFERING_STATUSES }) status!: CourseOfferingStatus;
   @Expose() @ApiProperty({ type: String, nullable: true }) language!: string | null;
 
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
-
   static fromEntity(entity: CourseOffering): CourseOfferingAdminResponseDto {
     return Object.assign(new CourseOfferingAdminResponseDto(), entity);
   }
@@ -212,10 +194,6 @@ export class CourseOfferingAdminResponseDto {
 export class CorrectedEnrollmentResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: ENROLLMENT_STATUSES }) status!: EnrollmentStatus;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 
   static fromEntity(entity: Enrollment): CorrectedEnrollmentResponseDto {
     return Object.assign(new CorrectedEnrollmentResponseDto(), entity);

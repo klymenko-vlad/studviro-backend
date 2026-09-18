@@ -4,20 +4,14 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   EXAM_REGISTRATION_STATUSES,
   EXAM_TERM_KINDS,
-  SOURCE_SYSTEMS,
-  SYNCHRONIZATION_STATUSES,
   type ExamRegistrationStatus,
   type ExamTermKind,
-  type SourceSystem,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 import {
   EXAM_ATTENDANCES,
-  EXAM_REGISTRATION_DELIVERIES,
   EXAM_REGISTRATION_REASONS,
   EXAM_REGISTRATION_STATES,
   type ExamAttendance,
-  type ExamRegistrationDelivery,
   type ExamRegistrationReason,
   type ExamRegistrationState,
   type MyExamTerm,
@@ -52,10 +46,6 @@ export class MyExamRegistrationDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   cancelledAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: EXAM_REGISTRATION_DELIVERIES })
-  delivery!: ExamRegistrationDelivery;
 }
 
 @Exclude()
@@ -85,24 +75,6 @@ export class ExamTermDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() code!: string;
   @Expose() @ApiProperty() name!: string;
-}
-
-@Exclude()
-export class ExamTermProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  sourceUpdatedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
 }
 
 @Exclude()
@@ -169,11 +141,6 @@ export class MyExamTermResponseDto {
   @Expose() @Type(() => ExamOfferingDto) @ApiProperty() offering!: ExamOfferingDto;
   @Expose() @Type(() => ExamCourseDto) @ApiProperty() course!: ExamCourseDto;
   @Expose() @Type(() => ExamTermDto) @ApiProperty() term!: ExamTermDto;
-
-  @Expose()
-  @Type(() => ExamTermProvenanceDto)
-  @ApiProperty()
-  provenance!: ExamTermProvenanceDto;
 
   static fromMyExamTerm(term: MyExamTerm): MyExamTermResponseDto {
     return Object.assign(new MyExamTermResponseDto(), term);

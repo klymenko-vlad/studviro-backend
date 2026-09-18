@@ -11,11 +11,6 @@ export class LearningSpaceDto {
   @Expose() @ApiProperty({ type: String, nullable: true }) shortName!: string | null;
   @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
   @Expose() @ApiProperty() visible!: boolean;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
 
   @Expose()
   @ApiProperty({ type: String, format: 'uuid', nullable: true })

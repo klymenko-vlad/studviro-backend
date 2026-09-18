@@ -28,7 +28,7 @@ export class NotificationEmitterRepository {
     const [inserted] = await this.writer
       .insert(notificationEvents)
       .values({
-        institutionId: emission.target.institutionId,
+        institutionId: emission.institutionId,
         type: emission.type,
         dedupeKey,
         courseOfferingId: emission.courseOfferingId,
@@ -36,7 +36,6 @@ export class NotificationEmitterRepository {
         learningActivityId: emission.learningActivityId,
         payload: emission.payload,
         occurredAt: emission.occurredAt,
-        sourceSystem: emission.target.sourceSystem,
       })
       .onConflictDoNothing({
         target: [notificationEvents.institutionId, notificationEvents.dedupeKey],
@@ -58,7 +57,7 @@ export class NotificationEmitterRepository {
       })
       .where(
         and(
-          eq(notificationEvents.institutionId, emission.target.institutionId),
+          eq(notificationEvents.institutionId, emission.institutionId),
           eq(notificationEvents.dedupeKey, dedupeKey),
           isNull(notificationEvents.deletedAt),
         ),
@@ -135,7 +134,6 @@ export class NotificationEmitterRepository {
           institutionId: event.institutionId,
           notificationEventId: event.id,
           userId,
-          sourceSystem: event.sourceSystem,
         })),
       )
       .onConflictDoUpdate({

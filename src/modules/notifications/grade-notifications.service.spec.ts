@@ -1,16 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OfficialCourseResult } from '../../database/schema';
-import type { SyncTarget } from '../synchronization/sync.types';
 
 import { GradeNotificationsService } from './grade-notifications.service';
 import type { NotificationEmitterService } from './notification-emitter.service';
 
-const TARGET: SyncTarget = {
-  institutionId: 'institution-1',
-  sourceSystem: 'sis',
-  connectorName: 'mock-sis',
-};
+const INSTITUTION = 'institution-1';
 const NOW = new Date('2026-06-20T10:00:00.000Z');
 
 const result = (overrides: Partial<OfficialCourseResult> = {}) =>
@@ -28,7 +23,7 @@ describe('GradeNotificationsService', () => {
 
   const publish = (overrides: Partial<OfficialCourseResult> = {}, previousGrade = null) =>
     service.published(
-      TARGET,
+      INSTITUTION,
       {
         result: result(overrides),
         recipientId: 'student-1',

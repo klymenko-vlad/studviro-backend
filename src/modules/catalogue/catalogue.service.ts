@@ -25,17 +25,6 @@ export interface CourseInput {
   readonly orgUnitId?: string | null;
 }
 
-/**
- * Editing a row the source system owns is a known disagreement until a run
- * settles it — the same `pending` grade entry writes, and the same state
- * reconciliation reads.
- */
-function provenanceOf(existing: { sourceSystem: string }) {
-  return existing.sourceSystem === 'platform'
-    ? {}
-    : { synchronizationStatus: 'pending' as const };
-}
-
 @Injectable()
 export class CatalogueService {
   constructor(
@@ -52,7 +41,6 @@ export class CatalogueService {
 
     return this.programs.create({
       institutionId,
-      sourceSystem: 'platform',
       code: input.code,
       name: input.name,
       ...(input.degreeLevel === undefined ? {} : { degreeLevel: input.degreeLevel }),
@@ -74,7 +62,7 @@ export class CatalogueService {
       await this.programs.assertCodeFree(institutionId, input.code, id);
     }
 
-    return this.programs.update(id, { ...definedOnly(input), ...provenanceOf(existing) });
+    return this.programs.update(id, { ...definedOnly(input) });
   }
 
   async removeProgram(institutionId: string, id: string): Promise<void> {
@@ -93,7 +81,6 @@ export class CatalogueService {
 
     return this.courses.create({
       institutionId,
-      sourceSystem: 'platform',
       code: input.code,
       title: input.title,
       description: input.description ?? null,
@@ -120,7 +107,6 @@ export class CatalogueService {
     return this.courses.update(id, {
       ...definedOnly(rest),
       ...(credits === undefined ? {} : { credits: credits === null ? null : String(credits) }),
-      ...provenanceOf(existing),
     });
   }
 

@@ -8,9 +8,7 @@ import {
   learningSpaces,
   type ActivityCompletionState,
   type LearningActivityType,
-  type SourceSystem,
   type SubmissionState,
-  type SynchronizationStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -35,10 +33,6 @@ export interface MyAssessmentResultRow {
   spaceId: string;
   spaceName: string;
   offeringId: string | null;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
 }
 
 export interface MyAssessmentResultFilter {
@@ -111,10 +105,6 @@ export class MyAssessmentResultsRepository {
         spaceId: learningSpaces.id,
         spaceName: learningSpaces.name,
         offeringId: learningSpaces.courseOfferingId,
-        sourceSystem: assessmentResults.sourceSystem,
-        externalId: assessmentResults.externalId,
-        lastSynchronizedAt: assessmentResults.lastSynchronizedAt,
-        synchronizationStatus: assessmentResults.synchronizationStatus,
       })
       .from(assessmentResults)
       .innerJoin(assessments, eq(assessments.id, assessmentResults.assessmentId))

@@ -3,9 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   ActivityCompletionState,
   LearningActivityType,
-  SourceSystem,
   SubmissionState,
-  SynchronizationStatus,
 } from '../../database/schema';
 
 import {
@@ -34,12 +32,6 @@ export interface MyAssessmentResult {
   } | null;
   learningSpace: { id: string; name: string };
   offering: { id: string } | null;
-  provenance: {
-    sourceSystem: SourceSystem;
-    externalId: string | null;
-    lastSynchronizedAt: Date | null;
-    synchronizationStatus: SynchronizationStatus;
-  };
 }
 
 @Injectable()
@@ -91,12 +83,6 @@ function compose(row: MyAssessmentResultRow): MyAssessmentResult {
           },
     learningSpace: { id: row.spaceId, name: row.spaceName },
     offering: row.offeringId === null ? null : { id: row.offeringId },
-    provenance: {
-      sourceSystem: row.sourceSystem,
-      externalId: row.externalId,
-      lastSynchronizedAt: row.lastSynchronizedAt,
-      synchronizationStatus: row.synchronizationStatus,
-    },
   };
 }
 

@@ -11,13 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -35,13 +29,11 @@ export const learningSpaces = pgTable(
     url: text('url'),
     visible: boolean('visible').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('learning_spaces_external_id_unique_idx', table),
     uniqueIndex('learning_spaces_offering_unique_idx')
-      .on(table.courseOfferingId, table.sourceSystem)
+      .on(table.courseOfferingId)
       .where(isNull(table.deletedAt)),
   ],
 );
@@ -74,11 +66,9 @@ export const learningActivities = pgTable(
     closesAt: timestampColumn('closes_at'),
     visible: boolean('visible').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('learning_activities_external_id_unique_idx', table),
     index('learning_activities_space_idx')
       .on(table.learningSpaceId, table.position)
       .where(isNull(table.deletedAt)),
@@ -104,11 +94,9 @@ export const assessments = pgTable(
     weight: numeric('weight', { precision: 10, scale: 4 }),
     countsTowardFinalGrade: boolean('counts_toward_final_grade').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('assessments_external_id_unique_idx', table),
     index('assessments_space_idx').on(table.learningSpaceId).where(isNull(table.deletedAt)),
   ],
 );
@@ -130,14 +118,12 @@ export const assessmentResults = pgTable(
     gradedAt: timestampColumn('graded_at'),
     gradedById: uuid('graded_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('assessment_results_unique_idx')
       .on(table.assessmentId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('assessment_results_external_id_unique_idx', table),
     index('assessment_results_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -168,14 +154,12 @@ export const activityCompletions = pgTable(
     state: activityCompletionState('state').notNull().default('incomplete'),
     completedAt: timestampColumn('completed_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('activity_completions_unique_idx')
       .on(table.learningActivityId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('activity_completions_external_id_unique_idx', table),
     index('activity_completions_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -202,14 +186,12 @@ export const submissionRefs = pgTable(
     url: text('url'),
     fileCount: integer('file_count'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('submission_refs_unique_idx')
       .on(table.learningActivityId, table.userId, table.attempt)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('submission_refs_external_id_unique_idx', table),
     index('submission_refs_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );

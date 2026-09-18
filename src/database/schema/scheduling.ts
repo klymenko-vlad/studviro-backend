@@ -1,13 +1,7 @@
 import { isNull, sql } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { studyGroups } from './enrollments';
 import { institutionId, orgUnits } from './institutions';
@@ -24,14 +18,12 @@ export const rooms = pgTable(
     building: text('building'),
     capacity: integer('capacity'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('rooms_code_unique_idx')
       .on(table.institutionId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('rooms_external_id_unique_idx', table),
   ],
 );
 
@@ -64,11 +56,9 @@ export const timetableEvents = pgTable(
     endsAt: timestampColumn('ends_at').notNull(),
     cancelledAt: timestampColumn('cancelled_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('timetable_events_external_id_unique_idx', table),
     index('timetable_events_starts_at_idx')
       .on(table.institutionId, table.startsAt)
       .where(isNull(table.deletedAt)),
@@ -105,11 +95,9 @@ export const examTerms = pgTable(
     registrationClosesAt: timestampColumn('registration_closes_at'),
     cancelledAt: timestampColumn('cancelled_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('exam_terms_external_id_unique_idx', table),
     index('exam_terms_offering_idx')
       .on(table.courseOfferingId, table.startsAt)
       .where(isNull(table.deletedAt)),
@@ -165,7 +153,6 @@ export const examRegistrations = pgTable(
     registeredAt: timestampColumn('registered_at'),
     cancelledAt: timestampColumn('cancelled_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
@@ -175,7 +162,6 @@ export const examRegistrations = pgTable(
     uniqueIndex('exam_registrations_unique_idx')
       .on(table.examTermId, table.userId)
       .where(sql`${table.status} = 'registered' and ${table.deletedAt} is null`),
-    externalIdUnique('exam_registrations_external_id_unique_idx', table),
     index('exam_registrations_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );

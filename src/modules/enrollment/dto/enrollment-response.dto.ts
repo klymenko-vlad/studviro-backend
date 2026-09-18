@@ -3,10 +3,8 @@ import { Exclude, Expose } from 'class-transformer';
 
 import {
   ENROLLMENT_STATUSES,
-  SYNCHRONIZATION_STATUSES,
   type Enrollment,
   type EnrollmentStatus,
-  type SynchronizationStatus,
 } from '../../../database/schema';
 
 @Exclude()
@@ -23,13 +21,6 @@ export class EnrollmentResponseDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   withdrawnAt!: Date | null;
 
-  @Expose()
-  @ApiProperty({
-    enum: SYNCHRONIZATION_STATUSES,
-    description: '`pending` while the registrar’s system has not answered the request yet.',
-  })
-  synchronizationStatus!: SynchronizationStatus;
-
   static fromEntity(entity: Enrollment): EnrollmentResponseDto {
     const dto = new EnrollmentResponseDto();
 
@@ -38,7 +29,6 @@ export class EnrollmentResponseDto {
     dto.status = entity.status;
     dto.enrolledAt = entity.enrolledAt;
     dto.withdrawnAt = entity.withdrawnAt;
-    dto.synchronizationStatus = entity.synchronizationStatus;
 
     return dto;
   }

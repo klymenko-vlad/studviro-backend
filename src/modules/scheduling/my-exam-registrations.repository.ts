@@ -113,7 +113,6 @@ export class MyExamRegistrationsRepository {
         userId,
         status: 'registered',
         registeredAt: now,
-        sourceSystem: 'platform',
       })
       .returning();
 

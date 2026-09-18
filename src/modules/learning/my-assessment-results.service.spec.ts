@@ -27,10 +27,6 @@ const row = (overrides: Partial<MyAssessmentResultRow> = {}): MyAssessmentResult
   spaceId: 'space-1',
   spaceName: 'Programming 2',
   offeringId: 'offering-1',
-  sourceSystem: 'lms',
-  externalId: 'GRD-CRS-1-A1-P1',
-  lastSynchronizedAt: new Date('2026-11-11T00:00:00.000Z'),
-  synchronizationStatus: 'in_sync',
   ...overrides,
 });
 
@@ -112,11 +108,5 @@ describe(MyAssessmentResultsService.name, () => {
 
   it('keeps a space that no offering was matched to', async () => {
     await expect(listOne({ offeringId: null })).resolves.toMatchObject({ offering: null });
-  });
-
-  it('carries the provenance of the mark', async () => {
-    await expect(listOne()).resolves.toMatchObject({
-      provenance: { sourceSystem: 'lms', externalId: 'GRD-CRS-1-A1-P1' },
-    });
   });
 });

@@ -5,11 +5,9 @@ import {
   COURSE_GRADES,
   ENROLLMENT_STATUSES,
   OFFICIAL_COURSE_RESULT_STATUSES,
-  SOURCE_SYSTEMS,
   type CourseGrade,
   type EnrollmentStatus,
   type OfficialCourseResultStatus,
-  type SourceSystem,
 } from '../../../database/schema';
 import {
   GRADE_ENTRY_ROLES,
@@ -44,12 +42,6 @@ export class OfferingOfficialStageDto extends OfferingResultStageDto {
 }
 
 @Exclude()
-export class OfferingResultProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-}
-
-@Exclude()
 export class OfferingResultAttemptDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() attempt!: number;
@@ -74,11 +66,6 @@ export class OfferingResultAttemptDto {
   @Type(() => OfferingOfficialStageDto)
   @ApiProperty()
   official!: OfferingOfficialStageDto;
-
-  @Expose()
-  @Type(() => OfferingResultProvenanceDto)
-  @ApiProperty()
-  provenance!: OfferingResultProvenanceDto;
 }
 
 @Exclude()

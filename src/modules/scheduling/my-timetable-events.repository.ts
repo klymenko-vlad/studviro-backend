@@ -12,9 +12,7 @@ import {
   studyGroups,
   teachingAssignments,
   timetableEvents,
-  type SourceSystem,
   type StudyGroupKind,
-  type SynchronizationStatus,
   type TimetableEventType,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -42,11 +40,6 @@ export interface MyTimetableEventRow {
   termId: string;
   termCode: string;
   termName: string;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  sourceUpdatedAt: Date | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
 }
 
 export interface MyTimetableEventFilter {
@@ -104,11 +97,6 @@ export class MyTimetableEventsRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
-        sourceSystem: timetableEvents.sourceSystem,
-        externalId: timetableEvents.externalId,
-        sourceUpdatedAt: timetableEvents.sourceUpdatedAt,
-        lastSynchronizedAt: timetableEvents.lastSynchronizedAt,
-        synchronizationStatus: timetableEvents.synchronizationStatus,
       })
       .from(timetableEvents)
       .innerJoin(courseOfferings, eq(courseOfferings.id, timetableEvents.courseOfferingId))

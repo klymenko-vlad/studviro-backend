@@ -26,10 +26,6 @@ const row = (overrides: Partial<MyDeadlineRow> = {}): MyDeadlineRow => ({
   termId: 'term-1',
   termCode: '2026-WS',
   termName: 'Winter 2026',
-  sourceSystem: 'lms',
-  externalId: 'CRS-1-A1',
-  lastSynchronizedAt: new Date('2026-10-20T00:00:00.000Z'),
-  synchronizationStatus: 'in_sync',
   ...overrides,
 });
 
@@ -64,7 +60,6 @@ describe(MyDeadlinesService.name, () => {
       learningSpace: { id: 'space-1', name: 'Programming 2' },
       course: { code: 'INF/PF/22', title: 'Programming 2' },
       term: { code: '2026-WS' },
-      provenance: { sourceSystem: 'lms', synchronizationStatus: 'in_sync' },
     });
   });
 

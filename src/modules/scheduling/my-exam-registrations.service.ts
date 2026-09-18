@@ -8,7 +8,6 @@ import {
 import type { ExamRegistration } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
-import { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import { attemptsRequiredFor, laddersTo } from './exam-attempt-ladder';
 import {
@@ -22,7 +21,6 @@ export class MyExamRegistrationsService {
   constructor(
     private readonly repository: MyExamRegistrationsRepository,
     private readonly txHost: TransactionHost,
-    private readonly writeBack: ExamRegistrationWriteBackService,
     private readonly notifications: ExamRegistrationNotificationsService,
   ) {}
 
@@ -32,7 +30,7 @@ export class MyExamRegistrationsService {
     examTermId: string,
     now = new Date(),
   ): Promise<ExamRegistration> {
-    const { registration, outcome } = await this.txHost.run(
+    const registration = await this.txHost.run(
       async () => {
         const term = await this.repository.findRegistrableTerm(
           institutionId,
@@ -50,15 +48,11 @@ export class MyExamRegistrationsService {
 
         const created = await this.repository.register(institutionId, userId, examTermId, now);
 
-        return {
-          registration: created,
-          outcome: await this.writeBack.enqueueCreate(created, userId),
-        };
+        return created;
       },
       { isolationLevel: 'serializable' },
     );
 
-    await this.writeBack.publish(institutionId, outcome);
     await this.notifications.confirmed(registration, now);
 
     return registration;
@@ -70,7 +64,7 @@ export class MyExamRegistrationsService {
     registrationId: string,
     now = new Date(),
   ): Promise<ExamRegistration> {
-    const { registration, outcome } = await this.txHost.run(async () => {
+    const registration = await this.txHost.run(async () => {
       const existing = await this.repository.findLiveRegistrationById(
         institutionId,
         userId,
@@ -81,17 +75,9 @@ export class MyExamRegistrationsService {
 
       this.assertCancellable(existing, now);
 
-      // Enqueued before the row is soft-deleted, because the intent needs the
-      // identifiers the row carries.
-      const enqueued = await this.writeBack.enqueueCancel(existing.registration, userId);
-
-      return {
-        registration: await this.repository.cancel(registrationId, now),
-        outcome: enqueued,
-      };
+      return this.repository.cancel(registrationId, now);
     });
 
-    await this.writeBack.publish(institutionId, outcome);
     await this.notifications.cancelled(registration, now);
 
     return registration;

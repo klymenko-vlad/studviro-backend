@@ -12,15 +12,11 @@ import {
   FAILING_COURSE_GRADES,
   officialCourseResults,
   rooms,
-  sourceWriteIntents,
   teachingAssignments,
   users,
   VOIDED_COURSE_RESULT_STATUSES,
   type ExamRegistrationStatus,
   type ExamTermKind,
-  type SourceSystem,
-  type SourceWriteIntentState,
-  type SynchronizationStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -47,7 +43,6 @@ export interface MyExamTermRow {
   registrationStatus: ExamRegistrationStatus | null;
   registeredAt: Date | null;
   registrationCancelledAt: Date | null;
-  registrationDeliveryState: SourceWriteIntentState | null;
   offeringId: string;
   courseId: string;
   courseCode: string;
@@ -55,11 +50,6 @@ export interface MyExamTermRow {
   termId: string;
   termCode: string;
   termName: string;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  sourceUpdatedAt: Date | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
 }
 
 export interface MyExamTermFilter {
@@ -118,7 +108,6 @@ export class MyExamTermsRepository {
         registrationStatus: examRegistrations.status,
         registeredAt: examRegistrations.registeredAt,
         registrationCancelledAt: examRegistrations.cancelledAt,
-        registrationDeliveryState: this.deliveryState(),
         offeringId: courseOfferings.id,
         courseId: courses.id,
         courseCode: courses.code,
@@ -126,11 +115,6 @@ export class MyExamTermsRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
-        sourceSystem: examTerms.sourceSystem,
-        externalId: examTerms.externalId,
-        sourceUpdatedAt: examTerms.sourceUpdatedAt,
-        lastSynchronizedAt: examTerms.lastSynchronizedAt,
-        synchronizationStatus: examTerms.synchronizationStatus,
       })
       .from(examTerms)
       .innerJoin(courseOfferings, eq(courseOfferings.id, examTerms.courseOfferingId))
@@ -169,21 +153,6 @@ export class MyExamTermsRepository {
         and inner_registration.user_id = ${userId}
         and inner_registration.deleted_at is null
       order by inner_registration.registered_at desc nulls last, inner_registration.created_at desc
-      limit 1
-    )`;
-  }
-
-  /**
-   * How far the student's own act has got towards the university's system. The
-   * newest intent wins: a cancel queued behind its registration is what the
-   * student is waiting on now.
-   */
-  private deliveryState(): SQL<SourceWriteIntentState | null> {
-    return sql<SourceWriteIntentState | null>`(
-      select ${sourceWriteIntents.state} from ${sourceWriteIntents}
-      where ${sourceWriteIntents.canonicalId} = ${examRegistrations.id}
-        and ${sourceWriteIntents.deletedAt} is null
-      order by ${sourceWriteIntents.createdAt} desc
       limit 1
     )`;
   }

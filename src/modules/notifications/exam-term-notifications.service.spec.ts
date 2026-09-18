@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ExamTerm } from '../../database/schema';
-import type { AppliedChange, SyncTarget } from '../synchronization/sync.types';
 
 import { ExamTermNotificationsService } from './exam-term-notifications.service';
 import type { NotificationEmitterService } from './notification-emitter.service';
+import type { NotificationChange } from './notification-emitter.types';
 
-const TARGET: SyncTarget = {
-  institutionId: 'institution-1',
-  sourceSystem: 'sis',
-  connectorName: 'mock-sis',
-};
+const INSTITUTION = 'institution-1';
 
 const term = (overrides: Partial<ExamTerm> = {}): ExamTerm =>
   ({
@@ -23,8 +19,9 @@ const term = (overrides: Partial<ExamTerm> = {}): ExamTerm =>
     ...overrides,
   }) as ExamTerm;
 
-const change = (overrides: Partial<AppliedChange<ExamTerm>>): AppliedChange<ExamTerm> => ({
-  outcome: 'updated',
+const change = (
+  overrides: Partial<NotificationChange<ExamTerm>>,
+): NotificationChange<ExamTerm> => ({
   previous: term(),
   current: term(),
   ...overrides,
@@ -42,11 +39,11 @@ describe(ExamTermNotificationsService.name, () => {
     service = new ExamTermNotificationsService(emitter);
   });
 
-  const applied = (overrides: Partial<AppliedChange<ExamTerm>>) =>
-    service.applied(TARGET, change(overrides), new Date('2026-05-20T09:00:00.000Z'));
+  const applied = (overrides: Partial<NotificationChange<ExamTerm>>) =>
+    service.applied(INSTITUTION, change(overrides), new Date('2026-05-20T09:00:00.000Z'));
 
   it('announces a newly imported exam term', async () => {
-    await applied({ outcome: 'created', previous: null, current: term() });
+    await applied({ previous: null, current: term() });
 
     expect(emit).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'exam_term_published', subjectId: 'exam-1' }),
@@ -80,7 +77,7 @@ describe(ExamTermNotificationsService.name, () => {
   });
 
   it('treats a tombstoned exam term as cancelled', async () => {
-    await applied({ outcome: 'deleted', previous: term(), current: null });
+    await applied({ removed: true, previous: term(), current: null });
 
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({ type: 'exam_term_cancelled' }));
   });
@@ -91,8 +88,8 @@ describe(ExamTermNotificationsService.name, () => {
     expect(emit).not.toHaveBeenCalled();
   });
 
-  it('says nothing when the record was skipped by the stale-write guard', async () => {
-    await applied({ outcome: 'skipped', previous: term(), current: null });
+  it('says nothing about a change with nothing on either side', async () => {
+    await applied({ previous: term(), current: null });
 
     expect(emit).not.toHaveBeenCalled();
   });

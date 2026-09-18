@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { ConflictError, UnauthenticatedError } from '../../common/errors/domain.error';
 import type { Transaction } from '../../database/database.tokens';
-import type { ExternalIdentity, SourceSystem, User } from '../../database/schema';
+import type { ExternalIdentity, User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { UsersRepository } from '../users/users.repository';
 
@@ -11,7 +11,6 @@ import { UserEmailsRepository } from './user-emails.repository';
 
 export interface ProviderIdentity {
   readonly institutionId: string;
-  readonly sourceSystem: SourceSystem;
   readonly issuer: string;
   readonly subject: string;
   readonly externalUsername?: string | null;
@@ -142,7 +141,6 @@ export class IdentityLinkingService {
     return {
       institutionId: identity.institutionId,
       userId,
-      sourceSystem: identity.sourceSystem,
       issuer: identity.issuer,
       subject: identity.subject,
       externalUsername: identity.externalUsername ?? null,

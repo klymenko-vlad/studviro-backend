@@ -6,7 +6,7 @@ import {
   InvalidInputError,
 } from '../../common/errors/domain.error';
 import type { TransactionHost } from '../../database/transaction.host';
-import type { CourseEnrollmentWriteBackService } from '../write-back/course-enrollment-write-back.service';
+import type { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
 
 import type { EnrollableRow, MyEnrollmentsRepository } from './my-enrollments.repository';
 import { MyEnrollmentsService } from './my-enrollments.service';
@@ -34,9 +34,7 @@ describe('MyEnrollmentsService', () => {
   const withdraw = vi.fn();
   const activate = vi.fn();
 
-  const enqueueRequest = vi.fn();
-  const enqueueWithdrawal = vi.fn();
-  const publish = vi.fn();
+  const applied = vi.fn();
 
   const txHost = {
     run: (fn: () => Promise<unknown>) => fn(),
@@ -53,8 +51,6 @@ describe('MyEnrollmentsService', () => {
     request.mockResolvedValue({ id: 'enrollment-1', status: 'requested' });
     reopen.mockResolvedValue({ id: 'enrollment-1', status: 'requested' });
     withdraw.mockResolvedValue({ id: 'enrollment-1', status: 'withdrawn' });
-    enqueueRequest.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
-    enqueueWithdrawal.mockResolvedValue({ kind: 'queued', intentId: 'intent-2' });
 
     service = new MyEnrollmentsService(
       {
@@ -67,29 +63,15 @@ describe('MyEnrollmentsService', () => {
         activate,
       } as unknown as MyEnrollmentsRepository,
       txHost,
-      {
-        enqueueRequest,
-        enqueueWithdrawal,
-        publish,
-      } as unknown as CourseEnrollmentWriteBackService,
+      { applied } as unknown as EnrollmentNotificationsService,
     );
   });
 
   describe('requesting a place', () => {
-    it('records a request, not a place, while the registrar has not answered', async () => {
-      await expect(ask()).resolves.toMatchObject({ status: 'requested' });
-      expect(publish).toHaveBeenCalledWith('institution-1', {
-        kind: 'queued',
-        intentId: 'intent-1',
-      });
-    });
-
-    it('grants the place immediately where no connector can be told', async () => {
-      enqueueRequest.mockResolvedValue({ kind: 'not_writable' });
-
+    it('grants the place outright, because there is nobody upstream to approve it', async () => {
       await expect(ask()).resolves.toMatchObject({ status: 'active' });
       expect(activate).toHaveBeenCalledWith('enrollment-1', NOW);
-      expect(publish).not.toHaveBeenCalled();
+      expect(applied).toHaveBeenCalled();
     });
 
     it('reuses the row a student withdrew from rather than opening a second', async () => {
@@ -179,7 +161,7 @@ describe('MyEnrollmentsService', () => {
 
     it('withdraws a place and tells the registrar', async () => {
       await expect(drop()).resolves.toMatchObject({ status: 'withdrawn' });
-      expect(enqueueWithdrawal).toHaveBeenCalled();
+      expect(withdraw).toHaveBeenCalledWith('enrollment-1', NOW);
     });
 
     it('rejects an enrolment that is not the caller’s', async () => {

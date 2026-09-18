@@ -8,7 +8,6 @@ import {
 import type { ExamRegistration } from '../../database/schema';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
-import type { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
 import type {
   LiveRegistrationRow,
@@ -62,17 +61,8 @@ describe(MyExamRegistrationsService.name, () => {
     run: (fn: () => Promise<unknown>) => fn(),
   } as unknown as TransactionHost;
 
-  const enqueueCreate = vi.fn();
-  const enqueueCancel = vi.fn();
-  const publish = vi.fn();
   const confirmed = vi.fn();
   const cancelled = vi.fn();
-
-  const writeBack = {
-    enqueueCreate,
-    enqueueCancel,
-    publish,
-  } as unknown as ExamRegistrationWriteBackService;
 
   let service: MyExamRegistrationsService;
 
@@ -84,10 +74,7 @@ describe(MyExamRegistrationsService.name, () => {
     findLiveRegistrationForOffering.mockResolvedValue(undefined);
     register.mockResolvedValue({ id: 'registration-1' });
     cancel.mockResolvedValue({ id: 'registration-1' });
-    enqueueCreate.mockResolvedValue({ kind: 'queued', intentId: 'intent-1' });
-    enqueueCancel.mockResolvedValue({ kind: 'queued', intentId: 'intent-2' });
-    publish.mockResolvedValue(undefined);
-    service = new MyExamRegistrationsService(repository, txHost, writeBack, {
+    service = new MyExamRegistrationsService(repository, txHost, {
       confirmed,
       cancelled,
     } as unknown as ExamRegistrationNotificationsService);

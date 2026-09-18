@@ -1,12 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
-import {
-  NOTIFICATION_TYPES,
-  SOURCE_SYSTEMS,
-  type NotificationType,
-  type SourceSystem,
-} from '../../../database/schema';
+import { NOTIFICATION_TYPES, type NotificationType } from '../../../database/schema';
 import type { MyNotificationRow } from '../my-notifications.repository';
 
 @Exclude()
@@ -73,8 +68,6 @@ export class NotificationResponseDto {
   })
   reason!: string | null;
 
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-
   static fromRow(row: MyNotificationRow): NotificationResponseDto {
     const dto = new NotificationResponseDto();
 
@@ -98,7 +91,6 @@ export class NotificationResponseDto {
     dto.attempt = row.payload.attempt ?? null;
     dto.eventTitle = row.payload.eventTitle ?? null;
     dto.reason = row.payload.reason ?? null;
-    dto.sourceSystem = row.sourceSystem;
 
     return dto;
   }

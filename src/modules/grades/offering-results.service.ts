@@ -12,12 +12,10 @@ import {
   type EnrollmentStatus,
   type OfficialCourseResult,
   type OfficialCourseResultStatus,
-  type SourceSystem,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { GradeNotificationsService } from '../notifications/grade-notifications.service';
-import { CourseResultWriteBackService } from '../write-back/course-result-write-back.service';
 
 import {
   OfferingResultsRepository,
@@ -35,7 +33,6 @@ export interface OfferingResultAttempt {
   calculated: { grade: CourseGrade | null; points: number | null };
   proposed: { grade: CourseGrade | null; at: Date | null };
   official: { grade: CourseGrade | null; recordedAt: Date | null };
-  provenance: { sourceSystem: SourceSystem; externalId: string | null };
 }
 
 export interface OfferingResultStudent {
@@ -72,7 +69,6 @@ export class OfferingResultsService {
     private readonly authorization: AuthorizationService,
     private readonly txHost: TransactionHost,
     private readonly notifications: GradeNotificationsService,
-    private readonly writeBack: CourseResultWriteBackService,
   ) {}
 
   async findForViewer(
@@ -123,7 +119,7 @@ export class OfferingResultsService {
       );
     }
 
-    const { written, outcome } = await this.txHost.run(async () => {
+    return this.txHost.run(async () => {
       const enrollment = await this.repository.findEnrollment(
         institutionId,
         input.enrollmentId,
@@ -149,11 +145,6 @@ export class OfferingResultsService {
           attempt,
           ...this.stages(existing, input, userId, now),
           ...(input.conflictNote === undefined ? {} : { conflictNote: input.conflictNote }),
-          // A platform edit of a row the registrar owns is a known disagreement
-          // until a write-back settles it (ADR 0023).
-          ...(existing && existing.sourceSystem !== 'platform'
-            ? { synchronizationStatus: 'pending' as const }
-            : {}),
         },
         existing?.id ?? null,
       );
@@ -161,7 +152,7 @@ export class OfferingResultsService {
       if (publishes && input.officialGrade !== null) {
         await this.repository.markSeatAttended(offeringId, enrollment.userId, now);
         await this.notifications.published(
-          { institutionId, sourceSystem: 'platform', connectorName: 'platform' },
+          institutionId,
           {
             result: written,
             recipientId: enrollment.userId,
@@ -172,18 +163,8 @@ export class OfferingResultsService {
         );
       }
 
-      return {
-        written,
-        outcome:
-          publishes && input.officialGrade !== null
-            ? await this.writeBack.enqueuePublication(written, userId)
-            : ({ kind: 'not_writable' } as const),
-      };
+      return written;
     });
-
-    await this.writeBack.publish(institutionId, outcome);
-
-    return written;
   }
 
   private stages(
@@ -299,10 +280,6 @@ function groupByStudent(rows: OfferingResultRow[]): OfferingResultStudent[] {
         },
         proposed: { grade: row.proposedGrade, at: row.proposedAt },
         official: { grade: row.officialGrade, recordedAt: row.officialRecordedAt },
-        provenance: {
-          sourceSystem: row.sourceSystem ?? 'platform',
-          externalId: row.externalId,
-        },
       });
       student.nextAttempt = Math.max(student.nextAttempt, row.attempt + 1);
     }

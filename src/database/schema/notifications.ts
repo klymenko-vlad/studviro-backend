@@ -10,7 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { deletedAt, provenance, timestampColumn, timestamps } from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
 import { learningActivities } from './learning';
@@ -71,7 +71,6 @@ export const notificationEvents = pgTable(
     occurredAt: timestampColumn('occurred_at').notNull(),
     occurrenceCount: integer('occurrence_count').notNull().default(1),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
@@ -97,7 +96,6 @@ export const notificationDeliveries = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     readAt: timestampColumn('read_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [

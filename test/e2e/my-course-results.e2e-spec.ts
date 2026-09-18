@@ -122,7 +122,7 @@ describe('My course results (e2e)', () => {
     pastOfferingId = past!.id;
   });
 
-  it('returns each kind of grade with the source system that produced it', async () => {
+  it('returns each kind of grade with the stage it belongs to', async () => {
     const actor = await actingAs('student');
     const enrollmentId = await enrol(actor.user.id, runningOfferingId);
     await record(enrollmentId, {
@@ -130,11 +130,7 @@ describe('My course results (e2e)', () => {
       calculatedPoints: '87.5000',
       calculatedGrade: 'B',
       proposedGrade: 'B',
-      proposedAt: new Date('2026-06-01T00:00:00.000Z'),
       officialGrade: 'A',
-      officialRecordedAt: new Date('2026-06-10T00:00:00.000Z'),
-      sourceSystem: 'sis',
-      externalId: 'sis-result-1',
     });
 
     const response = await harness.inject({
@@ -152,7 +148,6 @@ describe('My course results (e2e)', () => {
       calculated: { grade: 'B', points: 87.5 },
       proposed: { grade: 'B' },
       official: { grade: 'A' },
-      provenance: { sourceSystem: 'sis', externalId: 'sis-result-1' },
       course: { code: 'INF/ALG/22', title: 'Algorithms', credits: 6 },
       term: { code: '2026-SS' },
       offering: { id: runningOfferingId },

@@ -78,8 +78,6 @@ describe('Catalogue administration (e2e)', () => {
         code: 'INF/ALG/22',
         title: 'Algorithms',
         credits: '6.00',
-        sourceSystem: 'sis',
-        externalId: 'C-1',
       })
       .returning();
 
@@ -108,7 +106,6 @@ describe('Catalogue administration (e2e)', () => {
       expect(response.statusCode).toBe(201);
       expect(response.json()).toMatchObject({
         code: 'INF-BC',
-        sourceSystem: 'platform',
       });
     });
 
@@ -155,7 +152,6 @@ describe('Catalogue administration (e2e)', () => {
 
       expect(response.json()).toMatchObject({
         title: 'Algorithms and Data Structures',
-        synchronizationStatus: 'pending',
       });
     });
 

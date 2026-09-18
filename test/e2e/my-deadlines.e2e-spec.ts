@@ -155,42 +155,16 @@ describe('My deadlines (e2e)', () => {
           institutionId,
           courseOfferingId: programmingOfferingId,
           name: 'Programming 2',
-          sourceSystem: 'lms',
-          externalId: 'CRS-PF',
         },
         {
           institutionId,
           courseOfferingId: databasesOfferingId,
           name: 'Databases',
-          sourceSystem: 'lms',
-          externalId: 'CRS-DB',
         },
       ])
       .returning();
     programmingSpaceId = programmingSpace!.id;
     databasesSpaceId = databasesSpace!.id;
-  });
-
-  it('returns the caller’s deadlines with their space, course and provenance', async () => {
-    const actor = await actingAs('student');
-    await enrol(actor.user.id, programmingOfferingId);
-    await activity({ sourceSystem: 'lms', externalId: 'CRS-PF-A1' });
-
-    const { statusCode, body } = await deadlinesFor(actor);
-
-    expect(statusCode).toBe(200);
-    expect(body).toHaveLength(1);
-    expect(body[0]).toMatchObject({
-      name: 'Assignment 1',
-      type: 'assignment',
-      dueAt: '2026-11-05T21:00:00.000Z',
-      attendance: 'enrolled',
-      learningSpace: { name: 'Programming 2' },
-      course: { code: 'INF/PF/22', title: 'Programming 2' },
-      term: { code: '2026-WS' },
-      offering: { id: programmingOfferingId },
-      provenance: { sourceSystem: 'lms', externalId: 'CRS-PF-A1' },
-    });
   });
 
   it('serves the deadline as ISO 8601, not as a raw database string', async () => {

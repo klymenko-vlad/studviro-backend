@@ -10,8 +10,6 @@ import {
   officialCourseResults,
   type CourseGrade,
   type OfficialCourseResultStatus,
-  type SourceSystem,
-  type SynchronizationStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
@@ -25,11 +23,6 @@ export interface MyCourseResultRow {
   officialGrade: CourseGrade | null;
   officialRecordedAt: Date | null;
   conflictNote: string | null;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  sourceUpdatedAt: Date | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
   enrollmentId: string;
   attempt: number;
   offeringId: string;
@@ -85,11 +78,6 @@ export class MyCourseResultsRepository {
         officialGrade: officialCourseResults.officialGrade,
         officialRecordedAt: officialCourseResults.officialRecordedAt,
         conflictNote: officialCourseResults.conflictNote,
-        sourceSystem: officialCourseResults.sourceSystem,
-        externalId: officialCourseResults.externalId,
-        sourceUpdatedAt: officialCourseResults.sourceUpdatedAt,
-        lastSynchronizedAt: officialCourseResults.lastSynchronizedAt,
-        synchronizationStatus: officialCourseResults.synchronizationStatus,
         enrollmentId: enrollments.id,
         attempt: enrollments.attempt,
         offeringId: courseOfferings.id,
