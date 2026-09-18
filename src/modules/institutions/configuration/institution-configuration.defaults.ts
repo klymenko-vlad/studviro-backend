@@ -1,6 +1,7 @@
 import {
   FEATURE_FLAGS,
   TERMINOLOGY_KEYS,
+  type FeatureFlag,
   type FeatureOverrides,
   type TerminologyOverrides,
 } from '../../../database/schema';
@@ -19,6 +20,21 @@ export const DEFAULT_FEATURES: ResolvedFeatures = {
   accommodation: false,
   fees: false,
 };
+
+/**
+ * Which flags close a door. The other four name capabilities the platform does
+ * not have, so turning one on shows nothing and turning it off hides nothing —
+ * the settings screen has to say so rather than offering a control that lies.
+ */
+export const IMPLEMENTED_FEATURES: readonly FeatureFlag[] = [
+  'examRegistration',
+  'timetable',
+  'grades',
+];
+
+export function isImplementedFeature(flag: FeatureFlag): boolean {
+  return IMPLEMENTED_FEATURES.includes(flag);
+}
 
 export function resolveTerminology(overrides: TerminologyOverrides): ResolvedTerminology {
   return Object.fromEntries(

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { InvitationsModule } from '../invitations/invitations.module';
 import { UsersModule } from '../users/users.module';
 
+import { FeatureFlagGuard } from './configuration/guards/feature-flag.guard';
 import { InstitutionConfigurationController } from './configuration/institution-configuration.controller';
 import { InstitutionConfigurationService } from './configuration/institution-configuration.service';
 import { InstitutionSettingsRepository } from './configuration/institution-settings.repository';
@@ -28,6 +29,7 @@ import { PeopleService } from './people.service';
     InstitutionsRepository,
     InstitutionConfigurationService,
     InstitutionSettingsRepository,
+    FeatureFlagGuard,
     OrgUnitsService,
     OrgUnitsRepository,
     PeopleService,
@@ -36,6 +38,7 @@ import { PeopleService } from './people.service';
     InstitutionsService,
     InstitutionsRepository,
     InstitutionConfigurationService,
+    FeatureFlagGuard,
     OrgUnitsRepository,
   ],
 })

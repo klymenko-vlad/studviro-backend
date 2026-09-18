@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import { RequireFeature } from '../institutions/configuration/decorators/require-feature.decorator';
 
 import { ListMyExamTermsQueryDto } from './dto/list-my-exam-terms-query.dto';
 import { MyExamTermResponseDto } from './dto/my-exam-term-response.dto';
@@ -11,6 +12,7 @@ import { MyExamTermsService } from './my-exam-terms.service';
 
 @ApiTags('schedule')
 @ApiBearerAuth('access-token')
+@RequireFeature('examRegistration')
 @Controller({ path: 'institutions/:institutionId/me/exam-terms', version: '1' })
 export class MyExamTermsController {
   constructor(private readonly myExamTerms: MyExamTermsService) {}

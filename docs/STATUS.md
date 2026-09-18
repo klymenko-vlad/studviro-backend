@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (the notification families land — G9 closed, B10 and B12 fixed)
+Last updated: 2026-09-18 (institution configuration stops lying — B6, B7)
 
 ## What this is
 
@@ -101,6 +101,13 @@ reasoning lives in `docs/adr/`. In short:
   `completed` student sitting a resit is told, and the examiner hears at all; a newly _published_ term
   still goes to everyone enrolled, because that is who could sit it.
 
+- **The institution's own settings mean something** (B6, B7) — a `FeatureFlagGuard` refuses a route
+  whose flag the institution turned off, and the navigation hides the tab rather than offering a door
+  that slams. Three flags gate real routes (`examRegistration`, `timetable`, `grades`); the other four
+  name capabilities the platform does not have, so `implementedFeatures` says so and the settings
+  screen disables them rather than offering a control that changes nothing. `useTerminology` renders
+  an institution's own word — the org-unit tree uses it for faculty and department.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -148,8 +155,9 @@ turned out not to be. Read those before starting; the headlines:
   person actually sign in (**B1** closed). What remains of **B2**: nobody can reach an institution
   without an invitation or a platform operator naming them — there is still no request-to-join.
 - **Rules that exist only as enums.** What is left of **B4**: `no_show` and `excused` are still never
-  set — publishing a grade marks a seat `attended`, but nobody can record an absence. All seven feature
-  flags gate nothing (**B6**) and terminology overrides are never rendered (**B7**).
+  set — publishing a grade marks a seat `attended`, but nobody can record an absence. What is left of
+  **B7**: the mechanism renders faculty and department; `course`, `student`, `teacher`, `credits`,
+  `program` and `academicTerm` are one-line swaps nobody has made yet.
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
   **G8 is closed** and **G4** is down to six permissions with no endpoint — no catalogue
@@ -176,31 +184,33 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — write-back step 2: the LMS pair
+## Next task — self-service course enrolment (G5)
 
-**`learning_space.provision` and `learning_enrollment.upsert`, which is where provisioning stops being
-a column nobody writes (`enrollments.lms_provisioned_at`).**
-
-The outbox, the worker, the capability gate, the retry ladder and the monitor surface all exist and are
-kind-agnostic; this step adds two writers and the `mock-lms` commands they call.
+**`courseRegistration` is the fourth feature flag with nothing to gate, and the reason is that the
+whole ladder it names is unbuilt** — `academic_terms.enrollment_opens_at` / `closes_at`,
+`course_offerings.capacity`, the `requested → provisioning → active` status ladder and
+`enrollments.attempt` are all columns nobody writes.
 
 What it takes:
 
-- `LearningSystemConnector` gains `provisionCourse` and `upsertEnrollment` with an idempotency key and
-  an acknowledgement carrying the identifier the LMS assigned, the same shape the academic pair has.
-  `course.provision` and `enrollment.write` are already in `LEARNING_SYSTEM_CAPABILITIES`.
-- Two `IntentWriter`s registered in `WriteBackModule`, targeting `lms` rather than `sis`.
-- What _originates_ a provisioning intent: an offering with no learning space, and an active enrolment
-  with no `lms_provisioned_at`. Unlike the exam pair there is no user act to hang it on, so decide
-  whether a sync run enqueues them or an administrator asks for it on the sync screen. That is the one
-  real design question in this step.
-- `mock-lms` implements both, with a deterministic refusal so the `rejected` path stays walkable.
-- Acknowledgement stamps `lms_provisioned_at` and the space's external id.
+- `GET institutions/:id/course-offerings?enrollable=true` behind `offering:read`: the offerings a
+  student may take this term, with the same why-not answer the exam terms already give — window
+  closed, no capacity, already enrolled, not in the programme.
+- `POST .../me/enrollments` behind a new decision: enrolling is the student's own act, so
+  `enrollment:manage` is the administrator's correction permission and this needs its own. Reuse
+  `offering:read` plus the feature flag, the way exam registration reuses `exam:register`.
+- `DELETE .../me/enrollments/:id` to withdraw, honouring the window.
+- The write-back pair `course_enrollment.request` / `.withdraw` is already named in ADR 0023 and the
+  outbox is kind-agnostic, so wire them here rather than leaving a second silent local-only act.
+- Then `courseRegistration` gates it, and `IMPLEMENTED_FEATURES` gains its fourth entry.
 
-**After that, in order:** write-back step 3 (`course_result.publish` — G8 has given it something to
-publish); B6 (make the seven feature flags gate something); B7 (render terminology overrides); G5
-(self-service enrolment); the rest of G4 (catalogue administration, enrolment correction); G10 (a sync
-schedule); G12 (GDPR inventory, threat model, audit events, export).
+Frontend: an enrollable-offerings screen under _Courses_ with the same card-and-reason shape the exam
+screen uses, and the enrolment state on the course page.
+
+**After that, in order:** write-back step 2 (the LMS pair) and step 3 (`course_result.publish`); G10 (a
+sync schedule, which also gives the outbox a sweeper); the rest of G4 (catalogue administration,
+enrolment correction); G12 (GDPR inventory, threat model, audit events, export); the remaining
+terminology swaps (**B7**); steps 49–53 and the testing passes 57–62.
 
 ## Caveats
 

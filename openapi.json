@@ -6047,6 +6047,22 @@
               "fees": true
             }
           },
+          "implementedFeatures": {
+            "type": "array",
+            "description": "The flags this platform build actually enforces. A flag outside this list is stored and resolved but gates nothing, so the screen must not offer it as a live control.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courseRegistration",
+                "examRegistration",
+                "timetable",
+                "grades",
+                "thesis",
+                "accommodation",
+                "fees"
+              ]
+            }
+          },
           "connectors": {
             "$ref": "#/components/schemas/InstitutionConnectorsDto"
           }
@@ -6059,6 +6075,7 @@
           "timezone",
           "terminology",
           "features",
+          "implementedFeatures",
           "connectors"
         ]
       },

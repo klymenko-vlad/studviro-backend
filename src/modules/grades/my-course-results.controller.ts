@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import { RequireFeature } from '../institutions/configuration/decorators/require-feature.decorator';
 
 import { ListMyCourseResultsQueryDto } from './dto/list-my-course-results-query.dto';
 import { MyCourseResultResponseDto } from './dto/my-course-result-response.dto';
@@ -12,6 +13,7 @@ import { MyCourseResultsService } from './my-course-results.service';
 
 @ApiTags('grades')
 @ApiBearerAuth('access-token')
+@RequireFeature('grades')
 @Controller({ path: 'institutions/:institutionId/me/course-results', version: '1' })
 export class MyCourseResultsController {
   constructor(private readonly myCourseResults: MyCourseResultsService) {}

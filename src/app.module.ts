@@ -24,6 +24,7 @@ import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { FeatureFlagGuard } from './modules/institutions/configuration/guards/feature-flag.guard';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { LearningModule } from './modules/learning/learning.module';
@@ -155,6 +156,10 @@ function workerModules(): DynamicModule[] {
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Registered here rather than in InstitutionsModule: a guard provided by a
+    // module that other modules import is registered once per import, and the
+    // second registration denies everything.
+    { provide: APP_GUARD, useClass: FeatureFlagGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     {

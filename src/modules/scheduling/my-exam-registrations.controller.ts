@@ -10,6 +10,7 @@ import {
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import { RequireFeature } from '../institutions/configuration/decorators/require-feature.decorator';
 
 import { ExamRegistrationResponseDto } from './dto/exam-registration-response.dto';
 import { RegisterForExamTermDto } from './dto/register-for-exam-term.dto';
@@ -19,6 +20,7 @@ const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as con
 
 @ApiTags('schedule')
 @ApiBearerAuth('access-token')
+@RequireFeature('examRegistration')
 @Controller({ path: 'institutions/:institutionId/me/exam-registrations', version: '1' })
 export class MyExamRegistrationsController {
   constructor(private readonly registrations: MyExamRegistrationsService) {}

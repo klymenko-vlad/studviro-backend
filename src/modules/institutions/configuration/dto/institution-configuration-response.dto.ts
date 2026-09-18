@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
-import { FEATURE_FLAGS, TERMINOLOGY_KEYS } from '../../../../database/schema';
+import { FEATURE_FLAGS, TERMINOLOGY_KEYS, type FeatureFlag } from '../../../../database/schema';
+import { IMPLEMENTED_FEATURES } from '../institution-configuration.defaults';
 import type {
   InstitutionConfiguration,
   ResolvedConnectors,
@@ -39,6 +40,15 @@ export class InstitutionConfigurationResponseDto {
   })
   features!: ResolvedFeatures;
 
+  @Expose()
+  @ApiProperty({
+    enum: FEATURE_FLAGS,
+    isArray: true,
+    description:
+      'The flags this platform build actually enforces. A flag outside this list is stored and resolved but gates nothing, so the screen must not offer it as a live control.',
+  })
+  implementedFeatures!: readonly FeatureFlag[];
+
   @Expose() @ApiProperty({ type: InstitutionConnectorsDto }) connectors!: ResolvedConnectors;
 
   static fromConfiguration(
@@ -53,6 +63,7 @@ export class InstitutionConfigurationResponseDto {
     dto.timezone = configuration.timezone;
     dto.terminology = configuration.terminology;
     dto.features = configuration.features;
+    dto.implementedFeatures = IMPLEMENTED_FEATURES;
     dto.connectors = configuration.connectors;
 
     return dto;

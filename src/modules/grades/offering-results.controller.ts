@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import { RequireFeature } from '../institutions/configuration/decorators/require-feature.decorator';
 
 import { OfferingResultsResponseDto } from './dto/offering-results-response.dto';
 import { RecordGradeDto } from './dto/record-grade.dto';
@@ -14,6 +15,7 @@ const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as con
 
 @ApiTags('grades')
 @ApiBearerAuth('access-token')
+@RequireFeature('grades')
 @Controller({
   path: 'institutions/:institutionId/course-offerings/:offeringId/results',
   version: '1',

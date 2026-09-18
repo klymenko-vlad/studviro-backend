@@ -270,4 +270,68 @@ describe('Institution configuration (e2e)', () => {
       expect(response.statusCode).toBe(403);
     });
   });
+
+  describe('a feature flag closes the door (B6)', () => {
+    const turnOff = async (feature: string) => {
+      const admin = await actingAs('institution_admin');
+      await harness.inject({
+        method: 'PATCH',
+        url: `/api/v1/institutions/${institutionId}/configuration`,
+        headers: admin.headers,
+        payload: { features: { [feature]: false } },
+      });
+    };
+
+    const listExamTerms = async () => {
+      const actor = await actingAs('student');
+
+      return harness.inject({
+        method: 'GET',
+        url: `/api/v1/institutions/${institutionId}/me/exam-terms`,
+        headers: actor.headers,
+      });
+    };
+
+    it('serves the exam terms while the feature is on', async () => {
+      expect((await listExamTerms()).statusCode).toBe(200);
+    });
+
+    it('refuses the exam terms once the institution turns it off', async () => {
+      await turnOff('examRegistration');
+
+      const response = await listExamTerms();
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().code).toBe('FEATURE_DISABLED');
+    });
+
+    it('leaves the other features alone', async () => {
+      await turnOff('examRegistration');
+      const actor = await actingAs('student');
+
+      const grades = await harness.inject({
+        method: 'GET',
+        url: `/api/v1/institutions/${institutionId}/me/course-results`,
+        headers: actor.headers,
+      });
+
+      expect(grades.statusCode).toBe(200);
+    });
+
+    it('names the flags it actually enforces, so the screen need not guess', async () => {
+      const actor = await actingAs('institution_admin');
+
+      const response = await harness.inject({
+        method: 'GET',
+        url: `/api/v1/institutions/${institutionId}/configuration`,
+        headers: actor.headers,
+      });
+
+      expect(response.json().implementedFeatures).toEqual([
+        'examRegistration',
+        'timetable',
+        'grades',
+      ]);
+    });
+  });
 });
