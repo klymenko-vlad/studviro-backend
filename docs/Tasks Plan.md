@@ -1,5 +1,11 @@
 # Bachelor Thesis Project Blueprint: A Reusable Unified Academic Platform for AIS2 and Moodle
 
+> **Superseded on 2026-09-18.** This document is research output written against an
+> integration premise that no longer holds: StudViro is the system of record, not a layer over
+> AIS2 and Moodle. See ADR 0024 for why and `Product Plan.md` for the backlog that replaced
+> it. Kept for the record, and because steps 4 and 5 — what those two systems actually do —
+> survive as the feature checklist a replacement must meet.
+
 ## Executive summary
 
 The strongest version of this bachelor thesis is **not a literal clone of AIS2 plus Moodle**. It should be designed as a **reusable Unified Academic Experience Platform** that presents students, teachers, and university staff with one interface while treating existing Student Information Systems and Learning Management Systems as replaceable back-end providers.

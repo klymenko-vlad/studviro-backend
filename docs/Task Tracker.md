@@ -4,7 +4,13 @@ The live checklist for the 71-step backlog in `docs/Tasks Plan.md`. That documen
 research plan and does not change; this one records what is actually built. Update it in the
 same commit as the work it describes.
 
-Last updated: 2026-09-18 (catalogue administration — G4 closed)
+Last updated: 2026-09-18 (**the product pivoted — see ADR 0024**)
+
+> **The 71-step backlog below is superseded.** StudViro is the system of record, not a layer
+> over AIS2 and Moodle (ADR 0024). `Product Plan.md` carries the live backlog; the steps here
+> stay because they record what was actually delivered, and because the delivery state of a
+> step that survives the pivot is still the truth about it. Steps 5, 7, 10, 12, 13, 14, 16,
+> 29, 31–37, 46, 57, 58 and 64 are void.
 
 ## Working agreement
 

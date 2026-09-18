@@ -1,5 +1,9 @@
 # Feature Status
 
+> **StudViro is the system of record** (ADR 0024, 2026-09-18). Rows describing
+> synchronization, connectors, reconciliation or write-back describe machinery being removed
+> in Phase 0 of `Product Plan.md`; they are not capabilities.
+
 What a user can actually do in StudViro today, by audience. This is the product view;
 `docs/Task Tracker.md` is the delivery view over the 71-step backlog and
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
