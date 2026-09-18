@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (the exam lifecycle now means what its enums say — B4, B5, B9, B11)
+Last updated: 2026-09-18 (grades have a writer — G8 closed, G4 narrowed)
 
 ## What this is
 
@@ -83,6 +83,15 @@ reasoning lives in `docs/adr/`. In short:
   totals credits, the weighted average and the courses awaiting a resit, and the client's own copy of
   that arithmetic is gone.
 
+- **Grades have a writer** (G8; narrows G4) — `GET .../course-offerings/:id/results` lists every
+  recorded student with each attempt they hold, behind `grade:read` and the standing the roster asks
+  for. `PUT .../results/:enrollmentId` proposes behind `grade:propose` and publishes behind
+  `grade:publish`, checked separately so a teaching assistant may propose and may not publish. A second
+  publication of one attempt becomes `corrected`, an annulled attempt cannot be revived, and a resit is
+  recorded by naming the next attempt. **Publishing marks the student's live seat `attended`** — the
+  only thing in the product that ever spends an attempt, which is the piece B4 left open. Editing a row
+  the registrar owns marks it `pending`, so write-back step 3 has something to push.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -129,18 +138,16 @@ turned out not to be. Read those before starting; the headlines:
   platform operator create an institution without SQL, and let an invited or self-registered
   person actually sign in (**B1** closed). What remains of **B2**: nobody can reach an institution
   without an invitation or a platform operator naming them — there is still no request-to-join.
-- **Rules that exist only as enums.** What is left of **B4**: nothing ever sets `attended`,
-  `no_show` or `excused`, because no examiner surface exists to set them (**G4**/**G8**) — until then
-  an attempt is spent by a failing official result alone. All seven feature flags gate nothing
-  (**B6**) and terminology overrides are never rendered (**B7**).
+- **Rules that exist only as enums.** What is left of **B4**: `no_show` and `excused` are still never
+  set — publishing a grade marks a seat `attended`, but nobody can record an absence. All seven feature
+  flags gate nothing (**B6**) and terminology overrides are never rendered (**B7**).
 - **Flows that end badly.** Notifications reach everyone enrolled rather than everyone holding a
   seat, and never the examiner (**B10**); your own registration is never confirmed (**B12**). Both are
   the same missing families as **G9**.
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
-  Eight of
-  twenty-two permissions have no endpoint — no catalogue, no grade entry, no enrolment correction
-  (**G4**, **G8**); no self-service enrolment (**G5**); no grade, enrolment or timetable notification
+  **G8 is closed** and **G4** is down to six permissions with no endpoint — no catalogue
+  administration and no enrolment correction; no self-service enrolment (**G5**); no grade, enrolment or timetable notification
   family (**G9**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
@@ -164,33 +171,34 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — give grades a writer (G4 / G8)
+## Next task — the notification families nobody has (G9, which is also B10 and B12)
 
-**Eight of twenty-two permissions have no endpoint. `grade:propose` and `grade:publish` are the two
-that matter most, because the proposed stage of `course_results` is permanently empty without them
-and write-back step 3 has nothing to push.**
+**Two of the five families exist. Three do not, and two long-standing defects are the same hole seen
+from inside the exam flow.**
 
 What it takes:
 
-- `GET institutions/:id/offerings/:offeringId/results` behind `grade:read`, scoped to the offering the
-  caller teaches — the roster with each student's calculated, proposed and official stage.
-- `PATCH .../results/:enrollmentId` behind `grade:propose` to set a proposed grade, and behind
-  `grade:publish` to promote one to official. Two permissions on one route, checked separately:
-  `teaching_assistant` may propose and may not publish, which the catalogue already says.
-- The attempt is part of the key now, so entering a grade for a resit writes attempt 2 rather than
-  overwriting attempt 1. Deciding which attempt a mark belongs to is the part to get right.
-- Publishing sets `attended` on the matching exam registration, which is what finally spends the
-  attempt the way **B4** wants — the piece that step deliberately left open.
+- **Grade publication.** `OfferingResultsService.record` is the emitter's natural home now that it
+  exists: publishing a grade is exactly the moment a student wants to hear. The importer that lands an
+  official result from the registrar should emit the same family, deduplicated the way ADR 0012 already
+  deduplicates by `type:subject:day`.
+- **Enrolment outcome** and **timetable change** — both already detected by their importers, neither
+  emitted.
+- **B10** — the exam audience is `ENROLLMENT_PARTICIPATING_STATUSES`, which is everyone enrolled rather
+  than everyone holding a seat, and never the examiner. A `completed` student who legitimately
+  registers for a resit is never told when that term moves. The audience for an exam-term event should
+  be the people with a live registration, plus the examiner.
+- **B12** — registering and cancelling emit nothing, so the inbox reports what the university changed
+  and never what you undertook. Adding those two closes the last silence in write-back: a refused
+  registration is compensated and currently only the card says so.
 
-Frontend: a grade-entry table on the teaching offering page, gated on the server's permission answer,
-with the proposed and official stages distinguishable and the provenance of an imported grade visible
-so a teacher never silently overwrites the registrar.
+Frontend: the inbox already renders by type, so each new family needs its copy and its icon, and the
+exam notification's audience change needs no screen at all.
 
-**After that, in order:** G9 (the grade, enrolment and timetable notification families — which is also
-**B10** and **B12**); write-back step 2 (the LMS pair) and step 3 (`course_result.publish`, which G4/G8
-finally gives something to publish); B6 (make the seven feature flags gate something); B7 (render
-terminology overrides); G5 (self-service enrolment); G10 (a sync schedule); G12 (GDPR inventory,
-threat model, audit events, export).
+**After that, in order:** write-back step 2 (the LMS pair) and step 3 (`course_result.publish`, which
+G8 has now given something to publish); B6 (make the seven feature flags gate something); B7 (render
+terminology overrides); G5 (self-service enrolment); the rest of G4 (catalogue administration,
+enrolment correction); G10 (a sync schedule); G12 (GDPR inventory, threat model, audit events, export).
 
 ## Caveats
 

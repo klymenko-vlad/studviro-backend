@@ -4489,6 +4489,204 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/results": {
+      "get": {
+        "description": "`grade:read` alone is not enough: the caller must teach the offering or hold `offering:manage`, the same standing the roster asks for.",
+        "operationId": "listOfferingResults",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferingResultsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read every recorded student of an offering with each attempt they hold",
+        "tags": [
+          "grades"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/results/{enrollmentId}": {
+      "put": {
+        "description": "Proposing needs `grade:propose`; setting `officialGrade` needs `grade:publish` as well, checked separately so a teaching assistant may propose and may not publish. Publishing marks the student’s live seat on that course as attended, which is what spends the attempt.",
+        "operationId": "recordOfferingResult",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enrollmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordGradeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordedGradeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Propose a grade for one student, or publish one",
+        "tags": [
+          "grades"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/learning-spaces": {
       "get": {
         "operationId": "listLearningSpaces",
@@ -8438,6 +8636,403 @@
           "creditsAttempted",
           "weightedAverage",
           "awaitingRetake"
+        ]
+      },
+      "OfferingResultsOfferingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "OfferingResultsCourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "credits"
+        ]
+      },
+      "OfferingCalculatedStageDto": {
+        "type": "object",
+        "properties": {
+          "grade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string"
+          },
+          "points": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "grade",
+          "points"
+        ]
+      },
+      "OfferingProposedStageDto": {
+        "type": "object",
+        "properties": {
+          "grade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "grade",
+          "at"
+        ]
+      },
+      "OfferingOfficialStageDto": {
+        "type": "object",
+        "properties": {
+          "grade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "grade",
+          "recordedAt"
+        ]
+      },
+      "OfferingResultProvenanceDto": {
+        "type": "object",
+        "properties": {
+          "sourceSystem": {
+            "enum": [
+              "platform",
+              "sis",
+              "lms"
+            ],
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "sourceSystem",
+          "externalId"
+        ]
+      },
+      "OfferingResultAttemptDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "calculated",
+              "proposed",
+              "official",
+              "corrected",
+              "annulled",
+              "disputed"
+            ],
+            "type": "string"
+          },
+          "isVoided": {
+            "type": "boolean"
+          },
+          "calculated": {
+            "$ref": "#/components/schemas/OfferingCalculatedStageDto"
+          },
+          "proposed": {
+            "$ref": "#/components/schemas/OfferingProposedStageDto"
+          },
+          "official": {
+            "$ref": "#/components/schemas/OfferingOfficialStageDto"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/OfferingResultProvenanceDto"
+          }
+        },
+        "required": [
+          "id",
+          "attempt",
+          "status",
+          "isVoided",
+          "calculated",
+          "proposed",
+          "official",
+          "provenance"
+        ]
+      },
+      "OfferingResultStudentDto": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "enrollmentStatus": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfferingResultAttemptDto"
+            }
+          },
+          "nextAttempt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "userId",
+          "displayName",
+          "email",
+          "enrollmentStatus",
+          "attempts",
+          "nextAttempt"
+        ]
+      },
+      "OfferingResultsResponseDto": {
+        "type": "object",
+        "properties": {
+          "offering": {
+            "$ref": "#/components/schemas/OfferingResultsOfferingDto"
+          },
+          "course": {
+            "$ref": "#/components/schemas/OfferingResultsCourseDto"
+          },
+          "viewerRole": {
+            "enum": [
+              "teacher",
+              "administrator"
+            ],
+            "type": "string"
+          },
+          "canPublish": {
+            "type": "boolean",
+            "description": "Whether the caller may promote a proposal to official, as opposed to only proposing one."
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfferingResultStudentDto"
+            }
+          }
+        },
+        "required": [
+          "offering",
+          "course",
+          "viewerRole",
+          "canPublish",
+          "students"
+        ]
+      },
+      "RecordGradeDto": {
+        "type": "object",
+        "properties": {
+          "attempt": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Which sitting the grade belongs to. Omitted, it lands on the student’s current attempt; a resit is recorded by naming the next one."
+          },
+          "proposedGrade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string",
+            "description": "Behind `grade:propose`. Null withdraws the proposal."
+          },
+          "officialGrade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string",
+            "description": "Behind `grade:publish`. Null withdraws the published grade."
+          },
+          "conflictNote": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          }
+        }
+      },
+      "RecordedGradeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "calculated",
+              "proposed",
+              "official",
+              "corrected",
+              "annulled",
+              "disputed"
+            ],
+            "type": "string"
+          },
+          "proposedGrade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string"
+          },
+          "officialGrade": {
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed",
+              null
+            ],
+            "type": "string"
+          },
+          "synchronizationStatus": {
+            "enum": [
+              "in_sync",
+              "pending",
+              "conflict",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "enrollmentId",
+          "attempt",
+          "status",
+          "proposedGrade",
+          "officialGrade",
+          "synchronizationStatus"
         ]
       },
       "LearningSpaceDto": {
