@@ -27,6 +27,7 @@ export const DEFAULT_FEATURES: ResolvedFeatures = {
  * the settings screen has to say so rather than offering a control that lies.
  */
 export const IMPLEMENTED_FEATURES: readonly FeatureFlag[] = [
+  'courseRegistration',
   'examRegistration',
   'timetable',
   'grades',

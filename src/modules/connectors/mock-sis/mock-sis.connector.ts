@@ -4,6 +4,8 @@ import {
   ACADEMIC_SYSTEM_CAPABILITIES,
   type AcademicSystemCapabilities,
   type AcademicSystemConnector,
+  type SisCourseRegistrationCommand,
+  type SisCourseWithdrawalCommand,
   type SisExamRegistrationCancelCommand,
   type SisExamRegistrationCommand,
   type SisWriteAcknowledgement,
@@ -34,11 +36,13 @@ import {
 import { buildMockSisDataset, type MockSisDataset } from './mock-sis.dataset';
 import { MOCK_SIS_OPTIONS, type MockSisOptions } from './mock-sis.options';
 import {
+  acceptCourseRegistration,
+  acceptCourseWithdrawal,
   acceptExamRegistration,
   acceptExamRegistrationCancellation,
 } from './mock-sis.registrar';
 
-const UNSUPPORTED_CAPABILITIES = new Set<string>(['courseRegistration.write']);
+const UNSUPPORTED_CAPABILITIES = new Set<string>();
 
 const CREDENTIAL_FIELDS: readonly ConnectorCredentialField[] = [
   {
@@ -144,6 +148,14 @@ export class MockSisConnector implements AcademicSystemConnector {
 
   cancelExamRegistration(command: SisExamRegistrationCancelCommand): Promise<void> {
     return acceptExamRegistrationCancellation(command);
+  }
+
+  registerForCourse(command: SisCourseRegistrationCommand): Promise<SisWriteAcknowledgement> {
+    return acceptCourseRegistration(command);
+  }
+
+  withdrawFromCourse(command: SisCourseWithdrawalCommand): Promise<void> {
+    return acceptCourseWithdrawal(command);
   }
 
   private read<TData>(

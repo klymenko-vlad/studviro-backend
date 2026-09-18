@@ -84,6 +84,23 @@ export const ENROLLMENT_RECORDED_STATUSES: readonly EnrollmentStatus[] = [
   'completed',
 ];
 
+/**
+ * Statuses that hold a place against the offering's capacity. A request that
+ * has not been answered yet holds one, or two students could be given the last
+ * seat while neither is `active`.
+ */
+export const ENROLLMENT_OCCUPYING_STATUSES: readonly EnrollmentStatus[] = [
+  'requested',
+  ...ENROLLMENT_RECORDED_STATUSES,
+];
+
+/** Statuses a student may withdraw from themselves. */
+export const ENROLLMENT_WITHDRAWABLE_STATUSES: readonly EnrollmentStatus[] = [
+  'requested',
+  'provisioning',
+  'active',
+];
+
 export const ENROLLMENT_REQUIREMENT_TYPES = ['compulsory', 'optional', 'elective'] as const;
 export type EnrollmentRequirementType = (typeof ENROLLMENT_REQUIREMENT_TYPES)[number];
 export const enrollmentRequirementType = pgEnum(

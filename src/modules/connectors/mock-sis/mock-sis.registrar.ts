@@ -1,4 +1,6 @@
 import type {
+  SisCourseRegistrationCommand,
+  SisCourseWithdrawalCommand,
   SisExamRegistrationCancelCommand,
   SisExamRegistrationCommand,
   SisWriteAcknowledgement,
@@ -34,6 +36,42 @@ export function acceptExamRegistration(
   return Promise.resolve({
     externalId: `EXR-${command.examTermExternalId}-${command.personExternalId}`,
   });
+}
+
+export const MOCK_SIS_FULL_COURSE_REFUSAL_CODE = 'COURSE_QUOTA_EXHAUSTED';
+
+/**
+ * The registrar refuses a course whose external identifier ends in `-99`. As
+ * with the retake rule, it exists so the `rejected` path can be walked at all.
+ */
+const REFUSED_OFFERING_SUFFIX = '-99';
+
+export function acceptCourseRegistration(
+  command: SisCourseRegistrationCommand,
+): Promise<SisWriteAcknowledgement> {
+  if (command.courseOfferingExternalId.endsWith(REFUSED_OFFERING_SUFFIX)) {
+    return Promise.reject(
+      new ConnectorRejectedError(
+        MOCK_SIS_FULL_COURSE_REFUSAL_CODE,
+        'The registrar has no quota left on that course',
+      ),
+    );
+  }
+
+  return Promise.resolve({
+    externalId: `ENR-${command.courseOfferingExternalId}-${command.personExternalId}`,
+  });
+}
+
+export function acceptCourseWithdrawal(command: SisCourseWithdrawalCommand): Promise<void> {
+  return command.courseOfferingExternalId.endsWith(REFUSED_OFFERING_SUFFIX)
+    ? Promise.reject(
+        new ConnectorRejectedError(
+          MOCK_SIS_FULL_COURSE_REFUSAL_CODE,
+          'The registrar will not release that course',
+        ),
+      )
+    : Promise.resolve();
 }
 
 export function acceptExamRegistrationCancellation(

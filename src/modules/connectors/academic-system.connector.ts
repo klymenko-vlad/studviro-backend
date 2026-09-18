@@ -62,6 +62,12 @@ export interface SisCourseRegistrationCommand extends SisWriteCommand {
   readonly personExternalId: string;
 }
 
+export interface SisCourseWithdrawalCommand extends SisWriteCommand {
+  readonly courseOfferingExternalId: string;
+  readonly personExternalId: string;
+  readonly enrollmentExternalId: string | null;
+}
+
 /** What the source assigned, so the next import of that domain matches our row. */
 export interface SisWriteAcknowledgement {
   readonly externalId: string;
@@ -93,6 +99,7 @@ export interface AcademicSystemConnector {
   registerForExam?(command: SisExamRegistrationCommand): Promise<SisWriteAcknowledgement>;
   cancelExamRegistration?(command: SisExamRegistrationCancelCommand): Promise<void>;
   registerForCourse?(command: SisCourseRegistrationCommand): Promise<SisWriteAcknowledgement>;
+  withdrawFromCourse?(command: SisCourseWithdrawalCommand): Promise<void>;
 }
 
 export const ACADEMIC_SYSTEM_CONNECTORS = Symbol('ACADEMIC_SYSTEM_CONNECTORS');

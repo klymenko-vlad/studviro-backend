@@ -5,7 +5,10 @@ import type { ConnectorRecord } from '../connector.types';
 
 import { MockSisConnector } from './mock-sis.connector';
 import { DEFAULT_MOCK_SIS_OPTIONS, type MockSisOptions } from './mock-sis.options';
-import { MOCK_SIS_RETAKE_REFUSAL_CODE } from './mock-sis.registrar';
+import {
+  MOCK_SIS_FULL_COURSE_REFUSAL_CODE,
+  MOCK_SIS_RETAKE_REFUSAL_CODE,
+} from './mock-sis.registrar';
 
 const connector = (overrides: Partial<MockSisOptions> = {}): MockSisConnector =>
   new MockSisConnector({ ...DEFAULT_MOCK_SIS_OPTIONS, ...overrides });
@@ -18,13 +21,13 @@ describe('MockSisConnector', () => {
     await expect(connector().healthCheck()).resolves.toMatchObject({ reachable: true });
   });
 
-  it('advertises every read capability, and exam registration as the one it can write', () => {
+  it('advertises every capability, reads and writes alike', () => {
     const capabilities = connector().capabilities();
 
     expect(capabilities['courses.read']).toBe(true);
     expect(capabilities['officialResults.read']).toBe(true);
     expect(capabilities['examRegistration.write']).toBe(true);
-    expect(capabilities['courseRegistration.write']).toBe(false);
+    expect(capabilities['courseRegistration.write']).toBe(true);
   });
 
   describe('exam registration write-back', () => {
@@ -87,10 +90,39 @@ describe('MockSisConnector', () => {
     ]);
   });
 
-  it('does not implement the optional write operations it does not advertise', () => {
+  it('implements every write operation it advertises', () => {
     const academic = connector() as unknown as Record<string, unknown>;
 
-    expect(academic.registerForCourse).toBeUndefined();
+    expect(academic.registerForExam).toBeTypeOf('function');
+    expect(academic.cancelExamRegistration).toBeTypeOf('function');
+    expect(academic.registerForCourse).toBeTypeOf('function');
+    expect(academic.withdrawFromCourse).toBeTypeOf('function');
+  });
+
+  describe('course registration write-back', () => {
+    const command = (courseOfferingExternalId: string) => ({
+      idempotencyKey: '5d2f7a1e-0000-4000-8000-000000000002',
+      courseOfferingExternalId,
+      personExternalId: 'PER-1',
+    });
+
+    it('accepts an ordinary offering and returns the identifier it assigned', async () => {
+      await expect(connector().registerForCourse(command('OFF-1'))).resolves.toEqual({
+        externalId: 'ENR-OFF-1-PER-1',
+      });
+    });
+
+    it('refuses an offering the registrar has no quota on', async () => {
+      await expect(connector().registerForCourse(command('OFF-99'))).rejects.toMatchObject({
+        code: MOCK_SIS_FULL_COURSE_REFUSAL_CODE,
+      });
+    });
+
+    it('accepts a withdrawal from an ordinary offering', async () => {
+      await expect(
+        connector().withdrawFromCourse({ ...command('OFF-1'), enrollmentExternalId: null }),
+      ).resolves.toBeUndefined();
+    });
   });
 
   describe('determinism', () => {

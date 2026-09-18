@@ -240,7 +240,7 @@ describe('Institution configuration (e2e)', () => {
       expect(academic).toMatchObject({ name: 'mock-sis', installed: true, healthy: true });
       expect(academic.capabilities).toContain('courses.read');
       expect(academic.capabilities).toContain('examRegistration.write');
-      expect(academic.capabilities).not.toContain('courseRegistration.write');
+      expect(academic.capabilities).toContain('courseRegistration.write');
     });
 
     it('offers the connectors the deployment ships with as alternatives', async () => {
@@ -328,6 +328,7 @@ describe('Institution configuration (e2e)', () => {
       });
 
       expect(response.json().implementedFeatures).toEqual([
+        'courseRegistration',
         'examRegistration',
         'timetable',
         'grades',

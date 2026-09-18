@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (institution configuration stops lying — B6, B7)
+Last updated: 2026-09-18 (self-service enrolment — G5 closed)
 
 ## What this is
 
@@ -108,6 +108,14 @@ reasoning lives in `docs/adr/`. In short:
   screen disables them rather than offering a control that changes nothing. `useTerminology` renders
   an institution's own word — the org-unit tree uses it for faculty and department.
 
+- **A student can take a course** (G5) — `/institutions/[id]/enroll` lists what is on offer with the
+  places left and says why any is out of reach. `course:enroll` is a new self-service permission beside
+  `exam:register`. The status ladder is used as the schema always described it: a request lands
+  `requested` and becomes `active` only when the registrar's system acknowledges the write-back, or
+  immediately where no connector can be told. Capacity counts a pending request, so two students cannot
+  be given the last place; a re-request reuses the withdrawn row. The write-back pair from ADR 0023 is
+  wired, so `courseRegistration` is the fourth implemented feature flag.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -161,7 +169,7 @@ turned out not to be. Read those before starting; the headlines:
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
   **G8 is closed** and **G4** is down to six permissions with no endpoint — no catalogue
-  administration and no enrolment correction; no self-service enrolment (**G5**); no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
+  administration and no enrolment correction; no sync schedule (**G10**); GDPR, threat model, audit and export unstarted while personal data is
   already served (**G12**).
 - **G2 is closed**, and so is the reconciliation gap it left behind. What G2 did not settle: an LMS mark
   deliberately does not feed the calculated stage of `course_results` (ADR 0022), and grade entry is still G4/G8.
@@ -184,33 +192,29 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — self-service course enrolment (G5)
+## Next task — the client bundle, before it breaches (and write-back step 2)
 
-**`courseRegistration` is the fourth feature flag with nothing to gate, and the reason is that the
-whole ladder it names is unbuilt** — `academic_terms.enrollment_opens_at` / `closes_at`,
-`course_offerings.capacity`, the `requested → provisioning → active` status ladder and
-`enrollments.attempt` are all columns nobody writes.
+**The bundle has 1.34 kB of headroom and every recent step has spent more than that.** Decide the
+budget deliberately rather than discovering it in CI:
 
-What it takes:
+- Either raise the `size-limit` figure with a stated reason, or spend the step reducing it. The obvious
+  reductions: `/enroll` and `/exams` render the same card-and-reason shape twice and could share one
+  component; `/enroll`'s card duplicates `ExamTermCard`'s window and seats logic; several
+  `@/shared/ui` primitives are pulled in by one screen each.
+- Whichever way it goes, record the decision so the next step is not surprised.
 
-- `GET institutions/:id/course-offerings?enrollable=true` behind `offering:read`: the offerings a
-  student may take this term, with the same why-not answer the exam terms already give — window
-  closed, no capacity, already enrolled, not in the programme.
-- `POST .../me/enrollments` behind a new decision: enrolling is the student's own act, so
-  `enrollment:manage` is the administrator's correction permission and this needs its own. Reuse
-  `offering:read` plus the feature flag, the way exam registration reuses `exam:register`.
-- `DELETE .../me/enrollments/:id` to withdraw, honouring the window.
-- The write-back pair `course_enrollment.request` / `.withdraw` is already named in ADR 0023 and the
-  outbox is kind-agnostic, so wire them here rather than leaving a second silent local-only act.
-- Then `courseRegistration` gates it, and `IMPLEMENTED_FEATURES` gains its fourth entry.
+**Then write-back step 2: the LMS pair.** `learning_space.provision` and
+`learning_enrollment.upsert`, which is where provisioning stops being a column nobody writes
+(`enrollments.lms_provisioned_at`). The outbox, worker, capability gate, retry ladder and monitor
+surface are kind-agnostic and already carry two intent kinds each for SIS reads and writes; this adds
+two writers targeting `lms` and the `mock-lms` commands they call. The one real design question: unlike
+the exam and enrolment pairs there is no user act to hang a provisioning intent on, so decide whether a
+sync run enqueues them or an administrator asks for it on the sync screen.
 
-Frontend: an enrollable-offerings screen under _Courses_ with the same card-and-reason shape the exam
-screen uses, and the enrolment state on the course page.
-
-**After that, in order:** write-back step 2 (the LMS pair) and step 3 (`course_result.publish`); G10 (a
-sync schedule, which also gives the outbox a sweeper); the rest of G4 (catalogue administration,
-enrolment correction); G12 (GDPR inventory, threat model, audit events, export); the remaining
-terminology swaps (**B7**); steps 49–53 and the testing passes 57–62.
+**After that, in order:** write-back step 3 (`course_result.publish`); G10 (a sync schedule, which also
+gives the outbox the sweeper it lacks); the rest of G4 (catalogue administration, enrolment
+correction); G12 (GDPR inventory, threat model, audit events, export); the remaining terminology swaps
+(**B7**); steps 49–53 and the testing passes 57–62.
 
 ## Caveats
 
@@ -232,8 +236,11 @@ terminology swaps (**B7**); steps 49–53 and the testing passes 57–62.
   resit is never told when that term moves — the exam flow still disagrees with itself, now only
   for retakes. Fold this into the B10 fix.
 - Steps 1–22 were inferred from documents, not re-verified.
-- **The client bundle is at 444.36 kB gzipped against the 455 kB guard — 10.64 kB of headroom.**
-  G1 step 1 spent 3.31 kB, the step before it 0.46 kB, then 1.72 kB, G3 2.61 kB, G2 2.67 kB. When choosing a
+- **The client bundle is at 453.66 kB gzipped against the 455 kB guard — 1.34 kB of headroom. The next
+  step to touch the client will almost certainly breach it.** G5 spent 3.83 kB, B6/B7 0.8 kB, G9 0.34 kB,
+  G8 3.78 kB, G1 step 1 3.31 kB. Either raise the budget deliberately or spend a step on the bundle —
+  the `/enroll` and `/exams` screens duplicate a card-and-reason shape that could be one component, and
+  several `@/shared/ui` primitives are imported by exactly one screen. When choosing a
   `shared/ui` primitive, remember the native-`<select>` swap that freed 27.61 kB: a Radix control pulls
   in floating-ui, focus-scope, dismissable-layer and the collection helpers, and a plain HTML element
   sometimes covers the same behaviour for less.

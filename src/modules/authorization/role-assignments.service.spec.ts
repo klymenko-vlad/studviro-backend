@@ -99,6 +99,7 @@ function serviceWith(
 }
 
 const ALL_PERMISSIONS = [
+  'course:enroll',
   'program:read',
   'program:manage',
   'course:read',
@@ -124,6 +125,7 @@ const ALL_PERMISSIONS = [
 ];
 
 const ORG_UNIT_MANAGER_PERMISSIONS = [
+  'course:enroll',
   'institution:read',
   'program:read',
   'course:read',

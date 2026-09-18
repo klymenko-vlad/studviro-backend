@@ -4988,6 +4988,285 @@
           "marketing"
         ]
       }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments/enrollable": {
+      "get": {
+        "operationId": "listEnrollableOfferings",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnrollableOfferingResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the courses the caller may take, and say why not where they may not",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments": {
+      "post": {
+        "description": "A request, not a place: the row is `requested` until the registrar’s system acknowledges it, and `active` immediately where no connector can be told.",
+        "operationId": "requestEnrollment",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEnrollmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Ask for a place on a course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments/{id}": {
+      "delete": {
+        "operationId": "withdrawFromCourse",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Withdraw from a course while the window is still open",
+        "tags": [
+          "courses"
+        ]
+      }
     }
   },
   "info": {
@@ -6730,6 +7009,7 @@
                 "schedule:manage",
                 "notification:read",
                 "exam:register",
+                "course:enroll",
                 "role:read",
                 "role:assign",
                 "institution:read",
@@ -9692,6 +9972,241 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "EnrollmentAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "canEnroll": {
+            "type": "boolean"
+          },
+          "canWithdraw": {
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "open",
+              "enrolled",
+              "requested",
+              "completed",
+              "not_open",
+              "closed",
+              "full",
+              "not_a_student"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "canEnroll",
+          "canWithdraw",
+          "reason"
+        ]
+      },
+      "MyEnrollmentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "EnrollableCourseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "credits"
+        ]
+      },
+      "EnrollableTermDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
+      "EnrollableOfferingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "occupiedSeats": {
+            "type": "number"
+          },
+          "seatsRemaining": {
+            "type": "number",
+            "nullable": true
+          },
+          "isFull": {
+            "type": "boolean"
+          },
+          "enrollmentOpensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enrollmentClosesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "windowState": {
+            "enum": [
+              "not_open",
+              "open",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/EnrollmentAvailabilityDto"
+          },
+          "myEnrollment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyEnrollmentSummaryDto"
+              }
+            ]
+          },
+          "course": {
+            "$ref": "#/components/schemas/EnrollableCourseDto"
+          },
+          "term": {
+            "$ref": "#/components/schemas/EnrollableTermDto"
+          }
+        },
+        "required": [
+          "id",
+          "capacity",
+          "occupiedSeats",
+          "seatsRemaining",
+          "isFull",
+          "enrollmentOpensAt",
+          "enrollmentClosesAt",
+          "windowState",
+          "availability",
+          "myEnrollment",
+          "course",
+          "term"
+        ]
+      },
+      "RequestEnrollmentDto": {
+        "type": "object",
+        "properties": {
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "courseOfferingId"
+        ]
+      },
+      "EnrollmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "enrolledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synchronizationStatus": {
+            "enum": [
+              "in_sync",
+              "pending",
+              "conflict",
+              "failed"
+            ],
+            "type": "string",
+            "description": "`pending` while the registrar’s system has not answered the request yet."
+          }
+        },
+        "required": [
+          "id",
+          "courseOfferingId",
+          "status",
+          "enrolledAt",
+          "withdrawnAt",
+          "synchronizationStatus"
         ]
       }
     }

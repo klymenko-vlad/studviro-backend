@@ -16,6 +16,7 @@ export const PERMISSIONS = [
   'schedule:manage',
   'notification:read',
   'exam:register',
+  'course:enroll',
   'role:read',
   'role:assign',
   'institution:read',
@@ -38,7 +39,10 @@ const READS = [
   'notification:read',
 ] as const satisfies readonly Permission[];
 
-const SELF_SERVICE = ['exam:register'] as const satisfies readonly Permission[];
+const SELF_SERVICE = [
+  'exam:register',
+  'course:enroll',
+] as const satisfies readonly Permission[];
 
 const TEACHING = [
   ...READS,

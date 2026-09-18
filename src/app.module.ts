@@ -22,6 +22,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { ConnectorsModule } from './modules/connectors/connectors.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { FeatureFlagGuard } from './modules/institutions/configuration/guards/feature-flag.guard';
@@ -150,6 +151,7 @@ function workerModules(): DynamicModule[] {
     MarketingModule,
     NotificationsModule,
     SchedulingModule,
+    EnrollmentModule,
     WriteBackModule,
     UsersModule,
     SynchronizationModule,
