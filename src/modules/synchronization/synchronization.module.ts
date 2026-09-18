@@ -5,6 +5,7 @@ import { ConnectorsModule } from '../connectors/connectors.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InstitutionsModule } from '../institutions/institutions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SchedulingModule } from '../scheduling/scheduling.module';
 import { UsersModule } from '../users/users.module';
 
 import { AcademicSyncService } from './academic-sync.service';
@@ -37,6 +38,7 @@ import { SynchronizationService } from './synchronization.service';
     UsersModule,
     CryptoModule,
     NotificationsModule,
+    SchedulingModule,
   ],
   controllers: [SynchronizationController],
   providers: [

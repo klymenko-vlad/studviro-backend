@@ -8,6 +8,7 @@ import {
   examRegistrations,
   examTerms,
   institutions,
+  officialCourseResults,
   roleAssignments,
   rooms,
   teachingAssignments,
@@ -66,9 +67,23 @@ describe('My exam terms (e2e)', () => {
     courseOfferingId: string,
     status: EnrollmentStatus = 'active',
   ) => {
-    await harness.db
+    const [row] = await harness.db
       .insert(enrollments)
-      .values({ institutionId, userId, courseOfferingId, status });
+      .values({ institutionId, userId, courseOfferingId, status })
+      .returning();
+
+    return row!.id;
+  };
+
+  /** One spent attempt, which is what opens the first rung of the retake ladder. */
+  const failCourse = async (enrollmentId: string) => {
+    await harness.db.insert(officialCourseResults).values({
+      institutionId,
+      enrollmentId,
+      status: 'official',
+      officialGrade: 'FX',
+      officialRecordedAt: new Date('2026-06-20T00:00:00.000Z'),
+    });
   };
 
   const teach = async (userId: string, courseOfferingId: string) => {
@@ -421,7 +436,7 @@ describe('My exam terms (e2e)', () => {
 
   it('blocks a sibling term while a live registration on the offering stands', async () => {
     const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
+    await failCourse(await enrol(actor.user.id, algorithmsOfferingId));
     await enrol(actor.user.id, databasesOfferingId);
     const held = await examTerm();
     await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
@@ -445,7 +460,7 @@ describe('My exam terms (e2e)', () => {
 
   it('does not let another student’s registration block the caller’s sibling term', async () => {
     const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
+    await failCourse(await enrol(actor.user.id, algorithmsOfferingId));
     const other = await examTerm();
     await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
     await register(other, examinerId);
@@ -457,7 +472,7 @@ describe('My exam terms (e2e)', () => {
 
   it('lets a cancelled registration of the caller’s own stop blocking the sibling term', async () => {
     const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
+    await failCourse(await enrol(actor.user.id, algorithmsOfferingId));
     const abandoned = await examTerm();
     await examTerm({ kind: 'first_retake', startsAt: new Date('2026-06-23T09:00:00.000Z') });
     await register(abandoned, actor.user.id, 'cancelled');

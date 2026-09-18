@@ -8,12 +8,17 @@ import {
   enrollments,
   examRegistrations,
   examTerms,
+  FAILING_COURSE_GRADES,
+  officialCourseResults,
+  VOIDED_COURSE_RESULT_STATUSES,
   type ExamRegistration,
+  type ExamTermKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 export interface RegistrableExamTermRow {
   examTermId: string;
+  kind: ExamTermKind;
   offeringId: string;
   capacity: number | null;
   registeredCount: number;
@@ -21,6 +26,8 @@ export interface RegistrableExamTermRow {
   registrationClosesAt: Date | null;
   cancelledAt: Date | null;
   enrolled: boolean;
+  /** Attempts already spent on this offering: failed results plus consumed seats. */
+  attemptsSpent: number;
 }
 
 export interface LiveRegistrationRow {
@@ -44,6 +51,7 @@ export class MyExamRegistrationsRepository {
     const [row] = await this.writer
       .select({
         examTermId: examTerms.id,
+        kind: examTerms.kind,
         offeringId: courseOfferings.id,
         capacity: examTerms.capacity,
         registeredCount: this.registeredCount(),
@@ -51,6 +59,7 @@ export class MyExamRegistrationsRepository {
         registrationClosesAt: examTerms.registrationClosesAt,
         cancelledAt: examTerms.cancelledAt,
         enrolled: sql<boolean>`${this.enrolledIn(userId)}`.mapWith(Boolean),
+        attemptsSpent: this.attemptsSpent(userId),
       })
       .from(examTerms)
       .innerJoin(courseOfferings, eq(courseOfferings.id, examTerms.courseOfferingId))
@@ -113,11 +122,16 @@ export class MyExamRegistrationsRepository {
     return created;
   }
 
+  /**
+   * A cancellation is recorded, not erased. It used to set `deleted_at` as well,
+   * which made the `cancelled` status unreadable dead data and left the student
+   * with no trace of an act they took.
+   */
   async cancel(id: string, now: Date): Promise<ExamRegistration> {
     const [cancelled] = await this.txHost
       .client()
       .update(examRegistrations)
-      .set({ status: 'cancelled', cancelledAt: now, deletedAt: now })
+      .set({ status: 'cancelled', cancelledAt: now })
       .where(and(eq(examRegistrations.id, id), isNull(examRegistrations.deletedAt)))
       .returning();
 
@@ -156,6 +170,24 @@ export class MyExamRegistrationsRepository {
       .limit(1);
 
     return row;
+  }
+
+  /**
+   * How far up the retake ladder the student already is on this offering. A
+   * failed standing result is one spent attempt; an annulled one is none,
+   * because it was struck.
+   */
+  private attemptsSpent(userId: string): SQL<number> {
+    return sql<number>`(
+      select count(*) from ${officialCourseResults}
+      inner join ${enrollments} on ${enrollments.id} = ${officialCourseResults.enrollmentId}
+      where ${enrollments.userId} = ${userId}
+        and ${enrollments.courseOfferingId} = ${courseOfferings.id}
+        and ${enrollments.deletedAt} is null
+        and ${officialCourseResults.deletedAt} is null
+        and ${officialCourseResults.status} not in ${VOIDED_COURSE_RESULT_STATUSES}
+        and ${officialCourseResults.officialGrade} in ${FAILING_COURSE_GRADES}
+    )`.mapWith(Number);
   }
 
   private registeredCount(): SQL<number> {

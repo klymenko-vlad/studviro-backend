@@ -174,7 +174,11 @@ describe('My course results (e2e)', () => {
       headers: actor.headers,
     });
 
-    expect(response.json()[0].effective).toEqual({ kind: 'proposed', grade: 'B' });
+    expect(response.json()[0].effective).toEqual({
+      kind: 'proposed',
+      grade: 'B',
+      passed: true,
+    });
   });
 
   it('orders the most recent term first and filters by term and offering', async () => {
@@ -264,5 +268,76 @@ describe('My course results (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+
+  describe('study progress', () => {
+    const summaryFor = async (actor: {
+      headers: { authorization: string };
+    }): Promise<Record<string, unknown>> => {
+      const response = await harness.inject({
+        method: 'GET',
+        url: `/api/v1/institutions/${institutionId}/me/course-results/summary`,
+        headers: actor.headers,
+      });
+
+      return response.json();
+    };
+
+    it('totals credits and the weighted average from published results alone', async () => {
+      const actor = await actingAs('student');
+      await record(await enrol(actor.user.id, runningOfferingId), {
+        status: 'official',
+        officialGrade: 'A',
+      });
+      await record(await enrol(actor.user.id, pastOfferingId), {
+        status: 'proposed',
+        proposedGrade: 'A',
+      });
+
+      expect(await summaryFor(actor)).toMatchObject({
+        gradedCourses: 1,
+        passedCourses: 1,
+        weightedAverage: 1,
+      });
+    });
+
+    it('counts a failed course as awaiting a resit', async () => {
+      const actor = await actingAs('student');
+      await record(await enrol(actor.user.id, runningOfferingId), {
+        status: 'official',
+        officialGrade: 'FX',
+      });
+
+      expect(await summaryFor(actor)).toMatchObject({
+        failedCourses: 1,
+        awaitingRetake: 1,
+        creditsEarned: 0,
+      });
+    });
+
+    it('counts an annulled result for nothing at all', async () => {
+      const actor = await actingAs('student');
+      await record(await enrol(actor.user.id, runningOfferingId), {
+        status: 'annulled',
+        officialGrade: 'A',
+      });
+
+      expect(await summaryFor(actor)).toMatchObject({
+        gradedCourses: 0,
+        creditsEarned: 0,
+        weightedAverage: null,
+      });
+    });
+
+    it('answers a student with no results at all with zeroes', async () => {
+      const actor = await actingAs('student');
+
+      expect(await summaryFor(actor)).toMatchObject({
+        gradedCourses: 0,
+        creditsEarned: 0,
+        weightedAverage: null,
+        awaitingRetake: 0,
+      });
+    });
   });
 });

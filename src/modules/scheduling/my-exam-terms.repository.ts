@@ -9,10 +9,13 @@ import {
   enrollments,
   examRegistrations,
   examTerms,
+  FAILING_COURSE_GRADES,
+  officialCourseResults,
   rooms,
   sourceWriteIntents,
   teachingAssignments,
   users,
+  VOIDED_COURSE_RESULT_STATUSES,
   type ExamRegistrationStatus,
   type ExamTermKind,
   type SourceSystem,
@@ -33,6 +36,7 @@ export interface MyExamTermRow {
   teaching: boolean;
   registeredCount: number;
   otherLiveRegistrationForOffering: boolean;
+  attemptsSpent: number;
   roomId: string | null;
   roomCode: string | null;
   roomName: string | null;
@@ -103,6 +107,7 @@ export class MyExamTermsRepository {
         registeredCount: this.registeredCount(),
         otherLiveRegistrationForOffering:
           sql<boolean>`${this.registeredElsewhere(userId)}`.mapWith(Boolean),
+        attemptsSpent: this.attemptsSpent(userId),
         roomId: rooms.id,
         roomCode: rooms.code,
         roomName: rooms.name,
@@ -135,14 +140,37 @@ export class MyExamTermsRepository {
       .leftJoin(users, and(eq(users.id, examTerms.examinerId), isNull(users.deletedAt)))
       .leftJoin(
         examRegistrations,
-        and(
-          eq(examRegistrations.examTermId, examTerms.id),
-          eq(examRegistrations.userId, userId),
-          isNull(examRegistrations.deletedAt),
-        ),
+        // The newest row wins: a cancellation is kept beside the registration it
+        // reverses, so the join has to say which of the two it means.
+        eq(examRegistrations.id, this.latestRegistrationId(userId)),
       )
       .where(and(...conditions))
       .orderBy(asc(examTerms.startsAt), asc(courses.code));
+  }
+
+  /** The same count the write enforces the retake ladder on. */
+  private attemptsSpent(userId: string): SQL<number> {
+    return sql<number>`(
+      select count(*) from ${officialCourseResults}
+      inner join ${enrollments} on ${enrollments.id} = ${officialCourseResults.enrollmentId}
+      where ${enrollments.userId} = ${userId}
+        and ${enrollments.courseOfferingId} = ${courseOfferings.id}
+        and ${enrollments.deletedAt} is null
+        and ${officialCourseResults.deletedAt} is null
+        and ${officialCourseResults.status} not in ${VOIDED_COURSE_RESULT_STATUSES}
+        and ${officialCourseResults.officialGrade} in ${FAILING_COURSE_GRADES}
+    )`.mapWith(Number);
+  }
+
+  private latestRegistrationId(userId: string): SQL<string> {
+    return sql<string>`(
+      select inner_registration.id from ${examRegistrations} as inner_registration
+      where inner_registration.exam_term_id = ${examTerms.id}
+        and inner_registration.user_id = ${userId}
+        and inner_registration.deleted_at is null
+      order by inner_registration.registered_at desc nulls last, inner_registration.created_at desc
+      limit 1
+    )`;
   }
 
   /**

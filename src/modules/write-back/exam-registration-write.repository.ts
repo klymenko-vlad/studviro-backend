@@ -101,12 +101,7 @@ export class ExamRegistrationWriteRepository {
     const [reversed] = await this.txHost
       .client()
       .update(examRegistrations)
-      .set({
-        status: 'cancelled',
-        cancelledAt: now,
-        deletedAt: now,
-        synchronizationStatus: 'in_sync',
-      })
+      .set({ status: 'cancelled', cancelledAt: now, synchronizationStatus: 'in_sync' })
       .where(and(eq(examRegistrations.id, registrationId), isNull(examRegistrations.deletedAt)))
       .returning();
 

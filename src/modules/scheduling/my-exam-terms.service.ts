@@ -9,6 +9,7 @@ import type {
   SynchronizationStatus,
 } from '../../database/schema';
 
+import { laddersTo } from './exam-attempt-ladder';
 import {
   MyExamTermsRepository,
   type MyExamTermFilter,
@@ -30,6 +31,7 @@ export const EXAM_REGISTRATION_REASONS = [
   'closed',
   'other_term_registered',
   'full',
+  'attempt_not_earned',
 ] as const;
 export type ExamRegistrationReason = (typeof EXAM_REGISTRATION_REASONS)[number];
 
@@ -215,6 +217,7 @@ function registrationAvailability(
   }
 
   if (row.cancelledAt !== null) return blocked('cancelled');
+  if (!laddersTo(row.kind, row.attemptsSpent)) return blocked('attempt_not_earned');
 
   const state = registrationState(row, now);
 

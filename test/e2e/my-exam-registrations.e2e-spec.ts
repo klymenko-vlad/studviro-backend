@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -8,10 +9,12 @@ import {
   examRegistrations,
   examTerms,
   institutions,
+  officialCourseResults,
   roleAssignments,
   type CanonicalRole,
   type NewExamTerm,
 } from '../../src/database/schema';
+import { ExamTermCancellationService } from '../../src/modules/scheduling/exam-term-cancellation.service';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
 interface ExamTermSeats {
@@ -46,9 +49,23 @@ describe('My exam registrations (e2e)', () => {
   };
 
   const enrol = async (userId: string, courseOfferingId: string) => {
-    await harness.db
+    const [row] = await harness.db
       .insert(enrollments)
-      .values({ institutionId, userId, courseOfferingId, status: 'active' });
+      .values({ institutionId, userId, courseOfferingId, status: 'active' })
+      .returning();
+
+    return row!.id;
+  };
+
+  /** One spent attempt, which is what opens the first rung of the retake ladder. */
+  const failCourse = async (enrollmentId: string) => {
+    await harness.db.insert(officialCourseResults).values({
+      institutionId,
+      enrollmentId,
+      status: 'official',
+      officialGrade: 'FX',
+      officialRecordedAt: new Date('2026-06-20T00:00:00.000Z'),
+    });
   };
 
   const examTerm = async (overrides: Partial<NewExamTerm> = {}) => {
@@ -182,10 +199,12 @@ describe('My exam registrations (e2e)', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ status: 'cancelled' });
+    // The cancellation is kept on the record rather than erased (B11), so the
+    // student can see that it happened; it just holds no seat.
     expect(await seatsOf(actor, examTermId)).toMatchObject({
       registeredCount: 0,
       seatsRemaining: 2,
-      myRegistration: null,
+      myRegistration: { status: 'cancelled' },
     });
   });
 
@@ -213,7 +232,7 @@ describe('My exam registrations (e2e)', () => {
 
   it('refuses a registration for a second term of the same course', async () => {
     const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
+    await failCourse(await enrol(actor.user.id, algorithmsOfferingId));
     const first = await examTerm();
     const retake = await examTerm({
       kind: 'first_retake',
@@ -272,15 +291,44 @@ describe('My exam registrations (e2e)', () => {
 
   it('registers a student whose enrolment has already completed', async () => {
     const actor = await actingAs('student');
-    await harness.db.insert(enrollments).values({
-      institutionId,
-      userId: actor.user.id,
-      courseOfferingId: algorithmsOfferingId,
-      status: 'completed',
-    });
+    const [enrollment] = await harness.db
+      .insert(enrollments)
+      .values({
+        institutionId,
+        userId: actor.user.id,
+        courseOfferingId: algorithmsOfferingId,
+        status: 'completed',
+      })
+      .returning();
+    await failCourse(enrollment!.id);
     const examTermId = await examTerm({ kind: 'first_retake' });
 
     expect((await registerFor(actor, examTermId)).statusCode).toBe(201);
+  });
+
+  it('refuses a retake to a student who has not failed the course', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, algorithmsOfferingId);
+    const examTermId = await examTerm({ kind: 'first_retake' });
+
+    const response = await registerFor(actor, examTermId);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe('EXAM_ATTEMPT_NOT_EARNED');
+  });
+
+  it('refuses a retake when the only failure on record was annulled', async () => {
+    const actor = await actingAs('student');
+    const enrollmentId = await enrol(actor.user.id, algorithmsOfferingId);
+    await harness.db.insert(officialCourseResults).values({
+      institutionId,
+      enrollmentId,
+      status: 'annulled',
+      officialGrade: 'FX',
+    });
+    const examTermId = await examTerm({ kind: 'first_retake' });
+
+    expect((await registerFor(actor, examTermId)).json().code).toBe('EXAM_ATTEMPT_NOT_EARNED');
   });
 
   it.each(['withdrawn', 'rejected', 'requested'] as const)(
@@ -328,5 +376,42 @@ describe('My exam registrations (e2e)', () => {
     const actor = await harness.actingAs();
 
     expect((await registerFor(actor, crypto.randomUUID())).statusCode).toBe(403);
+  });
+
+  describe('when the university cancels the term (B9)', () => {
+    it('lets the student register for the replacement instead of blocking on a dead term', async () => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id, algorithmsOfferingId);
+      const doomed = await examTerm();
+      const replacement = await examTerm({
+        startsAt: new Date('2026-06-20T09:00:00.000Z'),
+      });
+      await registerFor(actor, doomed);
+
+      const cancellations = harness.app.get(ExamTermCancellationService);
+      await harness.db
+        .update(examTerms)
+        .set({ cancelledAt: new Date('2026-06-01T00:00:00.000Z') })
+        .where(eq(examTerms.id, doomed));
+      await cancellations.releaseSeats(doomed, new Date('2026-06-01T00:00:00.000Z'));
+
+      expect((await registerFor(actor, replacement)).statusCode).toBe(201);
+    });
+
+    it('records the seats it released rather than erasing them', async () => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id, algorithmsOfferingId);
+      const doomed = await examTerm();
+      await registerFor(actor, doomed);
+
+      await harness.app
+        .get(ExamTermCancellationService)
+        .releaseSeats(doomed, new Date('2026-06-01T00:00:00.000Z'));
+
+      expect(await seatsOf(actor, doomed)).toMatchObject({
+        registeredCount: 0,
+        myRegistration: { status: 'cancelled' },
+      });
+    });
   });
 });

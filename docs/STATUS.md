@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (exam-registration write-back ships — G1 step 1 of 3)
+Last updated: 2026-09-18 (the exam lifecycle now means what its enums say — B4, B5, B9, B11)
 
 ## What this is
 
@@ -71,6 +71,18 @@ reasoning lives in `docs/adr/`. In short:
   path is walkable. The exam card names the delivery state; the sync monitor lists every unacknowledged write with
   retry and discard behind `sync:run`. No new permission.
 
+- **The exam lifecycle means what its enums say** (B4, B5, B9, B11) — pass, fail and the 1–4 point
+  scale sit beside `COURSE_GRADES` as the only copies of the rule, and `EXAM_TERM_KIND_ORDER` gives the
+  retake ladder its rungs: a `first_retake` needs one failed official result on the offering behind it,
+  a `second_retake` two, refused on the write and explained on the read as `attempt_not_earned`.
+  `official_course_results` is unique per (enrolment, attempt), so a resit no longer overwrites the
+  failure that made it necessary. An annulled result has no effective grade and says so
+  (_No standing_). Cancelling a term releases the seats it held, so the replacement is registrable.
+  A cancellation is recorded rather than erased — the unique index is partial on
+  `status = 'registered'` — and the card says you cancelled it. `GET .../me/course-results/summary`
+  totals credits, the weighted average and the courses awaiting a resit, and the client's own copy of
+  that arithmetic is gone.
+
 - **Onboarding, identity and the grant rules** (ADRs 0015–0018; **closes B1**, narrows B2) — an import
   lands a person as `users.status = 'invited'` with no credential and `user_emails` separates an
   asserted address from a proven one; `student` derives from an active `program_membership` and
@@ -117,16 +129,13 @@ turned out not to be. Read those before starting; the headlines:
   platform operator create an institution without SQL, and let an invited or self-registered
   person actually sign in (**B1** closed). What remains of **B2**: nobody can reach an institution
   without an invitation or a platform operator naming them — there is still no request-to-join.
-- **Rules that exist only as enums.** The retake ladder, the attendance outcomes and the `attempt`
-  columns are unenforced and unwritten, the unique indexes make a resit overwrite the failed
-  attempt, and nothing knows FX is a fail, so no credit total or average is computable (**B4**). An
-  `annulled` result still shows its grade (**B5**). All seven feature flags gate nothing (**B6**)
-  and terminology overrides are never rendered (**B7**).
-- **Flows that end badly.** A cancelled exam term leaves its registrations live, so the
-  one-registration rule blocks the replacement by naming a term that no longer exists (**B9**);
-  notifications reach everyone enrolled rather than everyone holding a seat, and never the examiner
-  (**B10**); a cancellation is soft-deleted so nobody can see it happened (**B11**); your own
-  registration is never confirmed (**B12**).
+- **Rules that exist only as enums.** What is left of **B4**: nothing ever sets `attended`,
+  `no_show` or `excused`, because no examiner surface exists to set them (**G4**/**G8**) — until then
+  an attempt is spent by a failing official result alone. All seven feature flags gate nothing
+  (**B6**) and terminology overrides are never rendered (**B7**).
+- **Flows that end badly.** Notifications reach everyone enrolled rather than everyone holding a
+  seat, and never the examiner (**B10**); your own registration is never confirmed (**B12**). Both are
+  the same missing families as **G9**.
 - **Not built at all.** **G1 is one third built**: exam registration reaches the source, the LMS pair
   (`learning_space.provision`, `learning_enrollment.upsert`) and `course_result.publish` are steps 2 and 3.
   Eight of
@@ -155,34 +164,33 @@ Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** a
 with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
 `docs/Deployment.md`.
 
-## Next task — make the exam lifecycle mean what its enums say (B4 / B5 / B9 / B11)
+## Next task — give grades a writer (G4 / G8)
 
-**One step, because the four defects are one rule seen from four sides: what a result _is_ on a
-retake.** Write-back step 3 (`course_result.publish`) depends on the answer, so this comes before it.
+**Eight of twenty-two permissions have no endpoint. `grade:propose` and `grade:publish` are the two
+that matter most, because the proposed stage of `course_results` is permanently empty without them
+and write-back step 3 has nothing to push.**
 
 What it takes:
 
-- **B4** — `exam_term_kind` and the `attempt` columns are decorative. A `first_retake` seat must
-  require a failed previous attempt; the unique indexes on results must key on the attempt so a resit
-  no longer overwrites the failure it followed; and `FX` must count as a fail, so credit totals and
-  averages become computable at all. Put the ladder beside the enum, one copy, the way
-  `ENROLLMENT_PARTICIPATING_STATUSES` sits beside its own.
-- **B5** — `effectiveGrade` reads only the three grade columns, so an `annulled` result still shows
-  its grade. Status has to gate the effective grade, on the server, once.
-- **B9** — cancelling an exam term leaves its registrations live, so the one-registration rule blocks
-  the replacement by naming a term that no longer exists. Cancel the registrations with the term.
-- **B11** — `cancel` sets `status = 'cancelled'` _and_ `deleted_at`, and every read filters
-  `deleted_at is null`, so the status is unreadable dead data. Stop soft-deleting a cancellation, and
-  show it as history.
+- `GET institutions/:id/offerings/:offeringId/results` behind `grade:read`, scoped to the offering the
+  caller teaches — the roster with each student's calculated, proposed and official stage.
+- `PATCH .../results/:enrollmentId` behind `grade:propose` to set a proposed grade, and behind
+  `grade:publish` to promote one to official. Two permissions on one route, checked separately:
+  `teaching_assistant` may propose and may not publish, which the catalogue already says.
+- The attempt is part of the key now, so entering a grade for a resit writes attempt 2 rather than
+  overwriting attempt 1. Deciding which attempt a mark belongs to is the part to get right.
+- Publishing sets `attended` on the matching exam registration, which is what finally spends the
+  attempt the way **B4** wants — the piece that step deliberately left open.
 
-Frontend: the exam card and the grades screen have to render the retake ladder and an annulled result
-honestly, and a cancelled registration has to be visible rather than vanish.
+Frontend: a grade-entry table on the teaching offering page, gated on the server's permission answer,
+with the proposed and official stages distinguishable and the provenance of an imported grade visible
+so a teacher never silently overwrites the registrar.
 
-**After that, in order:** G4/G8 (grade entry — the eight permissions with no endpoint); G9 (the grade,
-enrolment and timetable notification families, which also fixes **B10** and **B12**); write-back step 2
-(the LMS pair) and step 3 (`course_result.publish`); B6 (make the seven feature flags gate something);
-B7 (render terminology overrides); G5 (self-service enrolment); G10 (a sync schedule); G12 (GDPR
-inventory, threat model, audit events, export).
+**After that, in order:** G9 (the grade, enrolment and timetable notification families — which is also
+**B10** and **B12**); write-back step 2 (the LMS pair) and step 3 (`course_result.publish`, which G4/G8
+finally gives something to publish); B6 (make the seven feature flags gate something); B7 (render
+terminology overrides); G5 (self-service enrolment); G10 (a sync schedule); G12 (GDPR inventory,
+threat model, audit events, export).
 
 ## Caveats
 

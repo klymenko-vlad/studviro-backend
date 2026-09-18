@@ -9,6 +9,7 @@ import type { ExamRegistration } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { ExamRegistrationWriteBackService } from '../write-back/exam-registration-write-back.service';
 
+import { attemptsRequiredFor, laddersTo } from './exam-attempt-ladder';
 import {
   MyExamRegistrationsRepository,
   type LiveRegistrationRow,
@@ -40,6 +41,7 @@ export class MyExamRegistrationsService {
         if (!term) throw new EntityNotFoundError('exam term', examTermId);
 
         this.assertEnrolled(term);
+        this.assertLaddered(term);
         this.assertOpen(term, now);
         await this.assertNotAlreadyRegistered(institutionId, userId, term);
         this.assertSeatFree(term);
@@ -98,6 +100,21 @@ export class MyExamRegistrationsService {
       'EXAM_TERM_NOT_ENROLLED',
       'Only a student enrolled in the course can register for its exam',
       { examTermId: term.examTermId },
+    );
+  }
+
+  private assertLaddered(term: RegistrableExamTermRow): void {
+    if (laddersTo(term.kind, term.attemptsSpent)) return;
+
+    throw new InvalidInputError(
+      'EXAM_ATTEMPT_NOT_EARNED',
+      'A retake is only open to a student who failed the attempt before it',
+      {
+        examTermId: term.examTermId,
+        kind: term.kind,
+        attemptsSpent: term.attemptsSpent,
+        attemptsRequired: attemptsRequiredFor(term.kind),
+      },
     );
   }
 

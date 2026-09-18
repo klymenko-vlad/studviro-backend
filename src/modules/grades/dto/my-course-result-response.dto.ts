@@ -21,6 +21,7 @@ import {
 export class EffectiveCourseGradeDto {
   @Expose() @ApiProperty({ enum: COURSE_RESULT_KINDS }) kind!: CourseResultKind;
   @Expose() @ApiProperty({ enum: COURSE_GRADES }) grade!: CourseGrade;
+  @Expose() @ApiProperty() passed!: boolean;
 }
 
 @Exclude()
@@ -108,6 +109,12 @@ export class MyCourseResultResponseDto {
   @Type(() => EffectiveCourseGradeDto)
   @ApiProperty({ type: EffectiveCourseGradeDto, nullable: true })
   effective!: EffectiveCourseGradeDto | null;
+
+  @Expose()
+  @ApiProperty({
+    description: 'An annulled result carries a grade on the record and none in standing.',
+  })
+  isVoided!: boolean;
 
   @Expose()
   @Type(() => CalculatedCourseResultDto)

@@ -17,6 +17,7 @@ const row = (overrides: Partial<MyExamTermRow> = {}): MyExamTermRow => ({
   teaching: false,
   registeredCount: 12,
   otherLiveRegistrationForOffering: false,
+  attemptsSpent: 0,
   roomId: 'room-1',
   roomCode: 'P1',
   roomName: 'Lecture hall',
@@ -411,6 +412,53 @@ describe('registration availability', () => {
       );
 
       expect(term?.myRegistration?.delivery).toBe(delivery);
+    });
+  });
+
+  describe('the retake ladder, answered on the read', () => {
+    it('says a first retake is not earned rather than leaving the reader to guess', async () => {
+      findMyExamTerms.mockResolvedValue([row({ kind: 'first_retake', attemptsSpent: 0 })]);
+
+      const [term] = await service.listMine(
+        'institution-1',
+        'student-1',
+        {},
+        DURING_REGISTRATION,
+      );
+
+      expect(term?.registrationAvailability).toMatchObject({
+        canRegister: false,
+        reason: 'attempt_not_earned',
+      });
+    });
+
+    it('opens the same term once the attempt is spent', async () => {
+      findMyExamTerms.mockResolvedValue([row({ kind: 'first_retake', attemptsSpent: 1 })]);
+
+      const [term] = await service.listMine(
+        'institution-1',
+        'student-1',
+        {},
+        DURING_REGISTRATION,
+      );
+
+      expect(term?.registrationAvailability).toMatchObject({
+        canRegister: true,
+        reason: 'open',
+      });
+    });
+
+    it('never blocks a regular term on the ladder', async () => {
+      findMyExamTerms.mockResolvedValue([row({ kind: 'regular', attemptsSpent: 0 })]);
+
+      const [term] = await service.listMine(
+        'institution-1',
+        'student-1',
+        {},
+        DURING_REGISTRATION,
+      );
+
+      expect(term?.registrationAvailability.canRegister).toBe(true);
     });
   });
 });

@@ -7,6 +7,7 @@ import { RequirePermission } from '../authorization/decorators/require-permissio
 
 import { ListMyCourseResultsQueryDto } from './dto/list-my-course-results-query.dto';
 import { MyCourseResultResponseDto } from './dto/my-course-result-response.dto';
+import { StudyProgressResponseDto } from './dto/study-progress-response.dto';
 import { MyCourseResultsService } from './my-course-results.service';
 
 @ApiTags('grades')
@@ -31,5 +32,24 @@ export class MyCourseResultsController {
     const results = await this.myCourseResults.listMine(institutionId, userId, query);
 
     return results.map((result) => MyCourseResultResponseDto.fromMyCourseResult(result));
+  }
+
+  @Get('summary')
+  @RequirePermission('grade:read', { type: 'institution', param: 'institutionId' })
+  @ApiOperation({
+    operationId: 'getMyStudyProgress',
+    summary: 'Total the current user’s credits, pass rate and weighted average',
+    description:
+      'Answered on the server so the client never keeps a second copy of what counts as a pass. Only the latest attempt of a course counts, and an annulled result counts for nothing.',
+  })
+  @ApiOkResponse({ type: StudyProgressResponseDto })
+  @ApiErrorResponses()
+  async findMyProgress(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<StudyProgressResponseDto> {
+    return StudyProgressResponseDto.from(
+      await this.myCourseResults.summarize(institutionId, userId),
+    );
   }
 }

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
-import type {
-  CourseGrade,
-  OfficialCourseResultStatus,
-  SourceSystem,
-  SynchronizationStatus,
+import {
+  isFailingGrade,
+  isPassingGrade,
+  isVoidedResult,
+  type CourseGrade,
+  type OfficialCourseResultStatus,
+  type SourceSystem,
+  type SynchronizationStatus,
 } from '../../database/schema';
 
 import {
@@ -12,6 +15,7 @@ import {
   type MyCourseResultFilter,
   type MyCourseResultRow,
 } from './my-course-results.repository';
+import { summarizeStudyProgress, type StudyProgress } from './study-progress';
 
 export const COURSE_RESULT_KINDS = ['calculated', 'proposed', 'official'] as const;
 export type CourseResultKind = (typeof COURSE_RESULT_KINDS)[number];
@@ -19,6 +23,7 @@ export type CourseResultKind = (typeof COURSE_RESULT_KINDS)[number];
 export interface EffectiveCourseGrade {
   kind: CourseResultKind;
   grade: CourseGrade;
+  passed: boolean;
 }
 
 export interface MyCourseResult {
@@ -27,6 +32,8 @@ export interface MyCourseResult {
   attempt: number;
   conflictNote: string | null;
   effective: EffectiveCourseGrade | null;
+  /** An annulled result has a grade on record and no standing. */
+  isVoided: boolean;
   calculated: { grade: CourseGrade | null; points: number | null };
   proposed: { grade: CourseGrade | null; at: Date | null };
   official: { grade: CourseGrade | null; recordedAt: Date | null };
@@ -57,6 +64,10 @@ export class MyCourseResultsService {
     return rows.map((row) => this.compose(row));
   }
 
+  async summarize(institutionId: string, userId: string): Promise<StudyProgress> {
+    return summarizeStudyProgress(await this.listMine(institutionId, userId));
+  }
+
   private compose(row: MyCourseResultRow): MyCourseResult {
     return {
       id: row.resultId,
@@ -64,6 +75,7 @@ export class MyCourseResultsService {
       attempt: row.attempt,
       conflictNote: row.conflictNote,
       effective: effectiveGrade(row),
+      isVoided: isVoidedResult(row.status),
       calculated: { grade: row.calculatedGrade, points: toNumber(row.calculatedPoints) },
       proposed: { grade: row.proposedGrade, at: row.proposedAt },
       official: { grade: row.officialGrade, recordedAt: row.officialRecordedAt },
@@ -93,13 +105,30 @@ export class MyCourseResultsService {
   }
 }
 
+/**
+ * The grade the student actually stands on. An annulled result has been struck,
+ * so it has none — reading the three grade columns alone showed a grade the
+ * registrar had already withdrawn.
+ */
 const effectiveGrade = (row: MyCourseResultRow): EffectiveCourseGrade | null => {
-  if (row.officialGrade) return { kind: 'official', grade: row.officialGrade };
-  if (row.proposedGrade) return { kind: 'proposed', grade: row.proposedGrade };
-  if (row.calculatedGrade) return { kind: 'calculated', grade: row.calculatedGrade };
+  if (isVoidedResult(row.status)) return null;
+
+  const staged: readonly [CourseResultKind, CourseGrade | null][] = [
+    ['official', row.officialGrade],
+    ['proposed', row.proposedGrade],
+    ['calculated', row.calculatedGrade],
+  ];
+
+  for (const [kind, grade] of staged) {
+    if (grade) return { kind, grade, passed: isPassingGrade(grade) };
+  }
 
   return null;
 };
+
+export function hasFailed(result: Pick<MyCourseResult, 'effective'>): boolean {
+  return isFailingGrade(result.effective?.grade ?? null);
+}
 
 const toNumber = (value: string | null): number | null =>
   value === null ? null : Number(value);

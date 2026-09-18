@@ -68,7 +68,7 @@ describe(MyCourseResultsService.name, () => {
 
     const [result] = await service.listMine('institution-1', 'student-1');
 
-    expect(result!.effective).toEqual({ kind: 'official', grade: 'A' });
+    expect(result!.effective).toEqual({ kind: 'official', grade: 'A', passed: true });
   });
 
   it('falls back to the proposed grade while none is official yet', async () => {
@@ -78,7 +78,7 @@ describe(MyCourseResultsService.name, () => {
 
     const [result] = await service.listMine('institution-1', 'student-1');
 
-    expect(result!.effective).toEqual({ kind: 'proposed', grade: 'B' });
+    expect(result!.effective).toEqual({ kind: 'proposed', grade: 'B', passed: true });
   });
 
   it('falls back to the calculated grade when neither was published nor proposed', async () => {
@@ -94,7 +94,7 @@ describe(MyCourseResultsService.name, () => {
 
     const [result] = await service.listMine('institution-1', 'student-1');
 
-    expect(result!.effective).toEqual({ kind: 'calculated', grade: 'B' });
+    expect(result!.effective).toEqual({ kind: 'calculated', grade: 'B', passed: true });
   });
 
   it('reports no effective grade when the record carries none of the three', async () => {
@@ -135,6 +135,57 @@ describe(MyCourseResultsService.name, () => {
 
     expect(findMyResults).toHaveBeenCalledWith('institution-1', 'student-1', {
       offeringId: 'offering-1',
+    });
+  });
+
+  describe('an annulled result', () => {
+    it('shows no effective grade, because the registrar struck it', async () => {
+      findMyResults.mockResolvedValue([row({ status: 'annulled' })]);
+
+      const [result] = await service.listMine('institution-1', 'student-1');
+
+      expect(result!.effective).toBeNull();
+      expect(result!.isVoided).toBe(true);
+    });
+
+    it('keeps the grade columns on the record, so the history is still readable', async () => {
+      findMyResults.mockResolvedValue([row({ status: 'annulled' })]);
+
+      const [result] = await service.listMine('institution-1', 'student-1');
+
+      expect(result!.official.grade).toBe('A');
+    });
+
+    it.each(['official', 'corrected', 'disputed'] as const)(
+      'still lets a %s result speak',
+      async (status) => {
+        findMyResults.mockResolvedValue([row({ status })]);
+
+        const [result] = await service.listMine('institution-1', 'student-1');
+
+        expect(result!.effective).toMatchObject({ grade: 'A' });
+      },
+    );
+  });
+
+  describe('pass and fail', () => {
+    it.each(['A', 'B', 'C', 'D', 'E', 'passed'] as const)(
+      'counts %s as a pass',
+      async (grade) => {
+        findMyResults.mockResolvedValue([row({ officialGrade: grade })]);
+
+        const [result] = await service.listMine('institution-1', 'student-1');
+
+        expect(result!.effective?.passed).toBe(true);
+      },
+    );
+
+    it.each(['FX', 'failed'] as const)('counts %s as a fail', async (grade) => {
+      findMyResults.mockResolvedValue([row({ officialGrade: grade })]);
+
+      const [result] = await service.listMine('institution-1', 'student-1');
+
+      expect(result!.effective?.passed).toBe(false);
     });
   });
 });

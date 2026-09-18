@@ -1,4 +1,4 @@
-import { isNull } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import {
@@ -124,6 +124,27 @@ export const EXAM_REGISTRATION_STATUSES = [
   'excused',
 ] as const;
 export type ExamRegistrationStatus = (typeof EXAM_REGISTRATION_STATUSES)[number];
+
+/** Holds a seat: counts against capacity and blocks a second registration. */
+export const EXAM_REGISTRATION_HOLDING_STATUSES = ['registered'] as const;
+
+/**
+ * Consumed an attempt. Showing up and failing, and not showing up at all, both
+ * spend the seat; an excused absence does not.
+ */
+export const EXAM_ATTEMPT_CONSUMING_STATUSES = ['attended', 'no_show'] as const;
+
+export function consumesExamAttempt(status: ExamRegistrationStatus): boolean {
+  return (EXAM_ATTEMPT_CONSUMING_STATUSES as readonly string[]).includes(status);
+}
+
+/** Which exam terms a student must already have failed to sit this one. */
+export const EXAM_TERM_KIND_ORDER: Readonly<Record<ExamTermKind, number>> = {
+  regular: 0,
+  first_retake: 1,
+  second_retake: 2,
+  state_exam: 0,
+};
 export const examRegistrationStatus = pgEnum(
   'exam_registration_status',
   EXAM_REGISTRATION_STATUSES,
@@ -148,9 +169,12 @@ export const examRegistrations = pgTable(
     ...timestamps,
   },
   (table) => [
+    // One *live* registration per student per term. A cancellation stays on the
+    // record beside it rather than being erased, so the student can see that it
+    // happened and register again.
     uniqueIndex('exam_registrations_unique_idx')
       .on(table.examTermId, table.userId)
-      .where(isNull(table.deletedAt)),
+      .where(sql`${table.status} = 'registered' and ${table.deletedAt} is null`),
     externalIdUnique('exam_registrations_external_id_unique_idx', table),
     index('exam_registrations_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],

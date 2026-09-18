@@ -20,6 +20,8 @@ const NOW = new Date('2026-05-20T09:00:00.000Z');
 
 const term = (overrides: Partial<RegistrableExamTermRow> = {}): RegistrableExamTermRow => ({
   examTermId: 'exam-1',
+  kind: 'regular',
+  attemptsSpent: 0,
   offeringId: 'offering-1',
   capacity: 30,
   registeredCount: 12,
@@ -198,5 +200,36 @@ describe(MyExamRegistrationsService.name, () => {
     findRegistrableTerm.mockResolvedValue(term({ capacity: 13, registeredCount: 13 }));
 
     await expect(registerMine()).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  describe('the retake ladder', () => {
+    it('refuses a first retake to a student who has failed nothing', async () => {
+      findRegistrableTerm.mockResolvedValue(term({ kind: 'first_retake', attemptsSpent: 0 }));
+
+      await expect(registerMine()).rejects.toMatchObject({
+        code: 'EXAM_ATTEMPT_NOT_EARNED',
+      });
+      expect(register).not.toHaveBeenCalled();
+    });
+
+    it('opens a first retake once one attempt is spent', async () => {
+      findRegistrableTerm.mockResolvedValue(term({ kind: 'first_retake', attemptsSpent: 1 }));
+
+      await expect(registerMine()).resolves.toBeDefined();
+    });
+
+    it('refuses a second retake to a student one rung down', async () => {
+      findRegistrableTerm.mockResolvedValue(term({ kind: 'second_retake', attemptsSpent: 1 }));
+
+      await expect(registerMine()).rejects.toMatchObject({
+        code: 'EXAM_ATTEMPT_NOT_EARNED',
+      });
+    });
+
+    it('never gets in the way of a regular term', async () => {
+      findRegistrableTerm.mockResolvedValue(term({ kind: 'regular', attemptsSpent: 0 }));
+
+      await expect(registerMine()).resolves.toBeDefined();
+    });
   });
 });
