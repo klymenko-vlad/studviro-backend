@@ -14,15 +14,15 @@ to and none to receive one from — whatever is here is the only copy the instit
 None of the following is knowable from the code. Each is marked `TODO(institution)` inline
 where it bites.
 
-| Unknown                             | What is needed                                                                                                         | Why                                                                                                                                            |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Controller identity**             | Legal name, registered address and contact point of the institution operating the deployment                           | Art. 13/14 require it in every privacy notice; the code has an `institutions` row with a `code` and a `name`, which is not a controller        |
-| **DPO contact**                     | Name or role title and a contact address for the data protection officer                                               | A public body processing student records must designate one (Art. 37) and publish the contact (Art. 37(7))                                     |
-| **Lawful basis, per purpose**       | The Art. 6 basis for each purpose in the _Why it exists_ column — academic record, authentication, notification, leads | Determines whether erasure, objection and portability apply at all, and what a notice must say                                                 |
-| **Retention period, per category**  | How long an academic record, an authentication artefact, a notification, a log line and a demo lead may be kept        | Nothing in the code expires anything except JWTs. Retention cannot be implemented until a number exists                                        |
-| **Special-category data policy**    | Whether disability accommodations, health-based exam excusals or similar will ever be entered, and where               | No Art. 9 field exists today; `excused` on `exam_registrations` and `conflict_note` are where such data would arrive in free text              |
-| **Processors and hosting location** | Who hosts PostgreSQL, Redis and the mail transport, and in which jurisdiction                                          | Art. 28 contracts and Chapter V transfer assessment; `docs/Deployment.md` records no provider yet                                              |
-| **Subject-request procedure**       | Who receives an access, rectification or erasure request and within what internal deadline                             | Access and erasure now have endpoints (see _What is missing_); rectification does not, and deciding an erasure is a human judgement either way |
+| Unknown                             | What is needed                                                                                                         | Why                                                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Controller identity**             | Legal name, registered address and contact point of the institution operating the deployment                           | Art. 13/14 require it in every privacy notice; the code has an `institutions` row with a `code` and a `name`, which is not a controller                       |
+| **DPO contact**                     | Name or role title and a contact address for the data protection officer                                               | A public body processing student records must designate one (Art. 37) and publish the contact (Art. 37(7))                                                    |
+| **Lawful basis, per purpose**       | The Art. 6 basis for each purpose in the _Why it exists_ column — academic record, authentication, notification, leads | Determines whether erasure, objection and portability apply at all, and what a notice must say                                                                |
+| **Retention period, per category**  | How long an academic record, an authentication artefact, a notification, a log line and a demo lead may be kept        | The code expires credentials — JWTs, and the token rows the daily sweep drops — which is not retention. Nothing else can be implemented until a number exists |
+| **Special-category data policy**    | Whether disability accommodations, health-based exam excusals or similar will ever be entered, and where               | No Art. 9 field exists today; `excused` on `exam_registrations` and `conflict_note` are where such data would arrive in free text                             |
+| **Processors and hosting location** | Who hosts PostgreSQL, Redis and the mail transport, and in which jurisdiction                                          | Art. 28 contracts and Chapter V transfer assessment; `docs/Deployment.md` records no provider yet                                                             |
+| **Subject-request procedure**       | Who receives an access, rectification or erasure request and within what internal deadline                             | Access and erasure now have endpoints (see _What is missing_); rectification does not, and deciding an erasure is a human judgement either way                |
 
 ## How to read the _Deleted by_ column
 
@@ -31,16 +31,19 @@ where it bites.
   and every field in it stay in the table.** Reads filter on `deleted_at is null`; a
   database dump, a backup and a direct query do not.
 - **Cascade** — `onDelete: 'cascade'` on the foreign key. Only fires on a _hard_ delete of
-  the parent row. `BaseRepository.hardDelete` exists (line 265) but no service calls it.
+  the parent row. `BaseRepository.hardDelete` exists (line 265) but no service calls it;
+  `hardDeleteMany` (line 275) is what the two routes below use.
 - **Nothing** — no code path removes the row at all.
 
-This was the state until O4. **Erasure
-(`src/modules/privacy/personal-data-erasure.service.ts`, ADR 0030) is now the one route
-that hard-deletes**: `refresh_tokens`, `password_reset_tokens`, `user_emails`,
-`external_identities`, this institution's `invitations` to the person, and the
-`submission_files` rows whose objects it removes from the store. Everything else is still
-soft delete, so every other cascade in this schema remains unfired. The other hard delete
-in the codebase is `src/database/demo-seed/write-plan.ts:95-96`, which drops the demo
+This was the state until O4. **Two routes hard-delete.** Erasure
+(`src/modules/privacy/personal-data-erasure.service.ts`, ADR 0030) removes, for one person:
+`refresh_tokens`, `password_reset_tokens`, `user_emails`, `external_identities`, this
+institution's `invitations` to the person, and the `submission_files` rows whose objects it
+removes from the store. The daily expiry sweep
+(`src/modules/auth/expired-token-purge.service.ts`) removes, across all users, the
+`refresh_tokens` and `password_reset_tokens` rows that are past `expires_at`. Everything else
+is still soft delete, so every other cascade in this schema remains unfired. The other hard
+delete in the codebase is `src/database/demo-seed/write-plan.ts:95-96`, which drops the demo
 institution and every user whose email matches the seed's domain before re-seeding.
 
 ## Identity and authentication
@@ -106,12 +109,21 @@ whole family.
 behavioural**: together they are a per-session device-and-location history. They are set on
 every sign-in and every rotation (`src/modules/auth/auth.service.ts:144-145, 206-207`) from
 values the controller reads off the request (`auth.controller.ts:101-102`).
-**Deleted by:** **nothing.** `RefreshTokensRepository.purgeExpired`
-(`src/modules/auth/refresh-tokens.repository.ts:66`) exists and **`grep` finds no caller** —
-no cron, no `@Cron`, no startup hook. The expiry sweep the schema comment describes
-("drives the expiry sweep") is not wired up. An account that has been used for a year holds
-a year of IP addresses. Revocation sets `revoked_at`; it does not remove the row.
-**Retention:** `TODO(institution)`.
+**Deleted by:** **the daily expiry sweep**, plus erasure and cascade from `users`.
+`ExpiredTokenPurgeService.purge` (`src/modules/auth/expired-token-purge.service.ts:37`) runs
+at 03:00 under `@Cron(CronExpression.EVERY_DAY_AT_3AM)`, registered in `auth.module.ts:34`,
+and calls `RefreshTokensRepository.purgeExpired`
+(`src/modules/auth/refresh-tokens.repository.ts:66`), which **hard-deletes** every row whose
+`expires_at` is strictly in the past. The sweep is scoped to expiry, not to revocation: a
+revoked-but-unexpired row is kept deliberately, because reuse detection has to still
+recognise a leaked token that comes back. So revocation sets `revoked_at` and does not remove
+the row; expiry does. The device-and-location history an account accumulates is therefore
+**bounded by the refresh-token lifetime rather than unbounded** — the IP addresses and user
+agents of a year of sessions no longer sit in the table a year later.
+**Retention:** `TODO(institution)`. Expiry is not a retention policy — the sweep deletes a
+credential that can no longer authenticate anyone, which needs no number from the
+institution. How long a record of _who signed in from where_ may be kept while it is still
+live is a separate decision that does.
 
 ### `password_reset_tokens` — `password-reset-tokens.ts`
 
@@ -119,11 +131,16 @@ a year of IP addresses. Revocation sets `revoked_at`; it does not remove the row
 **Subject:** any user who used the reset form.
 **Why:** self-service reset for an active account. The raw token is never stored — SHA-256
 only, the same pattern as `refresh_tokens`.
-**Deleted by:** nothing. `PasswordResetService.confirm`
-(`src/modules/auth/password-reset/password-reset.service.ts`) sets `consumed_at` and leaves
-the row. Spent and expired tokens accumulate permanently. The residual value is low (a hash
-of a dead 32-byte random token) but the _fact and timing_ of each reset is a behavioural
-trace of one named user.
+**Deleted by:** the same daily expiry sweep, plus erasure. `PasswordResetService.confirm`
+(`src/modules/auth/password-reset/password-reset.service.ts:71`) sets `consumed_at` and
+leaves the row; `ExpiredTokenPurgeService.purge` then hard-deletes it once `expires_at` has
+passed, through `PasswordResetTokensRepository.purgeExpired`
+(`password-reset-tokens.repository.ts:38`). A consumed token is held until it expires as
+well, so a reset replayed inside the window is still recognised as a replay rather than as an
+unknown token. The residual value is low (a hash of a dead 32-byte random token) but the
+_fact and timing_ of each reset is a behavioural trace of one named user, and that trace now
+lives one token lifetime — `RESET_TTL_MS`, one hour — plus at most a day until the next
+sweep, rather than for ever.
 
 ### `invitations` — `invitations.ts`
 
@@ -391,7 +408,11 @@ Not risks yet — those are in `DPIA.md` — but facts about the code:
   every table above that holds data about the subject, including the storage keys of
   their files. Art. 20 portability is the same document; nothing converts it to another
   controller's format.
-- **No retention job.** `@nestjs/schedule` is registered (`ScheduleModule.forRoot()`) and
-  nothing is scheduled. `purgeExpired` is dead code.
+- **The only scheduled job expires credentials; it is not a retention job.**
+  `ExpiredTokenPurgeService` (`src/modules/auth/expired-token-purge.service.ts`) runs daily
+  under `ScheduleModule.forRoot()` and hard-deletes expired `refresh_tokens` and
+  `password_reset_tokens`. Nothing else in the schema is swept, because everything else needs
+  a retention period the institution has not supplied. An expired credential needs no such
+  number: it can no longer authenticate anyone.
 - **No rectification trail.** A corrected grade is a status change with a free-text note; who
   requested the correction is not recorded.

@@ -130,12 +130,17 @@ Assign a person, give them a teaching role — lecturer, seminar leader, lab sup
 examiner or assistant — and optionally name them the lead. There is at most one lead per
 offering; naming a second stands the first down.
 
-Two things to know:
+Three things to know:
 
 - **This is the only way a teacher comes to exist.** The `teacher` role is derived from a
   teaching assignment and cannot be granted on the _Roles_ screen.
+- The teaching role **assistant** derives `teaching_assistant` rather than `teacher`,
+  which is the difference between proposing a grade and publishing one.
 - Only somebody who already belongs to the institution can be assigned. Somebody new has
   to be invited first (see _Inviting people_).
+
+A teaching assignment is also what makes somebody the author of that course's page, so
+this step is worth doing before the teaching staff want to start building one.
 
 ### 9. Admit the students
 
@@ -196,6 +201,51 @@ start, an optional end, a seat count, a room, an examiner, and a registration wi
 - **A term with no registration window is open for ever.** There is nothing yet that
   closes it automatically.
 
+### 13. Open the course page
+
+**Screen:** the course-page panel on a course offering.
+**Permission:** `offering:read`, which every member of the institution holds — but the
+panel only offers to build anything to somebody the course belongs to. That is whoever
+**teaches the offering**, or anybody holding **`offering:manage`** across the institution.
+
+A course page — a **learning space** — is authored per offering, never derived from
+anything else (ADR 0028). There is at most one per offering, and a new one is
+**unpublished**, so a course can be built before anybody sees it.
+
+**The teacher of an offering can open and publish their own.** They do not need an
+administrator to do it for them. An administrator matters here for the courses nobody
+teaches yet, for the ones whose staff want help, and for seeing the whole institution's
+pages at once (see _Course pages across the institution_).
+
+A page carries a name, an optional short name and a summary, and holds two ordered lists.
+
+**Materials** — files, links and notes, in the order students read them. A file goes from
+the browser straight to the object store and never through the API; the server then asks
+the store what it actually received and records that, rather than what the browser
+claimed. Each material can be hidden, shown again, and moved up or down the list.
+
+**Assignments** — what students hand in. An assignment has a brief, an opens/due/closes
+window, how many attempts a student gets (empty for unlimited), whether work after the
+due date is accepted, the points available, and whether it counts towards the final grade.
+Creating one also opens its gradebook column; withdrawing it takes the column with it.
+
+The rules the server keeps, whoever set the assignment:
+
+- the dates must run opens → due → closes;
+- an attempt limit is between 1 and 100, or absent for unlimited;
+- nothing may be handed in before it opens or after it closes;
+- **with no closing date, the due date closes the assignment** unless late work is
+  accepted;
+- whether a submission is late is decided by the server's clock when the row is written.
+  A client that tries to say otherwise is refused, not ignored.
+
+Visibility is absence, not greying out. An unpublished space, a hidden material and an
+invisible assignment are **not found** for a student rather than shown as forbidden, and
+the teacher of one course cannot list or mark another course's submissions.
+
+Uploads are capped — 64 MiB per file by default, a deployment setting — and file
+materials and submissions need the object store configured; see `docs/Deployment.md`.
+
 ## Part two — running it
 
 ### Inviting people
@@ -207,8 +257,8 @@ Invite an email address and choose the role it arrives with. The invitation can 
 `course_coordinator`, `program_coordinator`, `registrar`, `org_unit_manager` or
 `institution_admin`, at institution scope or inside one faculty, programme or offering.
 
-It cannot carry `student` or `teacher`, because those are not grantable at all — see
-below.
+It cannot carry `student`, `teacher` or `teaching_assistant`, because those are not
+grantable at all — see below.
 
 The invited person receives a link to `/sign-up?invitation=<token>`, where they set a
 password and claim the account. An expired, used or malformed link gives one message:
@@ -227,15 +277,15 @@ needs it institution-wide.
 Three rules that will otherwise surprise you:
 
 1. **You may only hand out a role you hold yourself.**
-2. **`student` and `teacher` cannot be granted.** They are derived from the academic
-   record — an active programme membership and a teaching assignment respectively — and
-   appear on this screen read-only. To make somebody a student, admit them to a
-   programme. To make somebody a teacher, assign them to an offering.
+2. **`student`, `teacher` and `teaching_assistant` cannot be granted.** They are derived
+   from the academic record — an active programme membership and a teaching assignment
+   respectively — and appear on this screen read-only. To make somebody a student, admit
+   them to a programme. To make somebody a teacher, assign them to an offering.
 3. **The last `institution_admin` cannot be revoked.** An institution is never left
    without one.
 
 The grant form still takes a raw account identifier rather than offering a person picker.
-Find the identifier on the _People_ screen.
+Find the identifier on the _People_ screen, or by searching.
 
 ### Finding a person
 
@@ -246,8 +296,34 @@ Everybody with a role in the institution, granted or derived, with their roles a
 whether they are invited, active or suspended. This is the list to read an account
 identifier off.
 
-The list is not searchable or filterable yet. On a demo-sized institution it runs to
-around 170 names.
+The list itself is not filterable, and on a demo-sized institution it runs to around 170
+names. To find one person rather than read the list, search.
+
+### Searching the institution
+
+**Screen:** _Search_ (`/institutions/[id]/search`).
+**Permission:** `institution:read` to reach the screen; what it looks through depends on
+what else you hold.
+
+One box over six kinds at once — courses, course offerings, programmes, people, org units
+and rooms — matching on names, codes and email addresses. Two characters are enough to
+run it; each hit links straight through to its own screen.
+
+**Permission decides what is searched, not what is filtered out afterwards.** A kind you
+cannot read is never queried at all, so an empty result can never be read as proof that
+something does not exist. The screen says plainly which kinds it left out and why:
+
+| Kind             | Needs           |
+| ---------------- | --------------- |
+| Courses          | `course:read`   |
+| Course offerings | `offering:read` |
+| Programmes       | `program:read`  |
+| People           | `role:read`     |
+| Org units        | `role:read`     |
+| Rooms            | `schedule:read` |
+
+Each kind returns at most eight hits. When there are more, the screen says so and asks for
+a longer query rather than paging.
 
 ### Correcting an enrolment
 
@@ -258,6 +334,20 @@ The registrar's correction verb puts an enrolment into any state — `requested`
 `provisioning`, `active`, `completed`, `withdrawn` or `rejected` — and **is not bound by
 the enrolment window or the capacity a student is bound by**. Use it to put somebody into
 a full course, or to undo a mistaken withdrawal.
+
+### Marking what students hand in
+
+**Screen:** the submissions list under each assignment on a course offering.
+**Permissions:** **`grade:read`** to see what was handed in, **`grade:propose`** to mark
+it. As with grades, only somebody the course belongs to sees the list at all.
+
+Each row is one student's latest attempt, with its files, when it arrived and whether it
+was late. Marking gives it points out of the assignment's maximum and written feedback,
+and writes the result into that assignment's gradebook column.
+
+**A mark on an assignment is not the official course grade.** It is a working mark the
+student sees against that piece of work. The course grade is still the separate,
+deliberate act described below, and nothing promotes one into the other.
 
 ### Recording and publishing grades
 
@@ -275,6 +365,21 @@ checked separately, so a teaching assistant can be given the first and not the s
 - An annulled result has no standing and shows to the student as _No standing_.
 
 Publishing or correcting a grade notifies the student.
+
+### Course pages across the institution
+
+**Screen:** _Learning_ (`/institutions/[id]/learning`).
+**Permission:** `offering:read`.
+
+Every learning space in the institution, with how many assignments each carries and when
+the next one falls due, and a warning for any space that names an offering which no longer
+exists. It is the place to see which courses have a page at all and which are still empty
+a week before term.
+
+Holding `offering:manage` across the institution makes you an author of **every** course
+page here, not only the ones you teach — which is what lets an administrator finish a page
+for a course whose teacher has not been assigned yet. Use it sparingly; the teacher can do
+their own.
 
 ### Bulk entry
 
@@ -310,9 +415,10 @@ IANA time zone.
 
 **Terminology** — override the words the platform uses: institution, faculty, department,
 programme, course, course offering, academic term, student, teacher, student identifier,
-credits. Leaving a field empty keeps the platform's own word. The override currently
-renders in the org-unit tree only; the course, roster and grades screens still use the
-platform wording.
+credits. Leaving a field empty keeps the platform's own word. The override reaches the
+org-unit tree, the catalogue, the offerings list, the programme page and the student
+columns of the grade and marking tables — headings and labels, not yet every sentence in
+which the word appears.
 
 **Feature flags** — seven of them: `courseRegistration`, `examRegistration`, `timetable`,
 `grades`, `thesis`, `accommodation`, `fees`. The first four close a real door: switching
@@ -321,30 +427,89 @@ last three are disabled and say plainly that they are not built.
 
 ### Reading the audit trail
 
-**Permission:** **`audit:read`**.
+**Screen:** _Audit_ (`/institutions/[id]/audit`).
+**Permission:** **`audit:read`**, held by `institution_admin` alone.
 
-Audit events record who proposed or published a grade, granted or revoked a role,
-corrected an enrolment, or cancelled an exam term — with the value before the change and
-the request identifier (ADR 0026).
+Who changed what, and what it was before: a grade proposed or published, a role granted or
+revoked, an enrolment corrected, an exam term cancelled, a person erased (ADR 0026).
+Filter by action, and read older entries by paging back through time.
 
-**There is no screen for this yet.** It is readable only through
+Reads are deliberately not recorded, and neither is self-service: a student enrolling
+themselves is not an intervention in somebody else's record, while a registrar correcting
+the same row is. The raw feed is also available at
 `GET /api/v1/institutions/{id}/audit-events`.
+
+Nothing prunes the table yet, and for how long the trail is kept is `TODO(institution)`.
+
+### Personal data: copies, deactivation and erasure
+
+This is the part of the product where a mistake cannot be undone, so read it before you
+need it. **Deactivating an account and erasing a person are different acts with different
+endpoints**, and only one of them is reversible.
+
+**A copy of their own data** is self-service. Anybody can download everything this
+institution holds about them from their account screen, one file per institution they
+belong to. No administrator is involved, and you cannot take the copy on their behalf.
+
+**Deactivating an account** — `DELETE /api/v1/users/{id}` — stops the account working. It
+can no longer be used or listed. **It is not an erasure**: the name, the email address,
+and everything the institution wrote about the person stay exactly where they were. Use it
+for somebody who has left, or an account opened in error.
+
+**Erasing a person** — the erasure control on their row on the _People_ screen, behind
+**`institution:manage`**, or `DELETE
+/api/v1/institutions/{institutionId}/people/{userId}/personal-data` — is the real thing,
+and is irreversible (ADR 0030). It:
+
+- anonymises the account: an unroutable placeholder address, a neutral display name, no
+  password, and every outstanding session killed on the spot;
+- hard-deletes credentials and contact rows — refresh tokens, password-reset tokens,
+  extra email addresses, external identities, and this institution's invitations to them;
+- deletes their submitted work from the object store, and the rows naming those files;
+- clears free text a person wrote about them, including marking feedback;
+- **keeps the academic record.** Enrolments, results, exam registrations, programme
+  memberships and assessment results all stay, pointing at a row that no longer says who
+  it was. The institution can still say that somebody passed; it can no longer say who.
+
+Two refusals to expect. Erasure is scoped to one institution, and is **refused while
+another institution still has an active relationship with the person** — it names the fact
+rather than the other institution. And because it cannot be undone, the screen makes you
+type the person's email address rather than press a button.
+
+Who inside the institution is authorised to execute an erasure, and how long the
+anonymised academic record is then kept, are both `TODO(institution)`.
+
+### Sessions and tokens
+
+Each sign-in writes a session row carrying an IP address and a user agent, and each
+password reset writes a token. **Both are swept nightly once they have expired**, so
+neither accumulates a year of device-and-location history behind an account that is simply
+in daily use.
+
+Expiry is the boundary, not a retention period, so there is no number for you to choose. A
+refresh token that has been revoked but not yet expired is kept on purpose: it is exactly
+what has to still be found when a leaked token comes back.
 
 ## What is not here yet
 
 Worth knowing before you plan around it.
 
 - **No request-to-join.** Everybody arrives by invitation.
-- **No personal-data export or erasure screen.** See `docs/GDPR Data Inventory.md`.
-- **No audit screen**, as above.
+- **No quizzes, by decision rather than by omission.** StudViro takes work in and marks
+  it; it does not run timed, auto-marked question banks, and there is no plan to
+  (ADR 0028).
 - **Absences are not recordable.** Publishing a grade marks a seat attended; nothing
   marks one as a no-show or excused.
-- **Learning materials, assignments and submissions are not something an institution
-  fills in.** The read surfaces exist and nothing writes to them — this is Phase 2 of
-  `docs/Product Plan.md`.
-- **Terminology overrides render in one place only**, as above.
-- **Slovak is partial.** Strings are keyed as they are built; the translation pass is
-  deferred.
+- **Setting or moving an assignment notifies nobody.** The deadline appears on the
+  student's calendar and dashboard, and a mark appears on their course page, but neither
+  raises a notification the way a published grade or a moved exam term does. Say it in
+  class.
+- **Deleting a material or a submission leaves the file in the object store.** The row
+  goes and the file stops being reachable, but only an erasure actually removes objects.
+- **No person picker on the grant form**, as above.
+- **Terminology overrides do not reach every screen**, as above.
+- **Slovak is partial.** Every string is keyed in both languages, but most Slovak values
+  are still the English text; the translation pass is deferred.
 
 ## Where to look next
 

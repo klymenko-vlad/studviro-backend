@@ -179,11 +179,15 @@ _What does not._
   in it in the table. **Therefore no `onDelete: 'cascade'` in this schema has ever fired.**
   A "deleted" user keeps their email, display name and password digest indefinitely, and
   every enrolment, result and registration keyed to them stays live in the tables.
-- **There is no erasure endpoint and no export endpoint.** `/me` exposes `GET` and `PATCH`
-  only (`src/modules/users/me.controller.ts`). Art. 15, 17 and 20 are unimplemented; a
-  subject access request would be answered by hand against `GDPR Data Inventory.md`.
-- **There is no retention job.** `ScheduleModule.forRoot()` is registered in `app.module.ts`
-  and nothing is scheduled against it.
+- **Export and erasure both exist now.** Art. 15 and 20 are answered by
+  `GET /institutions/:institutionId/me/personal-data`, scoped to the caller; Art. 17 by
+  `DELETE /institutions/:institutionId/people/:userId/personal-data`, which anonymises the
+  person and keeps the academic record (ADR 0030). Note that `DELETE /users/:id` is a
+  deactivation and not an erasure, and says so in its own description.
+- **There is still no retention job, and one scheduled job is not one.**
+  `ExpiredTokenPurgeService` now sweeps expired refresh and password-reset tokens nightly,
+  which bounds the session trace — but expiry is not retention. Every academic and
+  behavioural category below still waits on a number the institution has not given.
 - **`conflict_note` is unconstrained free text** on a disputed or corrected grade. It is
   where a dispute's substance will be written, and there is no reason to expect the substance
   to stay inside the academic category — health, bereavement and allegations of misconduct

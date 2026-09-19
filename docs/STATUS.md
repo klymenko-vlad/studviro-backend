@@ -42,47 +42,78 @@ machine, which keeps the password it had. `admin@studviro.local` here is `newpas
 
 ## Where the backlog stands
 
-**`Product Plan.md` is complete. All thirty-three items, Phases 0 to 4, both halves of
-each.** That document is now the record of what was built and why, not a queue.
+**`Product Plan.md` is complete — all thirty-three items, Phases 0 to 4, both halves of
+each.** It is the record of what was built and why, not a queue: the integration removed
+and the dataset generator recovered as a demo seed (Phase 0, ADR 0025); the registry an
+institution sets up by hand from nothing (Phase 1); the learning half (Phase 2, ADRs 0027
+and 0028); one timeline, study progress, search, WCAG 2.2 AA, mobile and terminology
+(Phase 3, ADR 0029); and the compliance, observability, backup, load, accessibility and
+guide work of Phase 4 (ADRs 0026 and 0030).
 
-- **Phase 0** — the integration removed, and the deleted dataset generator recovered as a
-  demo seed (ADR 0025).
-- **Phase 1** — the registry. An institution can be set up by hand from nothing: terms, org
-  tree, rooms, programmes, courses, offerings, teaching assignments, programme memberships,
-  study groups, timetables, exam terms, and bulk paste.
-- **Phase 2** — the learning half. Object storage (ADR 0027), spaces, materials,
-  assignments, submissions, marking (ADR 0028). Quizzes ruled out, with reasons.
-- **Phase 3** — one timeline, study progress against the programme (ADR 0029), search,
-  WCAG 2.2 AA, mobile, terminology overrides.
-- **Phase 4** — GDPR inventory, DPIA, threat model, audit events (ADR 0026), export and
-  erasure (ADR 0030), observability, backup with a real restore drill, authorization-negative
-  tests, load tests with real numbers, accessibility tests, and two guides.
+The defect list this section used to carry has been worked through. What was found and
+fixed on 2026-09-19:
+
+- **The enrolment rush no longer loses a quarter of its writes.**
+  `TransactionHost.runSerializable` replays a lost serialisation race three times with
+  jittered backoff, on enrolment and exam registration both. Re-measured with the same k6
+  profile: conflicts fell from 25.7% to **4.2%** and 21.9% to **2.5%**, capacity still
+  respected. The requests that stopped being conflicts became honest `OFFERING_FULL`
+  answers. `docs/Performance.md` has the numbers.
+- **A teacher can use the product at all.** Signing in as the seeded teacher showed one
+  dead navigation entry and "you hold a role here, but not one that lets you read courses
+  or grades" — because teaching derived only offering-scoped roles while one programme
+  membership derived an institution-scoped one for a student. Teaching now derives a role
+  at the institution too, an assistant deriving `teaching_assistant` rather than `teacher`
+  so the publish decision is still withheld. **ADR 0031**, which supersedes ADR 0028's
+  guess at this.
+- **A teacher authors their own course page.** The learning authoring routes moved from
+  `offering:manage` to `offering:read`, with `LearningAccessService` deciding whose course
+  it is — a check that already existed and already counted the offering's teacher as its
+  author. Walked in a browser: saved on their own course, 403 on somebody else's.
+- **Expired tokens are swept nightly.** `RefreshTokensRepository.purgeExpired` had no
+  caller, so every sign-in's IP address and user agent accumulated for ever;
+  `password_reset_tokens` had no sweep at all. Both now run daily.
+- **`DELETE /users/:id` is named `deactivateUser`** and says in its own description that it
+  is not the erasure it sits beside.
+- **The person pickers are a typeahead**, matching name and email in any order, keyboard
+  complete. The seed has two people called Dana Gajdoš, which is why the address is shown.
+- **A student can read the feedback written with their mark.** It was stored, returned and
+  never rendered.
 
 ## What to do next
 
-There is no next backlog item. What follows is what this session found and deliberately did
-not do — each is a defect or a gap with evidence behind it, not a wish.
+The backlog is complete and so is the defect list it ended with. What follows is found
+work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**1. An enrolment rush loses about a quarter of its writes.** `docs/Performance.md` has the
-measured run: ~26% of a 144-student rush gets `409 SERIALIZATION_FAILURE`, and **nothing
-retries it**. A bounded retry around `MyEnrollmentsService.request` is the fix. Note the
-counter-intuitive part before touching it: raising `DATABASE_POOL_MAX` from 10 to 40 made it
-_worse_ — 80.6% conflicts and twelve places left unsold. The small pool is accidental
-admission control.
+**Next task — wire the two notification services that have no callers.**
+`LearningActivityNotificationsService` and `TimetableNotificationsService` both exist, are
+both tested, and **neither is injected anywhere**: `grep` finds them only in their own
+definition and in `notifications.module.ts`. So nobody is told when an assignment is set,
+moved or marked, or when a class is moved or cancelled. The calendar carries those events
+and the notifications list does not, which reads as a broken notifications feature rather
+than a missing one. The call sites are `assignments.service.ts`,
+`submission-marking.service.ts` and the timetable services; the notification families and
+the aggregation rules already exist (ADR 0012).
 
-**2. A teacher cannot author their own learning space.** `offering:manage` is
-institution-scoped while the derived `teacher` role is offering-scoped, so only a
-coordinator can. It needs a scope-aware guard; ADR 0028 records it.
+Then, in order:
 
-**3. The two guides predate the learning half and search.** `Administrator Guide.md` and
-`User Guide.md` were written while L2–L6 and U3 were landing, so materials, assignments,
-submissions, marking and the search box are missing from both.
-
-**4. Smaller, all real:** `RefreshTokensRepository.purgeExpired` still has no scheduler, so
-IP addresses and user agents accumulate; `DELETE /users/:id` is a soft delete that reads
-like an erasure and now sits beside a real one; the person pickers list the whole directory
-unfiltered and want a typeahead; and the bundle guard was raised to 540 kB for Phases 1–2
-and should come back down now they have landed (it measures 506 kB).
+1. **Deleting a material or a submission orphans its object in the store.** Only erasure
+   calls `StorageService.delete`. Every removed file is paid for for ever.
+2. **`/institutions/:id/learning` is a leftover.** It lists every space institution-wide
+   and reports how many are "matched to a course offering" — but a space is now authored
+   against one, so the unmatched half cannot occur. Its nav entry is gated on
+   `offering:read`, which every student holds, so students are offered the tab.
+3. **The Slovak translation.** Both catalogues are fully keyed; 1,316 of 1,457 Slovak
+   values are still the English string. The keys awaiting translation are exactly those
+   whose `sk` value equals its `en` value, so the pass is mechanical to scope.
+4. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
+   unpaginated. The pickers in front of it are a typeahead now, so this is about the
+   payload rather than the interface. The grant form on `/roles` still takes a raw user
+   id and never got the picker.
+5. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
+   `my-enrollments.service.ts:27` still say a place stays `requested` "until the
+   registrar's system acknowledges it", with the line below activating it unconditionally;
+   `institution-nav.tsx` says the learning screen "reports import provenance".
 
 ## Standing decisions — do not re-ask these
 
@@ -113,18 +144,27 @@ and should come back down now they have landed (it measures 506 kB).
 - `test/setup/global-setup.ts` reuses `DATABASE_URL` when set and the harness truncates every
   table — `pnpm test:e2e` against the dev database wipes it. Re-seed after.
 - **Do not bulk-edit with regex across many files.** It has silently eaten closing braces here.
+- **`node dist/main.js` serves the build, not the source.** Probing behaviour after a code
+  change without `pnpm build` first measures the previous build and reads as "my fix did
+  nothing". Check `stat dist/...` against the source when a live check disagrees with a
+  green test.
 
 ## Caveats worth knowing
 
-- The client bundle is ~480 kB against a **540 kB** guard, raised once for Phases 1 and 2 and
-  **meant to be lowered back** now they have landed. The reduction `.size-limit.mjs` reserved
-  was taken and measured at **zero bytes**; do not re-attempt it.
-- **A teacher who is not a course coordinator cannot author their own learning space.**
-  `offering:manage` is institution-scoped while the derived `teacher` role is
-  offering-scoped. It needs a scope-aware guard; ADR 0028 records it.
-- The person pickers on the teaching panel and the programme roll list the whole institution
-  directory unfiltered — 170-odd names after the seed. They want a typeahead. Neither can
-  filter by role, because a teacher need not hold one.
+- **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
+  to come back down; the app measured 506 kB. By the time that was taken it measured
+  **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
+  now **555 kB** against a measured 546.74 kB. `.size-limit.mjs` has the full reasoning.
+  Every reduction lever that file has ever named is spent; the next person needing room
+  will have to ship less.
+- **Two notification services have no callers.** `LearningActivityNotificationsService` and
+  `TimetableNotificationsService` exist and nothing invokes them, so nobody is told when an
+  assignment is set or marked, or when a class moves or is cancelled. The calendar carries
+  those; the notifications list does not.
+- **Deleting a material or a submission leaves the object in the store.** Only erasure
+  calls `StorageService.delete`.
+- The person pickers are a typeahead now, but the endpoint behind them still returns the
+  whole directory unpaginated. Fine at 170 people, not at 20,000.
 - A `requested` enrolment holds no place, so it is not on the roster and cannot join a study
   group. On a term that has not started every enrolment is `requested`.
 - The seed's anchor is fixed at 2026-10-15 to stay deterministic; the seeded year is
@@ -136,3 +176,4 @@ and should come back down now they have landed (it measures 506 kB).
   institutions inviting one address contend for a single shadow row. See ADR 0018.
 - What is left of **B4**: `no_show` and `excused` are never set — publishing a grade marks a
   seat `attended`, but nobody can record an absence. **B2**: still no request-to-join.
+- The k6 run leaves a `LOAD-RUSH-<n>` course behind by design. Re-seeding is the cleanup.

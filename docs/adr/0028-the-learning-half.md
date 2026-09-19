@@ -118,12 +118,22 @@ unpublished space, a hidden material and an invisible assignment from students w
 them visible to the teacher building them, and it is what stops the teacher of another
 offering from listing or marking this one's submissions.
 
-One consequence is worth stating plainly. Because the derived `teacher` role is scoped to an
-offering and `offering:manage` is checked at the institution, **a teacher who is not also a
-course coordinator cannot yet author their own course page** — they can see it, and mark
-against it, but an administrator has to create it. That follows from the existing scope
-model rather than from anything decided here, and the fix is a scope-aware variant of the
-permission guard rather than a new permission. It is noted rather than smuggled in.
+One consequence was worth stating plainly, and is **settled by ADR 0031** — read that
+instead of what follows, which is kept only because the reasoning it got wrong is
+instructive.
+
+As first shipped: because the derived `teacher` role is scoped to an offering and
+`offering:manage` is checked at the institution, a teacher who was not also a course
+coordinator could not author their own course page. This ADR guessed the fix would be a
+scope-aware variant of the permission guard. It was not. `teacher` carries
+`offering:manage` at no scope at all, so a scope-aware check would have refused them just
+the same; and the limitation was never confined to authoring — a teacher holding no granted
+role was refused every institution-scoped route, and saw an empty institution.
+
+What fixed it was making the two derivations symmetric: teaching anything at an institution
+now derives a role there, as one programme membership already did for a student. Authoring
+then sits behind `offering:read` with `LearningAccessService` deciding whose course it is —
+which is what the paragraph above already described it doing.
 
 ## L7 — quizzes are out of scope
 

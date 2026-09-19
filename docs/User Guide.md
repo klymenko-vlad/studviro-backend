@@ -31,11 +31,12 @@ you, or admit you to a programme.
 
 ## Your dashboard
 
-The first screen inside an institution. Three things:
+The first screen inside an institution. Four things:
 
 - **Current courses** — the courses you are enrolled in this term, and the credits.
 - **This week** — what is scheduled for you next.
 - **Your results** — the most recent, with the credits you have earned.
+- **Deadlines** — what falls due in your courses over the next fortnight.
 
 Each one links through to the full screen.
 
@@ -65,14 +66,68 @@ credits and who teaches it.
 Withdrawn and rejected enrolments are not shown unless you ask for them by name.
 
 Each course has its own page, reached from the list. It shows the teaching staff and who
-leads the course, your own enrolment and its state, your study groups, and your result
-for the course once there is one.
+leads the course, your own enrolment and its state, your study groups, the course page
+your teacher has built, your coursework marks, and your result for the course once there
+is one.
 
 ### One thing that confuses people
 
 On a term that has not started yet, your enrolment shows as **Requested**, not **Active**.
 That is normal. A requested enrolment does not hold a place on the roster, which is why a
 course you have signed up for may show a roster of nobody.
+
+## The course page
+
+Below the staff and your enrolment sits the page your teacher has built for the course: a
+name, a summary of what the course covers, and two lists under it.
+
+A course page is unpublished while it is being built, and an unpublished page is not shown
+to you at all. A course that has nothing there yet says so rather than pretending.
+
+**Materials** are what there is to read: a file to download, a link to follow, or a piece
+of text written straight into the page. They are listed in the order your teacher put them
+in. A file says what it is called and how large it is before you fetch it. Anything your
+teacher has hidden is not listed.
+
+**Assignments** are what you hand in. Each one shows its brief, the dates it opens, falls
+due and closes, how many attempts you get — or that there is no limit — how many points it
+is worth, and whether work after the due date is accepted. Where a date has not been set,
+the assignment says so instead of guessing at one.
+
+## Handing work in
+
+Under each assignment is your own work on it and nobody else's.
+
+Choose one or more files, add a note for the marker if there is anything they should know,
+and hand it in. The files go straight to the store, and the assignment is only recorded
+once every one of them has arrived — a failure halfway through leaves nothing handed in
+rather than half of it.
+
+Each attempt is listed with its number, when it was handed in, and whether it was on time
+or late. **Whether a submission is late is decided by the server's clock at the moment you
+hand it in**, not by anything your browser says. The screen tells you how many attempts you
+have left, and stops offering the form once they are spent.
+
+You may be refused, and the reason is said plainly: the assignment has not opened yet, it
+has closed, you have used every attempt, or the due date has passed and this assignment
+does not accept late work. **An assignment with no separate closing date closes when it
+falls due, unless late work is accepted.**
+
+Your files stay downloadable afterwards, so you can check what you actually sent.
+
+## Coursework marks
+
+Once your work is marked, the course page shows the mark: the points you were given
+against the points available, the share of the maximum, when the piece fell due, whether
+your hand-in was late, and when it was marked. An assignment that has not been marked yet
+says so. An assignment that does not count towards the final grade is labelled as not
+counting.
+
+Your marker can write feedback with the points. **It is recorded, but no screen shows it
+to you yet.**
+
+These are marks for pieces of work. They are not your grade for the course — that is a
+separate, deliberate act by your teacher, and it appears under your results.
 
 ## Your timetable
 
@@ -81,8 +136,9 @@ course you have signed up for may show a roster of nobody.
 1. **Classes** — the lectures, seminars and labs of the courses you attend, with the
    room and your study group.
 2. **Exam terms** — the exams of those courses.
-3. **Deadlines** — a layer that exists and is empty today, because nothing in StudViro
-   creates assignments yet.
+3. **Deadlines** — the assignments of those courses, on the day they fall due. Each one
+   names the course page it belongs to and says whether it is open, not open yet, past
+   due, or handed in — and if you handed it in late, that it was late.
 
 Move between weeks with the arrows. A class that has been called off stays on the
 calendar, marked as cancelled, so you can see that it was meant to happen.
@@ -132,15 +188,40 @@ Two more cases:
 
 The screen also totals how many courses are waiting on a resit.
 
+### Where you are in your programme
+
+Above your results, the same screen shows your standing in each programme you are actively
+admitted to: your study year, the credits you have earned against the credits the
+programme asks for, how many are left, and what share of the way that is. A programme you
+have finished the credits for says so.
+
+The total comes from the programme's standard length, at thirty credits a semester. **A
+programme with no recorded length gets no bar**: the screen says it has nothing to measure
+against rather than showing you a figure it cannot stand behind. And the credits are not
+the whole degree — they say nothing about a final examination, a thesis, or a compulsory
+course you have not taken.
+
+## Searching
+
+**_Search_** is one box over everything you are allowed to see: courses, the courses on
+offer, programmes, people, org units and rooms. Type at least two characters and the
+matches arrive grouped by kind, each linking to where the thing lives.
+
+Your permissions decide what is searched, not what is hidden afterwards, and the screen
+names the kinds it did not look at rather than leaving you to wonder why a room never
+appears. When there are more matches than it will show, it says so and asks for a longer
+query.
+
 ## Notifications
 
 **_Notifications_** is what changed in your courses, newest first, with an unread count in
 the navigation.
 
-It covers eleven kinds of change: an exam term published, moved or cancelled; an
-assignment deadline published or moved; a grade published or corrected; an enrolment
-confirmed or refused; a class moved or cancelled; and your own exam registration
-confirmed, cancelled or refused by the university.
+What reaches you today: an exam term published, moved or cancelled; a grade published or
+corrected; your enrolment confirmed or refused; and your own exam registration confirmed
+or cancelled. A class being moved or called off, and an assignment being set or its
+deadline moved, are kinds the system knows about and nothing raises yet — watch the
+calendar for those.
 
 Notifications are grouped rather than repeated: several of the same kind about the same
 thing on the same day arrive as one entry showing how many times it happened. Mark one as
@@ -153,6 +234,10 @@ holding a seat and the examiner hear about it — not everybody on the course.
 
 **_Account_**, from the header, shows your roles across every institution you belong to
 and any university accounts linked to your profile.
+
+Each institution you belong to is listed there with a way to take a copy of everything it
+holds about you. The copy downloads as a single file, and you can ask for it whenever you
+like without going through anybody.
 
 ---
 
@@ -180,6 +265,74 @@ Withdrawn and rejected students are excluded from both the list and the count, a
 two agree with each other. Students whose enrolment is still **Requested** hold no place
 and are not on the roster — which is why a course in a term that has not started can show
 a roster of nobody against a real seat count.
+
+## The course page
+
+Every offering can carry one course page, and it is authored here rather than derived from
+anything. Where there is none, the panel offers to open one, named after the course unless
+you say otherwise, with a short name and a summary.
+
+**A new page is unpublished, and an unpublished page is invisible to your students.** That
+is deliberate: a course is built before it is shown. Publish it from the same panel when it
+is ready, and unpublish it again if you need to.
+
+Teaching the course is standing enough. You do not need a coordinator's permission, and
+you do not need anybody to create the page for you: if you teach the offering, it is yours
+to open, build and publish. Somebody who administers offerings across the institution can
+do the same, which is how a course with no teacher yet gets a page at all.
+
+What you cannot do is author somebody else's course. Teaching one offering says nothing
+about another, and the panel will refuse it.
+
+Anybody who may read the institution's offerings also has a **_Learning_** screen in the
+navigation: every course page in the institution, with the offering it belongs to, how
+many activities are in it and the next deadline it carries. It flags any page that names a
+course offering which no longer exists.
+
+## Materials
+
+Materials are what there is to read, in the order you put them in. Three kinds:
+
+- **File** — chosen from your machine and uploaded straight to the store; the server
+  records what actually arrived, not what the browser claimed.
+- **Link** — an address somewhere else.
+- **Text** — written into the page itself.
+
+Each carries a title and an optional line of description. You can move one up or down the
+list, hide it from students while leaving it in place, show it again, or remove it.
+
+## Assignments
+
+An assignment is a piece of work, and setting one is where the dates are decided:
+
+- **Opens** — nothing may be handed in before it.
+- **Due** — after this, work is late.
+- **Closes** — after this, nothing is accepted at all. Leave it empty and **the due date
+  closes the assignment, unless you accept late work**.
+
+The dates must run in that order or the assignment is refused. Alongside them you set how
+many attempts a student gets — between one and a hundred, or empty for no limit — how many
+points the work is worth, whether late work is accepted, and whether it counts towards the
+final grade.
+
+An assignment is also hidden or shown to students independently of the course page, and it
+can be edited or removed after the fact. Setting one creates the gradebook column that
+marking later fills; you do not have to make one yourself.
+
+Deadlines you set here are what your students see on their calendar and on their dashboard.
+
+## Marking what is handed in
+
+Under each assignment, whoever may propose a grade sees every submission on it: the
+student, which attempt it is, when it arrived, whether the server recorded it as late, and
+the files, each one downloadable.
+
+Give it points — against the maximum, where you set one — and write feedback. That records
+a coursework mark, which the student sees on their course page beside the rest of their
+marks for the course. The feedback is stored but not yet shown to them.
+
+A coursework mark is not the course grade. That remains the separate, deliberate act
+described next.
 
 ## Grades
 
@@ -216,7 +369,7 @@ holds a place on the course can be in a group, and a full group refuses another 
 is written as one class per week, you can move a single week, call one class off, or put
 a called-off class back on, without touching the rest. A room that is already booked at
 that hour is refused. A called-off class stays listed, struck through, and releases its
-room. The students are told.
+room. The change shows on everybody's calendar, but no notification goes out about it yet.
 
 **Exam terms** — offer an exam term with a kind, a time, a room, an examiner, a seat
 count and a registration window. Moving one or calling it off reaches the students
@@ -233,12 +386,12 @@ as well as any you attend.
 
 So you are not left looking for it:
 
-- **No course materials, assignments or submissions.** Nothing in StudViro creates them,
-  so the deadlines layer on the calendar is empty. This is the next large piece of work.
-- **No message or discussion between students and teachers.**
+- **No message or discussion between students and teachers.** A note to the marker on a
+  submission, and feedback on a mark, are the only writing that travels between the two.
+- **No quizzes.** Assignments are things handed in, marked by a person. Nothing in
+  StudViro asks questions or marks answers, and nothing is planned to.
 - **No attendance.** Publishing a grade marks a seat attended; there is no way to record
-  an absence.
-- **No search.** Courses are reachable through the catalogue, your enrolments and your
-  teaching list.
-- **No export of your own data.**
+  an absence, and the two absence states the system knows about are never set.
+- **No notification when an assignment is set or marked, or when a class moves.** The
+  calendar carries those; the notifications list does not.
 - **The Slovak translation is partial.** Some strings still render in English.
