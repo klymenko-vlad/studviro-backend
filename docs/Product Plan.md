@@ -50,7 +50,7 @@ set up at all.
 | N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            | **Done**    |
 | N4  | Teaching assignments: make somebody a course's teacher              | —            | **Done**    |
 | N5  | Programme memberships: make somebody a student of a programme       | —            | **Done**    |
-| N6  | Study groups and their membership                                   | —            | Not started |
+| N6  | Study groups and their membership                                   | —            | **Done**    |
 | N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | Not started |
 | N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | Not started |
 | N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | Not started |

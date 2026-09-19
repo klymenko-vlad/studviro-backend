@@ -58,38 +58,33 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N6: study groups and their membership
+## Next task — N7: timetable events
 
-**Phase 0 and N1–N5 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
+**Phase 0 and N1–N6 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
 rows, fifteen tables, about a second. Sign in as `ada@studviro.local` (student),
 `teacher@studviro.local`, `registrar@studviro.local` or `admin@studviro.local`; the
-password is `correct horse battery staple` unless the account already existed here. ADR
-0025 records what the seed is.
+password is `correct horse battery staple` unless the account already existed here.
 
-**An institution can now be set up by hand from nothing**: create terms, build the org
-tree and rooms, add programmes and courses, put a course on in a term, say who teaches it,
-and admit students who can then enrol. That was the whole point of Phase 1's first half.
+**An institution can now be set up by hand from nothing**: terms, org tree and rooms,
+programmes and courses, offerings, teachers, students, and seminar groups.
 
-- **N1** — _Academic terms_ card on `/institutions/:id/catalogue`. `institution:manage`.
-- **N2** — `/institutions/:id/org-units` edits the tree and carries _Rooms_.
-- **N3** — _Course offerings_ card on the catalogue; each row links to the offering page.
-- **N4** — the teaching-staff panel on an offering. Makes a `teacher`.
-- **N5** — `/institutions/:id/programs/:programId`, linked from the catalogue. Makes a
-  `student`, which is what unblocks self-service enrolment.
+- **N1** _Academic terms_ · **N2** org tree + _Rooms_ · **N3** _Course offerings_ ·
+  **N4** teaching staff on an offering · **N5** `/institutions/:id/programs/:programId` ·
+  **N6** _Groups_ panel on the offering page.
 
 **Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left:
 
 | #   | Missing          | Consequence                                       |
 | --- | ---------------- | ------------------------------------------------- |
-| N6  | Study groups     | No seminar or lab groups                          |
 | N7  | Timetable events | `schedule:manage` gates rooms only                |
 | N8  | Exam terms       | Students can register for exams nobody can create |
 | N9  | Bulk entry       | A term's worth of offerings and people, pasted    |
 
-**N6 means**: `study_groups` and `study_group_memberships` on an offering — create a
-seminar or lab group with a capacity, put enrolled students in it, take them out. Put it on
-the offering page beside the teaching panel, under `offering:manage`. A group's members
-must be enrolled on the offering; that is the rule worth enforcing.
+**N7 means**: create, move and cancel `timetable_events` on an offering — type, title,
+room, study group, start and end — under `schedule:manage`. The student-facing week
+calendar already reads them (`my-timetable-events`); nothing writes them. A weekly
+repeat is what an institution actually wants, so generating a term's worth of events
+from one weekly slot is the feature, not a single event at a time.
 
 **Phase 2 is the Moodle half** and **L1 is decided**: Cloudflare R2 or AWS S3, so build one
 S3-compatible client behind a `StorageService`, run MinIO in `docker-compose` for local and
@@ -105,7 +100,7 @@ spend money. Record what a release will need in `docs/Deployment.md` instead.
 
 ## Caveats
 
-- The client bundle is at 460.85 kB against a **540 kB** guard, raised once for the whole
+- The client bundle is at 463.98 kB against a **540 kB** guard, raised once for the whole
   of Phase 1 and Phase 2 and to be lowered back when they land. The reduction
   `.size-limit.mjs` reserved — sharing one card between `/enroll` and `/exams` — was taken
   and measured at **zero bytes**; it is kept as better code. Do not re-attempt it.
@@ -116,6 +111,9 @@ spend money. Record what a release will need in `docs/Deployment.md` instead.
   institution directory — 170-odd names once the demo seed has run, unfiltered and
   unsearchable. Neither can filter by role (a teacher need not hold one), so what they
   want is a typeahead. Worth a step.
+- A `requested` enrolment holds no place, so it is not on the roster and cannot be put in
+  a study group. On a term that has not started every enrolment is `requested`, which is
+  why the demo's summer offerings show a roster of zero against a seat count of eight.
 - `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `className="w-full"`
   on the control does nothing. Every select in the app is natural width.
 - `pnpm db:seed` does not reset an existing user's password, deliberately. On this
