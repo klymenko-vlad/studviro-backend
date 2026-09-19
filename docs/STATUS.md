@@ -58,37 +58,46 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — remove the integration (ADR 0024, Phase 0 of `Product Plan.md`)
+## Next task — R6: a demo seed, because there is nothing to look at
 
-**Seven steps, R1–R7. Do them in order; R4 is the one with teeth.**
+**Phase 0 of `Product Plan.md` is done except R6, and R6 blocks everything else being
+demonstrable.** `pnpm db:seed` currently creates two users and no institution, so a fresh
+checkout has no programmes, no courses, no term, no students — nothing to open a screen on.
 
-- **R1** — delete `modules/connectors`, `modules/synchronization`, `modules/write-back`: 138
-  files, ~11,900 lines, about a third of the backend. The queue keeps `email`; the
-  `synchronization` queue and its three job kinds go.
-- **R2** — delete the client's `sync-monitor` and `connector-status` widgets, the
-  `sync-run`, `reconciliation`, `connector-credential` and `write-intent` entities, the
-  `start-sync-run`, `manage-connector-credentials`, `resolve-discrepancy` and
-  `resolve-write-intent` features, and the `institution-sync` view and route.
-- **R3** — drop `sync_runs`, `sync_domain_results`, `sync_watermarks`,
-  `reconciliation_resolutions`, `source_write_intents`, `connector_credentials`.
-- **R4** — strip `provenance` from the 8 schema files that spread it: six columns off
-  twenty-five tables, and **61 backend files plus 11 client components read it**. Expect this
-  to be most of the work. `external_identities` stays — identity linking is authentication,
-  not integration, and OIDC is still a goal.
-- **R5** — remove `sync:read`, `sync:run` and `connector:configure` from the permission
-  catalogue and every role that holds them; drop the two connector fields from
-  `institution_settings`.
-- **R6** — keep the `mock-sis` dataset generator and repurpose it as the demo seed, writing
-  canonical rows directly. It is the only realistic synthetic university the project has and
-  the thesis needs a populated system.
-- **R7** — rewrite the marketing copy that claims integration. `messages/en.json:970` says
-  "Your systems stay authoritative and unchanged", which describes software that does not
-  exist.
+The `mock-sis` dataset generator was the only realistic synthetic university this project had
+(~5,000 linked records: faculties, departments, programmes, courses, offerings, teachers,
+students, enrolments, timetables, exam terms, results). It was deleted with
+`modules/connectors`. **Recover it from git at `9d28d63~1`**, under
+`src/modules/connectors/mock-sis/`, and rewrite it as a seeding script:
 
-**Then Phase 1 of `Product Plan.md`**: the registry an institution can actually run. Academic
-terms, rooms, offerings, teaching assignments, programme memberships, study groups, timetable
-events and exam terms are all import-only today, so a fresh institution cannot be set up at
-all — and self-service enrolment needs a programme membership that nobody can create.
+- It currently emits `ConnectorRecord<T>` objects for an importer to apply. It should write
+  canonical rows directly through the repositories, in dependency order.
+- Drop `externalId`, `sourceVersion` and `sourceUpdatedAt` — those columns are gone.
+- Keep the deterministic seed, so two runs produce the same university.
+- Wire it behind `pnpm db:seed` for a named demo institution, and make it idempotent or
+  clearly destructive — say which.
+
+**Then Phase 1 of `Product Plan.md`: the registry an institution can actually run.** This is
+the real remaining scope and it is larger than it sounds. None of these can be created today,
+because every one of them arrived by import:
+
+| Missing               | Consequence                                                           |
+| --------------------- | --------------------------------------------------------------------- |
+| Academic terms        | Nothing to enrol into; the enrolment window lives here                |
+| Org units and rooms   | No faculties, no place to hold a class                                |
+| Course offerings      | `PATCH` exists; there is no `POST`                                    |
+| Teaching assignments  | Nobody can be made a course's teacher                                 |
+| Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
+| Study groups          | No seminar or lab groups                                              |
+| Timetable events      | `schedule:manage` still gates nothing                                 |
+| Exam terms            | Students can register for exams nobody can create                     |
+
+Take them roughly in that order: it is dependency order, and programme memberships are the
+one that unblocks a feature that already exists.
+
+**After Phase 1, Phase 2 is the Moodle half** — file storage first, then learning spaces,
+materials, assignments, submissions and marking. It is the larger of the two halves and it
+needs object storage the platform does not have.
 
 ## Caveats
 

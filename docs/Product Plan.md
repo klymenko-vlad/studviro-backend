@@ -21,15 +21,22 @@ A student's and a teacher's year, end to end, in one place:
 
 ## Phase 0 — Remove the integration (ADR 0024)
 
-| #   | Step                                                                          | Status |
-| --- | ----------------------------------------------------------------------------- | ------ |
-| R1  | Delete `modules/connectors`, `modules/synchronization`, `modules/write-back`  | Next   |
-| R2  | Delete the sync monitor, connector status, reconciliation and write-intent UI | Next   |
-| R3  | Drop the five integration tables and `connector_credentials`                  | Next   |
-| R4  | Strip `provenance` from 8 schema files; 6 columns off 25 tables               | Next   |
-| R5  | Remove `sync:read`, `sync:run`, `connector:configure` from the catalogue      | Next   |
-| R6  | Repurpose the `mock-sis` generator as the demo seed, writing canonical rows   | Next   |
-| R7  | Rewrite the marketing copy that claims integration                            | Next   |
+**Done, except R6.** Landed in `9d28d63` (backend) and `d4460eb` (client).
+
+| #   | Step                                                                          | Status   |
+| --- | ----------------------------------------------------------------------------- | -------- |
+| R1  | Delete `modules/connectors`, `modules/synchronization`, `modules/write-back`  | Done     |
+| R2  | Delete the sync monitor, connector status, reconciliation and write-intent UI | Done     |
+| R3  | Drop the five integration tables and `connector_credentials`                  | Done     |
+| R4  | Strip `provenance` from 8 schema files; 6 columns off 25 tables               | Done     |
+| R5  | Remove `sync:read`, `sync:run`, `connector:configure` from the catalogue      | Done     |
+| R6  | Repurpose the `mock-sis` generator as the demo seed, writing canonical rows   | **Next** |
+| R7  | Rewrite the marketing copy that claims integration                            | Done     |
+
+R6 is the one left, and it blocks everything else being demonstrable: `pnpm db:seed` makes
+two users and no institution, so a fresh checkout has nothing to open a screen on. The
+generator was deleted with `modules/connectors` and is recoverable from git at `9d28d63~1`
+under `src/modules/connectors/mock-sis/`. See `STATUS.md` for what rewriting it takes.
 
 ## Phase 1 — The registry an institution can actually run
 
