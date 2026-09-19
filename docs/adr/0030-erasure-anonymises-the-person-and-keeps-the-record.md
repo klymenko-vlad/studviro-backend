@@ -36,7 +36,9 @@ rows. Concretely:
   outstanding access token dies immediately.
 - Credentials and sessions — `refresh_tokens`, `password_reset_tokens`, `user_emails` and
   `external_identities` for that person are **hard-deleted**. These are the rows with no
-  retention argument at all.
+  retention argument at all. So are this institution's `invitations` to them: the address
+  an institution asserted about a person outlives an anonymised `users` row and hands the
+  erased identity straight back, which is the one thing anonymisation is for.
 - The academic record — `enrollments`, `official_course_results`, `exam_registrations`,
   `program_memberships`, `assessment_results` — **is kept**, still pointing at the now
   anonymous user row. The institution can still say a person with that student number
@@ -44,11 +46,15 @@ rows. Concretely:
 - Free text a human wrote about the person — `conflict_note`, marking feedback — is
   cleared, because it is the one place where an identity survives anonymisation of the
   columns around it.
-- Stored files belonging to the person are deleted from the object store. ADR 0027 notes
-  that nothing does this yet; erasure is where it starts.
+- Stored files belonging to the person — their submitted work, not the course's teaching
+  materials — are deleted from the object store, and the `submission_files` rows naming
+  them go with the objects rather than pointing at absences. ADR 0027 notes that nothing
+  deleted from the store until now; erasure is where it starts.
 - An `audit_events` row records that an erasure happened, by whom and when — **without the
   erased person's identifiers**. An audit trail that defeats the erasure it records is not
-  an audit trail.
+  an audit trail. `audit_events.subject_id` is not nullable, so the subject of the row is
+  the erasure itself, under an id minted for it; the same id is what the caller is handed
+  back, and it is the only handle anyone keeps on the event.
 
 **Export is self-service and erasure is not.** A person may take a copy of their own data
 whenever they like, over a route scoped to themselves. Erasure is a request the controller

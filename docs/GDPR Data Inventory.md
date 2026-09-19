@@ -14,15 +14,15 @@ to and none to receive one from — whatever is here is the only copy the instit
 None of the following is knowable from the code. Each is marked `TODO(institution)` inline
 where it bites.
 
-| Unknown                             | What is needed                                                                                                         | Why                                                                                                                                     |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Controller identity**             | Legal name, registered address and contact point of the institution operating the deployment                           | Art. 13/14 require it in every privacy notice; the code has an `institutions` row with a `code` and a `name`, which is not a controller |
-| **DPO contact**                     | Name or role title and a contact address for the data protection officer                                               | A public body processing student records must designate one (Art. 37) and publish the contact (Art. 37(7))                              |
-| **Lawful basis, per purpose**       | The Art. 6 basis for each purpose in the _Why it exists_ column — academic record, authentication, notification, leads | Determines whether erasure, objection and portability apply at all, and what a notice must say                                          |
-| **Retention period, per category**  | How long an academic record, an authentication artefact, a notification, a log line and a demo lead may be kept        | Nothing in the code expires anything except JWTs. Retention cannot be implemented until a number exists                                 |
-| **Special-category data policy**    | Whether disability accommodations, health-based exam excusals or similar will ever be entered, and where               | No Art. 9 field exists today; `excused` on `exam_registrations` and `conflict_note` are where such data would arrive in free text       |
-| **Processors and hosting location** | Who hosts PostgreSQL, Redis and the mail transport, and in which jurisdiction                                          | Art. 28 contracts and Chapter V transfer assessment; `docs/Deployment.md` records no provider yet                                       |
-| **Subject-request procedure**       | Who receives an access, rectification or erasure request and within what internal deadline                             | There is no endpoint for any of them (see _What is missing_), so the procedure is manual by definition                                  |
+| Unknown                             | What is needed                                                                                                         | Why                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Controller identity**             | Legal name, registered address and contact point of the institution operating the deployment                           | Art. 13/14 require it in every privacy notice; the code has an `institutions` row with a `code` and a `name`, which is not a controller        |
+| **DPO contact**                     | Name or role title and a contact address for the data protection officer                                               | A public body processing student records must designate one (Art. 37) and publish the contact (Art. 37(7))                                     |
+| **Lawful basis, per purpose**       | The Art. 6 basis for each purpose in the _Why it exists_ column — academic record, authentication, notification, leads | Determines whether erasure, objection and portability apply at all, and what a notice must say                                                 |
+| **Retention period, per category**  | How long an academic record, an authentication artefact, a notification, a log line and a demo lead may be kept        | Nothing in the code expires anything except JWTs. Retention cannot be implemented until a number exists                                        |
+| **Special-category data policy**    | Whether disability accommodations, health-based exam excusals or similar will ever be entered, and where               | No Art. 9 field exists today; `excused` on `exam_registrations` and `conflict_note` are where such data would arrive in free text              |
+| **Processors and hosting location** | Who hosts PostgreSQL, Redis and the mail transport, and in which jurisdiction                                          | Art. 28 contracts and Chapter V transfer assessment; `docs/Deployment.md` records no provider yet                                              |
+| **Subject-request procedure**       | Who receives an access, rectification or erasure request and within what internal deadline                             | Access and erasure now have endpoints (see _What is missing_); rectification does not, and deciding an erasure is a human judgement either way |
 
 ## How to read the _Deleted by_ column
 
@@ -34,10 +34,14 @@ where it bites.
   the parent row. `BaseRepository.hardDelete` exists (line 265) but no service calls it.
 - **Nothing** — no code path removes the row at all.
 
-The practical consequence: **`hardDelete` is unreachable from any HTTP route, so no cascade
-in this schema has ever fired in production.** The only hard delete in the codebase is
-`src/database/demo-seed/write-plan.ts:95-96`, which drops the demo institution and every
-user whose email matches the seed's domain before re-seeding.
+This was the state until O4. **Erasure
+(`src/modules/privacy/personal-data-erasure.service.ts`, ADR 0030) is now the one route
+that hard-deletes**: `refresh_tokens`, `password_reset_tokens`, `user_emails`,
+`external_identities`, this institution's `invitations` to the person, and the
+`submission_files` rows whose objects it removes from the store. Everything else is still
+soft delete, so every other cascade in this schema remains unfired. The other hard delete
+in the codebase is `src/database/demo-seed/write-plan.ts:95-96`, which drops the demo
+institution and every user whose email matches the seed's domain before re-seeding.
 
 ## Identity and authentication
 
@@ -372,14 +376,21 @@ BFF houses it in an `httpOnly` cookie (`frontend/src/shared/config/session.ts:45
 
 Not risks yet — those are in `DPIA.md` — but facts about the code:
 
-- **No audit log.** `grep -i audit` across `src` returns three comments and no table. There
-  is no record of who read a student's grades, who changed a role assignment, or who
-  exported anything. `official_course_results` records who _proposed_ and who _recorded_ a
-  grade, and that is the whole of the accountability trail.
-- **No erasure path.** `DELETE /users/:id` soft-deletes. `/me` exposes `GET` and `PATCH`
-  only (`src/modules/users/me.controller.ts`). Nothing implements Art. 17.
-- **No export path.** Nothing implements Art. 15 or Art. 20; a subject access request would
-  be answered by hand against this document.
+- **The audit log (O3) records writes, not reads.** `audit_events` now carries grade
+  proposals and publications, role grants and revocations, enrolment corrections, exam-term
+  cancellations and erasures. There is still no record of who _read_ a student's grades or
+  who exported anything.
+- **Erasure (Art. 17) is answered by
+  `DELETE /institutions/:institutionId/people/:userId/personal-data`** behind
+  `institution:manage`, to ADR 0030: anonymise the person, hard-delete the credentials,
+  clear the free text, delete the files, keep the academic record, refuse while another
+  institution still has an active relationship. `DELETE /users/:id` still only
+  soft-deletes and is not an erasure.
+- **Export (Art. 15) is answered by
+  `GET /institutions/:institutionId/me/personal-data`**, scoped to the caller. It covers
+  every table above that holds data about the subject, including the storage keys of
+  their files. Art. 20 portability is the same document; nothing converts it to another
+  controller's format.
 - **No retention job.** `@nestjs/schedule` is registered (`ScheduleModule.forRoot()`) and
   nothing is scheduled. `purgeExpired` is dead code.
 - **No rectification trail.** A corrected grade is a status change with a free-text note; who

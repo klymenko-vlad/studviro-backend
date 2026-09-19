@@ -76,14 +76,14 @@ assignment creates with itself. ADR 0028 records the model and why quizzes are o
 
 The reason to replace rather than tolerate them.
 
-| #   | Step                                                                | Carries over | Status      |
-| --- | ------------------------------------------------------------------- | ------------ | ----------- |
-| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | **Done**    |
-| U2  | Study progress against the programme, not just a grade list         | step 42      | **Backend** |
-| U3  | Search across everything the caller may see                         | step 51      | **Backend** |
-| U4  | WCAG 2.2 AA pass                                                    | step 52      | **Done**    |
-| U5  | Mobile-first review of every screen                                 | step 21      | **Done**    |
-| U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      | Not started |
+| #   | Step                                                                | Carries over | Status   |
+| --- | ------------------------------------------------------------------- | ------------ | -------- |
+| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | **Done** |
+| U2  | Study progress against the programme, not just a grade list         | step 42      | **Done** |
+| U3  | Search across everything the caller may see                         | step 51      | **Done** |
+| U4  | WCAG 2.2 AA pass                                                    | step 52      | **Done** |
+| U5  | Mobile-first review of every screen                                 | step 21      | **Done** |
+| U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      | **Done** |
 
 **U4, U5 and O9 landed together**, frontend only, and are written up in
 `frontend/docs/Accessibility.md` — every criterion checked, every measured contrast ratio in
@@ -102,14 +102,27 @@ also the answer to the five-column table on a 375 px phone; `Switch` given a 24 
 | --- | --------------------------------------------- | ------------ | ----------- |
 | O1  | GDPR data inventory and DPIA                  | step 19      | **Drafted** |
 | O2  | Threat model                                  | step 20      | **Drafted** |
-| O3  | Structured audit events                       | step 49      | **Backend** |
-| O4  | Personal-data export and erasure              | step 50      | Not started |
+| O3  | Structured audit events                       | step 49      | **Done**    |
+| O4  | Personal-data export and erasure              | step 50      | **Backend** |
 | O5  | Metrics and operational liveness              | step 53      | **Done**    |
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | **Done**    |
 | O8  | Performance and load tests                    | step 61      | **Done**    |
 | O9  | Accessibility tests                           | step 62      | **Done**    |
 | O10 | Administrator and user documentation          | steps 68, 69 | **Done**    |
+
+**O4 is `src/modules/privacy/`**, built to ADR 0030. `GET /institutions/:institutionId/me/personal-data`
+answers Article 15 for the caller and nobody else — account, sign-in trail, roles,
+invitations, programme memberships, enrolments, results, exam registrations, study groups,
+assessment results, activity completions, submissions, notifications and the storage keys
+of their files. `DELETE /institutions/:institutionId/people/:userId/personal-data`, behind
+`institution:manage`, anonymises the person and keeps the record: the address becomes an
+unroutable placeholder, the digest is nulled, `token_version` is bumped, credentials and
+invitations are **hard-deleted** — `BaseRepository.hardDelete`'s first callers outside
+token purging — free text about the person is cleared, submitted files are deleted from the
+object store, and an `audit_events` row is filed under the erasure's own id so the trail
+carries no identifier of the person it records. Refused while another institution still has
+an active relationship, naming the fact and not the institution. The screen is outstanding.
 
 **O8 is `load-test/university-day.js`** and `docs/Performance.md`. The profile models the
 load a university actually makes — spiky and correlated — as three overlapping scenarios:
