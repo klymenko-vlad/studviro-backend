@@ -58,26 +58,25 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N3: course offerings an institution can create
+## Next task — N4: teaching assignments
 
-**Phase 0, N1 and N2 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
+**Phase 0 and N1–N3 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
 rows, fifteen tables, about a second — so every screen has something on it. Sign in as
 `ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
 `admin@studviro.local`; the password is `correct horse battery staple` unless the account
 already existed on this machine. ADR 0025 records what the seed is.
 
-- **N1**: `/institutions/:id/catalogue` carries an _Academic terms_ card — list, create with
-  an enrolment window, retire. `institution:manage`.
-- **N2**: `/institutions/:id/org-units` carries a create form and a Retire action on every
-  node (`institution:manage`), and a _Rooms_ card (`schedule:manage`, its first real route).
-  The tree cannot close into a ring; nothing retires while something hangs off it.
+- **N1** — _Academic terms_ card on `/institutions/:id/catalogue`. `institution:manage`.
+- **N2** — `/institutions/:id/org-units` edits the tree (`institution:manage`) and carries a
+  _Rooms_ card (`schedule:manage`).
+- **N3** — _Course offerings_ card on the catalogue screen: `GET`/`POST`
+  `/institutions/:id/course-offerings` and `DELETE` on one, `offering:manage`. The list
+  carries places taken and teacher count, and flags an offering with no teacher.
 
-**Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left,
-in dependency order:
+**Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left:
 
 | #   | Missing               | Consequence                                                           |
 | --- | --------------------- | --------------------------------------------------------------------- |
-| N3  | Course offerings      | `PATCH` exists; there is no `POST`                                    |
 | N4  | Teaching assignments  | Nobody can be made a course's teacher                                 |
 | N5  | Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
 | N6  | Study groups          | No seminar or lab groups                                              |
@@ -85,25 +84,29 @@ in dependency order:
 | N8  | Exam terms            | Students can register for exams nobody can create                     |
 | N9  | Bulk entry            | A term's worth of offerings and people, pasted                        |
 
-**N3 means**: `POST /institutions/:id/course-offerings` under `offering:manage`, pairing a
-course with a term and setting capacity, language and status, plus a screen. The `PATCH`
-already exists on `offering-administration.controller.ts`; `POST` and a list are missing.
+**N4 means**: list, add and remove `teaching_assignments` on an offering, under
+`offering:manage`. It is the one that turns somebody into a `teacher` — the role derives
+from the assignment and is not grantable by hand (ADRs 0015–0018), so this is how a teacher
+comes to exist at all. The offerings card already shows which offerings have nobody.
 
-**Phase 2 is the Moodle half** and **L1 is decided**: the user will use Cloudflare R2 or
-AWS S3, so build one S3-compatible client behind a `StorageService`, run MinIO in
-`docker-compose` for local and CI, and take bucket, region, endpoint and credentials from
-the environment. **No credentials are needed until deploy**; do not create a bucket.
+**Phase 2 is the Moodle half** and **L1 is decided**: Cloudflare R2 or AWS S3, so build one
+S3-compatible client behind a `StorageService`, run MinIO in `docker-compose` for local and
+CI, and take bucket, region, endpoint and credentials from the environment. **No
+credentials are needed until deploy**; do not create a bucket.
+
+**O1 and O2 are decided too**: draft both fully from the code and mark the controller, DPO,
+retention periods and lawful basis as `TODO(institution)` placeholders, listed in one table
+at the top. Do not invent them.
 
 **The user has ruled: local only.** Do not deploy, do not create hosted resources, do not
 spend money. Record what a release will need in `docs/Deployment.md` instead.
 
 ## Caveats
 
-- **The client bundle is at 448.45 kB against a 450 kB guard: 1.55 kB of headroom.** The
-  next screen breaches it. `.size-limit.mjs` insists a reduction be looked for before a
-  raise, and it names the one that is left: `/enroll` and `/exams` render the same
-  card-and-reason shape twice, and `EnrollableOfferingCard` repeats `ExamTermCard`'s window
-  and seats logic. Take that extraction before N3's screen.
+- The client bundle is at 451.18 kB against a **540 kB** guard, raised once for the whole
+  of Phase 1 and Phase 2 and to be lowered back when they land. The reduction
+  `.size-limit.mjs` reserved — sharing one card between `/enroll` and `/exams` — was taken
+  and measured at **zero bytes**; it is kept as better code. Do not re-attempt it.
 - `pnpm arch` was red on `dev` before this session for a widget-to-widget import; it is
   green now. `offering-grades` was folded into `course-offering`, the only widget that
   rendered it.
