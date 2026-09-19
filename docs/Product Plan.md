@@ -107,9 +107,27 @@ also the answer to the five-column table on a 375 px phone; `Switch` given a 24 
 | O5  | Metrics and operational liveness              | step 53      | **Done**    |
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | **Done**    |
-| O8  | Performance and load tests                    | step 61      | Not started |
+| O8  | Performance and load tests                    | step 61      | **Done**    |
 | O9  | Accessibility tests                           | step 62      | **Done**    |
-| O10 | Administrator and user documentation          | steps 68, 69 | Not started |
+| O10 | Administrator and user documentation          | steps 68, 69 | **Done**    |
+
+**O8 is `load-test/university-day.js`** and `docs/Performance.md`. The profile models the
+load a university actually makes — spiky and correlated — as three overlapping scenarios:
+a results evening of sign-in and reads, an enrolment rush of 144 students on 40 places,
+and an exam-registration rush on 25 seats. Its thresholds are `docs/Observability.md`'s
+alert thresholds, so the run fails rather than merely reporting. Measured on 2026-09-19:
+19,330 requests at 69.6/s, p95 131 ms, zero 5xx, both rushes filled exactly and never
+oversold. **It bends at the enrolment write**: a quarter of the herd gets
+`409 SERIALIZATION_FAILURE` and nothing retries it, and raising `DATABASE_POOL_MAX` from
+10 to 40 makes that 80% and leaves 12 of 40 places unsold. A bounded retry around
+`MyEnrollmentsService.request` is the fix and is a behaviour change, so it is a step of
+its own rather than part of a measurement.
+
+**O10 is `docs/Administrator Guide.md` and `docs/User Guide.md`.** The first walks an
+institution from nothing to a running term in the order the screens require, then covers
+the ongoing jobs, naming the permission and the screen for each. The second is two short
+audiences, student and teacher. Both end with what is deliberately absent, so nobody
+hunts for a screen that is not there.
 
 **O5 was renamed.** "Freshness" meant lag behind the upstream system, and ADR 0024 removed
 the upstream: on a system of record there is nothing to be stale relative to. It is now

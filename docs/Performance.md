@@ -79,6 +79,10 @@ institution it owns, so **re-seeding is the cleanup**.
 
 ## Running it
 
+k6 is not a dependency of this repository and is not installed by `pnpm install`. Take the
+binary from Grafana's releases and put it on the path — the runs below were made with
+k6 v1.4.0.
+
 ```bash
 pnpm docker:up
 pnpm db:migrate
