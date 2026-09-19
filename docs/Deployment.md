@@ -38,6 +38,16 @@ fails readiness, so the platform holds traffic instead of routing it into 500s.
 Point Render's health check path at `/health/ready`, not `/health/live` — `live` only
 proves the process is up.
 
+## Scraping
+
+`GET /metrics`, version-neutral and outside the API prefix. It used to answer on
+`/v1/metrics` — URI versioning applied to the controller while the prefix exclusion only
+stripped `/api` — so a scrape configuration written before this change must be updated.
+
+`METRICS_TOKEN` is mandatory in production and the scraper must send it as
+`Authorization: Bearer …`. What to alert on, and at what threshold, is in
+`docs/Observability.md`.
+
 ## First account
 
 There is no seeding in production: `db:seed` refuses to run with `NODE_ENV=production` on

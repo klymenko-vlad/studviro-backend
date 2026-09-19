@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   institutions,
+  invitations,
   programs,
   roleAssignments,
   type CanonicalRole,
@@ -198,5 +199,49 @@ describe('Programme memberships (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(404);
+  });
+
+  it('counts an outstanding invitation as the institution knowing somebody', async () => {
+    const admin = await actingAs('institution_admin');
+    const invited = await harness.actingAs({ email: 'invited@example.com' });
+
+    // Before the invitation they are a stranger.
+    const stranger = await request(admin, 'POST', '', { userId: invited.user.id });
+    expect(stranger.statusCode).toBe(409);
+
+    await harness.db.insert(invitations).values({
+      institutionId,
+      address: 'invited@example.com',
+      role: 'registrar',
+      scopeType: 'institution',
+      scopeId: null,
+      tokenHash: 'hash-for-the-invitation',
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+
+    // "Invite them first" now means something: the invitation alone is enough,
+    // which is what makes admitting a whole incoming cohort possible.
+    const admitted = await request(admin, 'POST', '', { userId: invited.user.id });
+    expect(admitted.statusCode).toBe(201);
+  });
+
+  it('does not count an expired or already accepted invitation', async () => {
+    const admin = await actingAs('institution_admin');
+    const lapsed = await harness.actingAs({ email: 'lapsed@example.com' });
+
+    await harness.db.insert(invitations).values({
+      institutionId,
+      address: 'lapsed@example.com',
+      role: 'registrar',
+      scopeType: 'institution',
+      scopeId: null,
+      tokenHash: 'hash-for-the-lapsed-invitation',
+      expiresAt: new Date(Date.now() - 1_000),
+    });
+
+    const response = await request(admin, 'POST', '', { userId: lapsed.user.id });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().code).toBe('PERSON_NOT_IN_INSTITUTION');
   });
 });

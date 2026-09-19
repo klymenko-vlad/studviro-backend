@@ -52,7 +52,7 @@ set up at all.
 | N5  | Programme memberships: make somebody a student of a programme       | —            | **Done**    |
 | N6  | Study groups and their membership                                   | —            | **Done**    |
 | N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | **Done**    |
-| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | Not started |
+| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | **Done**    |
 | N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | Not started |
 
 ## Phase 2 — The learning half, natively
@@ -63,12 +63,12 @@ have yet.
 | #   | Step                                                                        | Carries over | Status      |
 | --- | --------------------------------------------------------------------------- | ------------ | ----------- |
 | L1  | File storage: object store, upload limits, virus posture, signed reads      | —            | Not started |
-| L2  | Learning spaces authored per offering, not derived                          | step 32      | Not started |
-| L3  | Materials: files, links, text, ordering, visibility                         | step 33      | Not started |
-| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      | Not started |
-| L5  | Student submissions: upload, resubmit, late marking                         | step 33      | Not started |
-| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      | Not started |
-| L7  | Quizzes — decide explicitly whether this is in scope at all                 | —            | Not started |
+| L2  | Learning spaces authored per offering, not derived                          | step 32      | **Backend** |
+| L3  | Materials: files, links, text, ordering, visibility                         | step 33      | **Backend** |
+| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      | **Backend** |
+| L5  | Student submissions: upload, resubmit, late marking                         | step 33      | **Backend** |
+| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      | **Backend** |
+| L7  | Quizzes — decided: out of scope, ADR 0028                                   | —            | **Done**    |
 
 ## Phase 3 — What the two systems never did well
 
@@ -91,12 +91,17 @@ The reason to replace rather than tolerate them.
 | O2  | Threat model                                  | step 20      | **Drafted** |
 | O3  | Structured audit events                       | step 49      | **Backend** |
 | O4  | Personal-data export and erasure              | step 50      | Not started |
-| O5  | Metrics and freshness observability           | step 53      | Not started |
+| O5  | Metrics and operational liveness              | step 53      | **Done**    |
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | Not started |
 | O8  | Performance and load tests                    | step 61      | Not started |
 | O9  | Accessibility tests                           | step 62      | Not started |
 | O10 | Administrator and user documentation          | steps 68, 69 | Not started |
+
+**O5 was renamed.** "Freshness" meant lag behind the upstream system, and ADR 0024 removed
+the upstream: on a system of record there is nothing to be stale relative to. It is now
+operational liveness — queue lag, the age of the oldest waiting job, migration drift —
+measured and documented in `docs/Observability.md`.
 
 ## Void
 

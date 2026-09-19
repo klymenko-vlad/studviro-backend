@@ -13,6 +13,7 @@ import {
   type MyCourseResultFilter,
   type MyCourseResultRow,
 } from './my-course-results.repository';
+import { standingIn, type ProgrammeStanding } from './programme-standing';
 import { summarizeStudyProgress, type StudyProgress } from './study-progress';
 
 export const COURSE_RESULT_KINDS = ['calculated', 'proposed', 'official'] as const;
@@ -55,8 +56,26 @@ export class MyCourseResultsService {
     return rows.map((row) => this.compose(row));
   }
 
-  async summarize(institutionId: string, userId: string): Promise<StudyProgress> {
-    return summarizeStudyProgress(await this.listMine(institutionId, userId));
+  /**
+   * Totals plus a position. U2's point is that a grade list answers "what did
+   * I get" and a student wants "how much is left"; the programme is the only
+   * thing that can put a denominator under the credits.
+   */
+  async summarize(
+    institutionId: string,
+    userId: string,
+  ): Promise<StudyProgress & { programmes: ProgrammeStanding[] }> {
+    const [results, programmes] = await Promise.all([
+      this.listMine(institutionId, userId),
+      this.repository.findMyProgrammes(institutionId, userId),
+    ]);
+
+    const progress = summarizeStudyProgress(results);
+
+    return {
+      ...progress,
+      programmes: programmes.map((programme) => standingIn(programme, progress)),
+    };
   }
 
   private compose(row: MyCourseResultRow): MyCourseResult {

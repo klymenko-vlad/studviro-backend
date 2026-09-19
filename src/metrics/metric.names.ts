@@ -1,0 +1,10 @@
+export const HTTP_DURATION_HISTOGRAM = 'http_request_duration_seconds';
+export const HTTP_REQUESTS_COUNTER = 'http_requests_total';
+export const QUEUE_COMPLETED_COUNTER = 'queue_jobs_completed_total';
+export const QUEUE_FAILED_COUNTER = 'queue_jobs_failed_total';
+export const QUEUE_WAITING_GAUGE = 'queue_jobs_waiting';
+export const QUEUE_OLDEST_WAITING_GAUGE = 'queue_oldest_waiting_job_age_seconds';
+export const DATABASE_POOL_MAX_GAUGE = 'database_pool_max_connections';
+export const INSTITUTIONS_GAUGE = 'institutions_count';
+export const MIGRATIONS_APPLIED_GAUGE = 'database_migrations_applied';
+export const MIGRATIONS_EXPECTED_GAUGE = 'database_migrations_expected';

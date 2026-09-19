@@ -2,6 +2,7 @@ import { Processor } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
+import { QueueMetrics } from '../../metrics/queue.metrics';
 import { BaseProcessor } from '../base.processor';
 import {
   emailJobSchemas,
@@ -27,8 +28,8 @@ export class EmailProcessor extends BaseProcessor<EmailJobSchemas> {
   // onto a class that declares its own constructor, so without this Nest
   // injects nothing and the base class gets an undefined logger.
   // eslint-disable-next-line @typescript-eslint/no-useless-constructor
-  constructor(logger: PinoLogger) {
-    super(logger);
+  constructor(logger: PinoLogger, metrics: QueueMetrics) {
+    super(logger, metrics);
   }
 
   private async sendWelcome(payload: EmailJobPayload<'welcome'>): Promise<void> {

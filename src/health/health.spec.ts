@@ -128,6 +128,17 @@ describe('MigrationsHealthIndicator', () => {
     expect(result).toMatchObject({ status: 'down' });
   });
 
+  it('exposes both counts so metrics can publish the gap', async () => {
+    const { service } = indicator();
+
+    const counts = await new MigrationsHealthIndicator(
+      dbApplying(expected - 2),
+      service,
+    ).counts();
+
+    expect(counts).toEqual({ applied: expected - 2, expected });
+  });
+
   it('reports down rather than throwing when the count cannot be read', async () => {
     const { service, down } = indicator();
     const db = {

@@ -27,12 +27,18 @@ export class MigrationsHealthIndicator {
     private readonly indicator: HealthIndicatorService,
   ) {}
 
+  async counts(): Promise<{ applied: number; expected: number }> {
+    const expected = await this.expectedCount();
+    const applied = await this.appliedCount();
+
+    return { applied, expected };
+  }
+
   async check(key: string) {
     const check = this.indicator.check(key);
 
     try {
-      const expected = await this.expectedCount();
-      const applied = await this.appliedCount();
+      const { applied, expected } = await this.counts();
 
       return applied >= expected
         ? check.up({ applied, expected })

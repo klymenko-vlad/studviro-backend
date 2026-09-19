@@ -5,13 +5,13 @@ import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.e
 import {
   programMemberships,
   programs,
-  roleAssignments,
-  teachingAssignments,
   users,
   type ProgramMembership,
   type ProgramMembershipStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+import { InstitutionMembershipService } from './institution-membership.service';
 
 export interface ProgramMemberEntry {
   readonly id: string;
@@ -47,7 +47,10 @@ const ACTIVE: ProgramMembershipStatus = 'active';
  */
 @Injectable()
 export class ProgramMembershipsService {
-  constructor(private readonly txHost: TransactionHost) {}
+  constructor(
+    private readonly txHost: TransactionHost,
+    private readonly institutionMembership: InstitutionMembershipService,
+  ) {}
 
   async list(institutionId: string, programId: string): Promise<ProgramMemberEntry[]> {
     await this.program(institutionId, programId);
@@ -82,7 +85,7 @@ export class ProgramMembershipsService {
   ): Promise<ProgramMembership> {
     return this.txHost.run(async () => {
       await this.program(institutionId, programId);
-      await this.assertKnownToInstitution(institutionId, input.userId);
+      await this.institutionMembership.assertKnown(institutionId, input.userId);
 
       const [clash] = await this.client
         .select({ id: programMemberships.id })
@@ -234,60 +237,6 @@ export class ProgramMembershipsService {
       .limit(1);
 
     if (!row) throw new EntityNotFoundError('program', programId);
-  }
-
-  /** Same rule as a teaching assignment: an institution may not reach into the user table. */
-  private async assertKnownToInstitution(institutionId: string, userId: string): Promise<void> {
-    const [person] = await this.client
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-      .limit(1);
-    if (!person) throw new EntityNotFoundError('user', userId);
-
-    const [granted] = await this.client
-      .select({ id: roleAssignments.id })
-      .from(roleAssignments)
-      .where(
-        and(
-          eq(roleAssignments.institutionId, institutionId),
-          eq(roleAssignments.userId, userId),
-          isNull(roleAssignments.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (granted) return;
-
-    const [teaching] = await this.client
-      .select({ id: teachingAssignments.id })
-      .from(teachingAssignments)
-      .where(
-        and(
-          eq(teachingAssignments.institutionId, institutionId),
-          eq(teachingAssignments.userId, userId),
-          isNull(teachingAssignments.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (teaching) return;
-
-    const [member] = await this.client
-      .select({ id: programMemberships.id })
-      .from(programMemberships)
-      .where(
-        and(
-          eq(programMemberships.institutionId, institutionId),
-          eq(programMemberships.userId, userId),
-          isNull(programMemberships.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (member) return;
-
-    throw new ConflictError(
-      'PERSON_NOT_IN_INSTITUTION',
-      'That person is not part of this institution; invite them first',
-    );
   }
 
   private get client() {

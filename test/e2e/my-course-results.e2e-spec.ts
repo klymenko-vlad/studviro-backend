@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -7,6 +8,8 @@ import {
   enrollments,
   institutions,
   officialCourseResults,
+  programMemberships,
+  programs,
   roleAssignments,
   type CanonicalRole,
   type NewOfficialCourseResult,
@@ -332,6 +335,98 @@ describe('My course results (e2e)', () => {
         creditsEarned: 0,
         weightedAverage: null,
         awaitingRetake: 0,
+        programmes: [],
+      });
+    });
+
+    describe('against the programme (U2)', () => {
+      const admitTo = async (
+        userId: string,
+        overrides: { standardLengthSemesters?: number | null; code?: string } = {},
+      ) => {
+        const [program] = await harness.db
+          .insert(programs)
+          .values({
+            institutionId,
+            code: overrides.code ?? 'INF-BC',
+            name: 'Informatics',
+            standardLengthSemesters:
+              overrides.standardLengthSemesters === undefined
+                ? 6
+                : overrides.standardLengthSemesters,
+          })
+          .returning();
+
+        await harness.db.insert(programMemberships).values({
+          institutionId,
+          programId: program!.id,
+          userId,
+          status: 'active',
+          studyYear: 2,
+        });
+
+        return program!;
+      };
+
+      it('puts a denominator under the credits', async () => {
+        const actor = await actingAs('student');
+        await admitTo(actor.user.id);
+
+        const summary = await summaryFor(actor);
+
+        expect(summary.programmes).toEqual([
+          expect.objectContaining({
+            programCode: 'INF-BC',
+            studyYear: 2,
+            creditsRequired: 180,
+            creditsEarned: 0,
+            percentComplete: 0,
+            creditsRemaining: 180,
+            creditsComplete: false,
+          }),
+        ]);
+      });
+
+      it('invents no denominator for a programme with no recorded length', async () => {
+        const actor = await actingAs('student');
+        await admitTo(actor.user.id, { standardLengthSemesters: null });
+
+        const [programme] = (await summaryFor(actor)).programmes as unknown[];
+
+        expect(programme).toMatchObject({
+          creditsRequired: null,
+          percentComplete: null,
+          creditsRemaining: null,
+        });
+      });
+
+      it('says nothing about a programme the student has left', async () => {
+        const actor = await actingAs('student');
+        const program = await admitTo(actor.user.id);
+
+        await harness.db
+          .update(programMemberships)
+          .set({ status: 'graduated' })
+          .where(eq(programMemberships.programId, program.id));
+
+        expect((await summaryFor(actor)).programmes).toEqual([]);
+      });
+
+      it('reports each of a student’s programmes separately', async () => {
+        const actor = await actingAs('student');
+        await admitTo(actor.user.id, { code: 'INF-BC' });
+        await admitTo(actor.user.id, { code: 'MAT-BC', standardLengthSemesters: 8 });
+
+        const programmes = (await summaryFor(actor)).programmes as {
+          programCode: string;
+          creditsRequired: number | null;
+        }[];
+
+        expect(programmes.map((programme) => programme.programCode)).toEqual([
+          'INF-BC',
+          'MAT-BC',
+        ]);
+        expect(programmes[1]?.creditsRequired).toBe(240);
       });
     });
   });

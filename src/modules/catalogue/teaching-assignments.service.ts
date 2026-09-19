@@ -5,14 +5,14 @@ import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.e
 import {
   courseOfferings,
   courses,
-  programMemberships,
-  roleAssignments,
   teachingAssignments,
   users,
   type TeachingAssignment,
   type TeachingRole,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+import { InstitutionMembershipService } from './institution-membership.service';
 
 export interface TeachingAssignmentEntry {
   readonly id: string;
@@ -36,7 +36,10 @@ export interface NewTeachingAssignment {
  */
 @Injectable()
 export class TeachingAssignmentsService {
-  constructor(private readonly txHost: TransactionHost) {}
+  constructor(
+    private readonly txHost: TransactionHost,
+    private readonly institutionMembership: InstitutionMembershipService,
+  ) {}
 
   async list(institutionId: string, offeringId: string): Promise<TeachingAssignmentEntry[]> {
     await this.offering(institutionId, offeringId);
@@ -69,7 +72,7 @@ export class TeachingAssignmentsService {
   ): Promise<TeachingAssignment> {
     return this.txHost.run(async () => {
       await this.offering(institutionId, offeringId);
-      await this.assertKnownToInstitution(institutionId, input.userId);
+      await this.institutionMembership.assertKnown(institutionId, input.userId);
 
       const role = input.role ?? 'lecturer';
 
@@ -157,64 +160,6 @@ export class TeachingAssignmentsService {
           isNull(teachingAssignments.deletedAt),
         ),
       );
-  }
-
-  /**
-   * A person the institution has never heard of cannot be made its teacher —
-   * that would be an institution reaching into the global user table. Somebody
-   * new arrives through an invitation, which grants them a role first.
-   */
-  private async assertKnownToInstitution(institutionId: string, userId: string): Promise<void> {
-    const [person] = await this.client
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-      .limit(1);
-    if (!person) throw new EntityNotFoundError('user', userId);
-
-    const [granted] = await this.client
-      .select({ id: roleAssignments.id })
-      .from(roleAssignments)
-      .where(
-        and(
-          eq(roleAssignments.institutionId, institutionId),
-          eq(roleAssignments.userId, userId),
-          isNull(roleAssignments.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (granted) return;
-
-    const [tied] = await this.client
-      .select({ id: teachingAssignments.id })
-      .from(teachingAssignments)
-      .where(
-        and(
-          eq(teachingAssignments.institutionId, institutionId),
-          eq(teachingAssignments.userId, userId),
-          isNull(teachingAssignments.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (tied) return;
-
-    const [enrolled] = await this.client
-      .select({ id: programMemberships.id })
-      .from(programMemberships)
-      .where(
-        and(
-          eq(programMemberships.institutionId, institutionId),
-          eq(programMemberships.userId, userId),
-          isNull(programMemberships.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (enrolled) return;
-
-    throw new ConflictError(
-      'PERSON_NOT_IN_INSTITUTION',
-      'That person is not part of this institution; invite them first',
-    );
   }
 
   private async offering(institutionId: string, offeringId: string): Promise<void> {

@@ -19,6 +19,7 @@ import { REQUEST_ID_HEADER } from './common/logger/logger.module';
 import { AppConfigService } from './config/app-config.service';
 import { validateEnv } from './config/env.schema';
 import { parseTrustProxy } from './config/trust-proxy';
+import { HttpMetricsRecorder } from './metrics/http.metrics';
 import { runWithRequestId } from './modules/audit/request-id.context';
 import { buildOpenApiDocument } from './openapi.document';
 
@@ -66,6 +67,23 @@ export async function createApp(): Promise<NestFastifyApplication> {
     .getInstance()
     .addHook('onSend', (request, reply, _payload, done) => {
       reply.header(REQUEST_ID_HEADER, request.id);
+      done();
+    });
+
+  const httpMetrics = app.get(HttpMetricsRecorder);
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onResponse', (request, reply, done) => {
+      httpMetrics.record({
+        method: request.method,
+        // The route *pattern*, never `request.url`. Labelling with
+        // `/users/<uuid>` would mint a time series per user and eventually
+        // take Prometheus down.
+        route: request.routeOptions.url,
+        status: reply.statusCode,
+        durationMs: reply.elapsedTime,
+      });
       done();
     });
 

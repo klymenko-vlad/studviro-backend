@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
@@ -8,6 +8,8 @@ import {
   ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   officialCourseResults,
+  programMemberships,
+  programs,
   type CourseGrade,
   type OfficialCourseResultStatus,
 } from '../../database/schema';
@@ -103,4 +105,45 @@ export class MyCourseResultsRepository {
   private get reader() {
     return this.txHost.reader();
   }
+
+  /**
+   * The programmes this student is actually studying, with the length that
+   * gives their credits a denominator. Only `active` memberships: a graduated
+   * one is history, and showing "50% complete" against a programme somebody
+   * left would be worse than showing nothing.
+   */
+  async findMyProgrammes(
+    institutionId: string,
+    userId: string,
+  ): Promise<ProgrammeEnrolmentRow[]> {
+    return this.txHost
+      .reader()
+      .select({
+        programId: programs.id,
+        programCode: programs.code,
+        programName: programs.name,
+        studyYear: programMemberships.studyYear,
+        standardLengthSemesters: programs.standardLengthSemesters,
+      })
+      .from(programMemberships)
+      .innerJoin(programs, eq(programs.id, programMemberships.programId))
+      .where(
+        and(
+          eq(programMemberships.institutionId, institutionId),
+          eq(programMemberships.userId, userId),
+          eq(programMemberships.status, 'active'),
+          isNull(programMemberships.deletedAt),
+          isNull(programs.deletedAt),
+        ),
+      )
+      .orderBy(asc(programs.code));
+  }
+}
+
+export interface ProgrammeEnrolmentRow {
+  programId: string;
+  programCode: string;
+  programName: string;
+  studyYear: number | null;
+  standardLengthSemesters: number | null;
 }
