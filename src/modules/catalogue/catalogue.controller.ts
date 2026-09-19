@@ -60,9 +60,7 @@ export class CatalogueController {
   @RequirePermission('program:manage', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createProgram',
-    summary: 'Add a programme the source system does not carry',
-    description:
-      'The row is platform-authored, so no import will ever match it and reconciliation leaves it alone.',
+    summary: 'Add a programme',
   })
   @ApiCreatedResponse({ type: ProgramResponseDto })
   @ApiErrorResponses({ conflict: true })
@@ -80,8 +78,6 @@ export class CatalogueController {
   @ApiOperation({
     operationId: 'updateProgram',
     summary: 'Correct a programme',
-    description:
-      'Editing a row the source system owns marks it `pending`, so the disagreement is on the record until a run settles it.',
   })
   @ApiOkResponse({ type: ProgramResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
@@ -125,7 +121,7 @@ export class CatalogueController {
   @RequirePermission('course:manage', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createCourse',
-    summary: 'Add a course the source system does not carry',
+    summary: 'Add a course',
   })
   @ApiCreatedResponse({ type: CourseResponseDto })
   @ApiErrorResponses({ conflict: true })

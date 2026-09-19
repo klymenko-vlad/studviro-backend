@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 
+import { AcademicTermsController } from './academic-terms.controller';
+import { AcademicTermsRepository } from './academic-terms.repository';
+import { AcademicTermsService } from './academic-terms.service';
 import { CatalogueController } from './catalogue.controller';
 import {
   CoursesCatalogueRepository,
@@ -10,13 +13,15 @@ import { OfferingAdministrationController } from './offering-administration.cont
 import { OfferingAdministrationService } from './offering-administration.service';
 
 @Module({
-  controllers: [CatalogueController, OfferingAdministrationController],
+  controllers: [AcademicTermsController, CatalogueController, OfferingAdministrationController],
   providers: [
+    AcademicTermsService,
+    AcademicTermsRepository,
     CatalogueService,
     ProgramsCatalogueRepository,
     CoursesCatalogueRepository,
     OfferingAdministrationService,
   ],
-  exports: [CatalogueService, OfferingAdministrationService],
+  exports: [AcademicTermsService, CatalogueService, OfferingAdministrationService],
 })
 export class CatalogueModule {}
