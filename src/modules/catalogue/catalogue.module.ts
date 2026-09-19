@@ -14,6 +14,8 @@ import { OfferingAdministrationController } from './offering-administration.cont
 import { OfferingAdministrationService } from './offering-administration.service';
 import { ProgramMembershipsController } from './program-memberships.controller';
 import { ProgramMembershipsService } from './program-memberships.service';
+import { StudyGroupsController } from './study-groups.controller';
+import { StudyGroupsService } from './study-groups.service';
 import { TeachingAssignmentsController } from './teaching-assignments.controller';
 import { TeachingAssignmentsService } from './teaching-assignments.service';
 
@@ -24,6 +26,7 @@ import { TeachingAssignmentsService } from './teaching-assignments.service';
     CourseOfferingsController,
     OfferingAdministrationController,
     ProgramMembershipsController,
+    StudyGroupsController,
     TeachingAssignmentsController,
   ],
   providers: [
@@ -34,6 +37,7 @@ import { TeachingAssignmentsService } from './teaching-assignments.service';
     CoursesCatalogueRepository,
     OfferingAdministrationService,
     ProgramMembershipsService,
+    StudyGroupsService,
     TeachingAssignmentsService,
   ],
   exports: [AcademicTermsService, CatalogueService, OfferingAdministrationService],
