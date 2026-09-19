@@ -57,18 +57,20 @@ set up at all.
 
 ## Phase 2 — The learning half, natively
 
-The Moodle replacement. This is the larger half and it needs storage the platform does not
-have yet.
+**Done.** The Moodle replacement: an S3-compatible store (ADR 0027), learning spaces
+authored per offering, materials as files, links or text, assignments with a window and an
+attempt policy, student submissions, and marking that feeds the gradebook column every
+assignment creates with itself. ADR 0028 records the model and why quizzes are out.
 
-| #   | Step                                                                        | Carries over | Status      |
-| --- | --------------------------------------------------------------------------- | ------------ | ----------- |
-| L1  | File storage: object store, upload limits, virus posture, signed reads      | —            | Not started |
-| L2  | Learning spaces authored per offering, not derived                          | step 32      | **Backend** |
-| L3  | Materials: files, links, text, ordering, visibility                         | step 33      | **Backend** |
-| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      | **Backend** |
-| L5  | Student submissions: upload, resubmit, late marking                         | step 33      | **Backend** |
-| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      | **Backend** |
-| L7  | Quizzes — decided: out of scope, ADR 0028                                   | —            | **Done**    |
+| #   | Step                                                                        | Carries over | Status   |
+| --- | --------------------------------------------------------------------------- | ------------ | -------- |
+| L1  | File storage: object store, upload limits, virus posture, signed reads      | —            | **Done** |
+| L2  | Learning spaces authored per offering, not derived                          | step 32      | **Done** |
+| L3  | Materials: files, links, text, ordering, visibility                         | step 33      | **Done** |
+| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      | **Done** |
+| L5  | Student submissions: upload, resubmit, late marking                         | step 33      | **Done** |
+| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      | **Done** |
+| L7  | Quizzes — decided: out of scope, ADR 0028                                   | —            | **Done** |
 
 ## Phase 3 — What the two systems never did well
 

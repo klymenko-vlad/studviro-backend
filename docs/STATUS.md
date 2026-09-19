@@ -49,8 +49,9 @@ machine, which keeps the password it had. `admin@studviro.local` here is `newpas
   nothing**: academic terms, org tree, rooms, programmes, courses, offerings, teaching
   assignments, programme memberships, study groups, timetables, exam terms, and bulk paste
   for a term's worth of offerings or a cohort.
-- **Phase 2 (the learning half)** — L1 storage done (ADR 0027), L2–L6 backends done (ADR
-  0028), L7 decided: **no quizzes**, and why. The screens were the last thing in flight.
+- **Phase 2 (the learning half)** — **done, both halves.** Object storage (ADR 0027),
+  learning spaces, materials, assignments, submissions and marking (ADR 0028), all on the
+  course offering page. L7 decided: **no quizzes**, and why.
 - **Phase 3** — U1, U4, U5 done. U2 and U3 have backends. **U6 is not started.**
 - **Phase 4** — O1, O2, O5, O6, O7, O9 done. O3 has a backend. **O4 is not started.**
 
