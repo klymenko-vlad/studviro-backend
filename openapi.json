@@ -794,7 +794,8 @@
         ]
       },
       "delete": {
-        "operationId": "remove",
+        "description": "Reversible, and **not** an erasure. The row is marked deleted so the account can no longer be used or listed; the name, the email address and everything written about the person stay exactly where they were. To actually erase somebody, use `DELETE /institutions/{institutionId}/people/{userId}/personal-data`, which anonymises them and destroys their credentials and files (ADR 0030).",
+        "operationId": "deactivateUser",
         "parameters": [
           {
             "name": "id",
@@ -807,7 +808,7 @@
         ],
         "responses": {
           "204": {
-            "description": "The user was soft-deleted."
+            "description": "The account was deactivated."
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
@@ -855,7 +856,7 @@
             "access-token": []
           }
         ],
-        "summary": "Soft-delete a user",
+        "summary": "Deactivate an account, keeping the person and their record",
         "tags": [
           "users"
         ]

@@ -70,10 +70,15 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Soft-delete a user' })
-  @ApiNoContentResponse({ description: 'The user was soft-deleted.' })
+  @ApiOperation({
+    operationId: 'deactivateUser',
+    summary: 'Deactivate an account, keeping the person and their record',
+    description:
+      'Reversible, and **not** an erasure. The row is marked deleted so the account can no longer be used or listed; the name, the email address and everything written about the person stay exactly where they were. To actually erase somebody, use `DELETE /institutions/{institutionId}/people/{userId}/personal-data`, which anonymises them and destroys their credentials and files (ADR 0030).',
+  })
+  @ApiNoContentResponse({ description: 'The account was deactivated.' })
   @ApiErrorResponses({ notFound: true })
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.usersService.remove(id);
+  deactivate(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.usersService.deactivate(id);
   }
 }

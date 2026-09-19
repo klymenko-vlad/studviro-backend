@@ -25,6 +25,7 @@ describe('UsersService', () => {
     findByCursor: vi.fn(),
     findByIdOrFail: vi.fn(),
     softDelete: vi.fn(),
+    hardDelete: vi.fn(),
   };
 
   const passwords = {
@@ -109,11 +110,12 @@ describe('UsersService', () => {
     expect(page.items[0]).not.toHaveProperty('passwordHash');
   });
 
-  it('remove delegates to a soft delete, never a hard one', async () => {
+  it('deactivates by soft-deleting, and never hard-deletes the person', async () => {
     repository.softDelete.mockResolvedValue(undefined);
 
-    await service.remove('id-1');
+    await service.deactivate('id-1');
 
     expect(repository.softDelete).toHaveBeenCalledWith('id-1');
+    expect(repository.hardDelete).not.toHaveBeenCalled();
   });
 });
