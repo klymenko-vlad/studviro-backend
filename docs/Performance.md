@@ -8,13 +8,13 @@ actually turns over.**
 
 ## What the institution must supply
 
-| Thing                  | What is needed                                                                                                                                                                | State               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Real population        | Every number below was measured against 144 students. A university with 20,000 will bend in the same places at a different rate, and the profile has to be re-run against it. | `TODO(institution)` |
-| Production hardware    | One API process on a shared 16-core laptop is not a deployment. Replica count, CPU allocation and the Postgres instance change every figure here.                             | `TODO(institution)` |
-| Rate-limit budget      | `THROTTLE_LIMIT` is per address. The right value depends on whether students reach the API through a campus NAT, which would put thousands of them behind one IP.             | `TODO(institution)` |
-| Enrolment policy       | Whether a lost race should be retried for the student, or reported to them, is a product decision this document only measures the cost of. See _Where it bends_.              | `TODO(institution)` |
-| Where the profile runs | Nothing runs this in CI today. It takes five minutes and needs a seeded database, so it is a release gate rather than a per-commit one.                                       | `TODO(institution)` |
+| Thing                  | What is needed                                                                                                                                                                                                                             | State               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| Real population        | Every number below was measured against 144 students. A university with 20,000 will bend in the same places at a different rate, and the profile has to be re-run against it.                                                              | `TODO(institution)` |
+| Production hardware    | One API process on a shared 16-core laptop is not a deployment. Replica count, CPU allocation and the Postgres instance change every figure here.                                                                                          | `TODO(institution)` |
+| Rate-limit budget      | `THROTTLE_LIMIT` is per address. The right value depends on whether students reach the API through a campus NAT, which would put thousands of them behind one IP.                                                                          | `TODO(institution)` |
+| Enrolment policy       | A lost race is now retried three times before the student is told anything. Whether that is the right number, and whether a student who still loses should be queued rather than refused, is the institution's call. See _Where it bends_. | `TODO(institution)` |
+| Where the profile runs | Nothing runs this in CI today. It takes five minutes and needs a seeded database, so it is a release gate rather than a per-commit one.                                                                                                    | `TODO(institution)` |
 
 ## The load a university actually makes
 
@@ -122,18 +122,18 @@ The defaults describe the demo seed.
 A load test that only produces numbers gets read once. These are budgets, and crossing
 one fails the run.
 
-| Threshold                                     | Value              | Why that number                                                                                                                                            |
-| --------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `http_req_duration{scenario:results_evening}` | p95 < 1s, p99 < 5s | Exactly `docs/Observability.md`'s two latency alerts. A test that tolerates more than the alerts do measures nothing                                       |
-| `enrollment_request_duration`                 | p95 < 3s, p99 < 5s | Three times the read budget: 144 serialisable transactions queue on a pool of ten. Past 5s `REQUEST_TIMEOUT_MS` is the next thing that happens             |
-| `exam_registration_duration`                  | p95 < 3s, p99 < 5s | Same shape, same reasoning                                                                                                                                 |
-| `server_errors`                               | rate < 0.01        | Observability pages on a 5xx ratio over 5% and raises a ticket over 1%. This is the ticket line                                                            |
-| `http_req_failed`                             | rate < 0.01        | 400, 404 and 409 are answers this profile asks for and are declared expected; anything else is a broken response                                           |
-| `unexpected_status`                           | rate == 0          | A status no call site has a name for is a behaviour change, not slowness                                                                                   |
-| `checks`                                      | rate == 1.00       | Every refusal must carry a domain code the client can act on — `OFFERING_FULL`, not a bare 409                                                             |
-| `capacity_respected`                          | rate == 1.00       | Asserted after both rushes: seats held never exceeded seats offered. A rush that quietly oversells passes every timing measure                             |
-| `sign_in_duration`                            | p95 < 2s           | argon2id at 19 MiB is deliberately expensive; it still must not be what makes signing in feel broken                                                       |
-| `enrollment_serialization_conflicts`          | rate < 0.50        | A ceiling, not a target. Today it is about a quarter; a change that turns the whole herd into conflicts should fail here rather than be found in September |
+| Threshold                                     | Value              | Why that number                                                                                                                                                            |
+| --------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `http_req_duration{scenario:results_evening}` | p95 < 1s, p99 < 5s | Exactly `docs/Observability.md`'s two latency alerts. A test that tolerates more than the alerts do measures nothing                                                       |
+| `enrollment_request_duration`                 | p95 < 3s, p99 < 5s | Three times the read budget: 144 serialisable transactions queue on a pool of ten. Past 5s `REQUEST_TIMEOUT_MS` is the next thing that happens                             |
+| `exam_registration_duration`                  | p95 < 3s, p99 < 5s | Same shape, same reasoning                                                                                                                                                 |
+| `server_errors`                               | rate < 0.01        | Observability pages on a 5xx ratio over 5% and raises a ticket over 1%. This is the ticket line                                                                            |
+| `http_req_failed`                             | rate < 0.01        | 400, 404 and 409 are answers this profile asks for and are declared expected; anything else is a broken response                                                           |
+| `unexpected_status`                           | rate == 0          | A status no call site has a name for is a behaviour change, not slowness                                                                                                   |
+| `checks`                                      | rate == 1.00       | Every refusal must carry a domain code the client can act on — `OFFERING_FULL`, not a bare 409                                                                             |
+| `capacity_respected`                          | rate == 1.00       | Asserted after both rushes: seats held never exceeded seats offered. A rush that quietly oversells passes every timing measure                                             |
+| `sign_in_duration`                            | p95 < 2s           | argon2id at 19 MiB is deliberately expensive; it still must not be what makes signing in feel broken                                                                       |
+| `enrollment_serialization_conflicts`          | rate < 0.50        | A ceiling, not a target. With the bounded retry it measures about 4%; a change that turns the whole herd into conflicts should fail here rather than be found in September |
 
 ## What was measured
 
@@ -165,12 +165,17 @@ second. 4m 38s, 2,627 iterations, **19,330 requests at 69.6/s**. Every threshold
 
 ### Turning it up
 
-| Run                               | Served  | p95 all | p95 browsing | p95 sign-in | p95 enrolment | Conflicts | Seats filled      |
-| --------------------------------- | ------- | ------- | ------------ | ----------- | ------------- | --------- | ----------------- |
-| Peak 12/s (recorded)              | 69.6/s  | 131 ms  | 132 ms       | 177 ms      | 150 ms        | 25.7%     | 40/40 · 25/25     |
-| Peak 25/s                         | 135.6/s | 143 ms  | 118 ms       | 114 ms      | 793 ms        | 22.2%     | 40/40 · 25/25     |
-| Peak 45/s                         | 104.3/s | 3.01 s  | 2.83 s       | 1.68 s      | 7.57 s        | 59.7%     | 40/40 · 25/25     |
-| Peak 12/s, `DATABASE_POOL_MAX=40` | 69.2/s  | 185 ms  | 158 ms       | 216 ms      | 1.45 s        | **80.6%** | **28/40 · 18/25** |
+| Run                                  | Served  | p95 all | p95 browsing | p95 sign-in | p95 enrolment | Conflicts | Seats filled      |
+| ------------------------------------ | ------- | ------- | ------------ | ----------- | ------------- | --------- | ----------------- |
+| Peak 12/s (recorded)                 | 69.6/s  | 131 ms  | 132 ms       | 177 ms      | 150 ms        | 25.7%     | 40/40 · 25/25     |
+| Peak 25/s                            | 135.6/s | 143 ms  | 118 ms       | 114 ms      | 793 ms        | 22.2%     | 40/40 · 25/25     |
+| Peak 45/s                            | 104.3/s | 3.01 s  | 2.83 s       | 1.68 s      | 7.57 s        | 59.7%     | 40/40 · 25/25     |
+| Peak 12/s, `DATABASE_POOL_MAX=40`    | 69.2/s  | 185 ms  | 158 ms       | 216 ms      | 1.45 s        | **80.6%** | **28/40 · 18/25** |
+| Peak 12/s, with the retry, busy host | 68.8/s  | 699 ms  | 645 ms       | 448 ms      | 1.91 s        | **4.2%**  | 40/40 · 25/25     |
+
+The last row is the same profile after the bounded retry landed, on a host that was
+carrying other work at the time — which is why its browsing p95 is five times the
+recorded run's. Read the conflict column, not the latency columns: that is what changed.
 
 At 45 arrivals a second k6 could not place its iterations at all: **4,739 were dropped**,
 and the 104 requests a second in that row is less than the 136 the server was serving
@@ -184,16 +189,35 @@ spread in mind; on a quiet machine the same run measures 150 ms.
 
 ## Where it bends first
 
-**1. The enrolment write path, and not in the way a latency graph shows.** Under a herd,
-a quarter of the requests come back `409 SERIALIZATION_FAILURE` — "Concurrent update
-conflict — retry the request". Postgres is doing exactly its job: the transaction is
-`serializable`, the seat count is read and written inside it, and a conflicting pair
-cannot both commit. Nothing retries. **The student is told to try again and it is their
-problem.** This is the first thing to fix and it is cheap to fix: a bounded retry with
-jitter around `MyEnrollmentsService.request`, three attempts, would convert almost all of
-it, because a conflicting transaction that re-reads a full course gets a clean, correct
-`OFFERING_FULL` on the second pass. It is left undone here because it is a behaviour
-change, not a measurement.
+**1. The enrolment write path — fixed, and the fix is measured.** Under a herd a quarter
+of the requests used to come back `409 SERIALIZATION_FAILURE`, and nothing retried them:
+the student was told to try again and it was their problem. `TransactionHost.runSerializable`
+now replays the transaction up to three times with exponential backoff and full jitter,
+on both the enrolment and the exam-registration paths.
+
+It converted almost exactly what the earlier run predicted it would.
+
+|                                    | Before                | After               |
+| ---------------------------------- | --------------------- | ------------------- |
+| Enrolment conflicts                | 37 of 144 (**25.7%**) | 6 of 144 (**4.2%**) |
+| Exam conflicts                     | 7 of 32 (**21.9%**)   | 1 of 40 (**2.5%**)  |
+| Enrolment granted · refused · lost | 40 · 67 · 37          | 40 · **98** · 6     |
+| Capacity respected                 | yes                   | yes                 |
+
+The middle row is the whole point. The 31 requests that stopped being conflicts did not
+become places — the course only ever had 40 — they became `OFFERING_FULL`, which is a
+true answer the client can act on rather than an error the student has to interpret. A
+replay re-reads the seat count, so a herd that has already filled the course is told so.
+
+Six students still lost after three attempts. That is a floor rather than a bug: raising
+the attempt count trades a longer wait for a smaller tail, and three attempts keeps the
+worst case well inside `REQUEST_TIMEOUT_MS`.
+
+The cost is latency, and it is smaller than it looks. Enrolment p95 measured 1.91 s
+against 150 ms on the recorded run — but browsing p95 measured 645 ms against 132 ms in
+the same run, so most of that gap is a busy host rather than the retry (the earlier
+document already records repeats at 2.7 s and 2.9 s on a loaded machine). Both stayed
+inside budget, and every threshold was green.
 
 **2. Giving the database more connections makes it worse.** With `DATABASE_POOL_MAX=40`
 instead of 10, the same rush produced **80.6% conflicts and left 12 of 40 places unsold**,
@@ -201,8 +225,10 @@ and the exam term filled 18 of 25. More concurrency at the database means more
 transactions reading the same seat count at the same instant and more of them losing.
 The pool of ten is acting as accidental admission control, and it is the only thing
 currently stopping the rush from failing most of the herd. **Do not raise
-`DATABASE_POOL_MAX` to make enrolment faster.** Raise it only alongside the retry in
-point 1, and re-run this profile.
+`DATABASE_POOL_MAX` to make enrolment faster.** The retry in point 1 has now landed, which
+was the precondition this document set for touching the pool at all — but the 40-connection
+run has not been repeated since, so the pairing is still unmeasured. Raise it only with a
+fresh run of this profile in hand.
 
 **3. Correctness never gave way.** Across every run, at every rate, with two pool sizes:
 zero 5xx, zero oversold seats, and every refusal carried a domain code a client can act
