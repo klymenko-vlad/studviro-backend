@@ -9,7 +9,7 @@ import {
   enrollments,
   learningActivities,
   learningSpaces,
-  submissionRefs,
+  submissions,
   teachingAssignments,
   type LearningActivityType,
   type SubmissionState,
@@ -20,7 +20,7 @@ export interface MyDeadlineRow {
   activityId: string;
   type: LearningActivityType;
   name: string;
-  url: string | null;
+  brief: string | null;
   opensAt: Date | null;
   dueAt: Date;
   teaching: boolean;
@@ -29,7 +29,6 @@ export interface MyDeadlineRow {
   submissionIsLate: boolean | null;
   spaceId: string;
   spaceName: string;
-  spaceUrl: string | null;
   offeringId: string;
   courseId: string;
   courseCode: string;
@@ -77,18 +76,17 @@ export class MyDeadlinesRepository {
         activityId: learningActivities.id,
         type: learningActivities.type,
         name: learningActivities.name,
-        url: learningActivities.url,
+        brief: learningActivities.brief,
         opensAt: learningActivities.opensAt,
         dueAt: sql<Date>`${learningActivities.dueAt}`.mapWith(learningActivities.dueAt),
         teaching: sql<boolean>`${teaches}`.mapWith(Boolean),
-        submissionState: submissionRefs.state,
-        submittedAt: sql<Date | null>`${submissionRefs.submittedAt}`.mapWith(
-          submissionRefs.submittedAt,
+        submissionState: submissions.state,
+        submittedAt: sql<Date | null>`${submissions.submittedAt}`.mapWith(
+          submissions.submittedAt,
         ),
-        submissionIsLate: submissionRefs.isLate,
+        submissionIsLate: submissions.isLate,
         spaceId: learningSpaces.id,
         spaceName: learningSpaces.name,
-        spaceUrl: learningSpaces.url,
         offeringId: courseOfferings.id,
         courseId: courses.id,
         courseCode: courses.code,
@@ -99,12 +97,12 @@ export class MyDeadlinesRepository {
       })
       .from(learningActivities)
       .leftJoin(
-        submissionRefs,
+        submissions,
         and(
-          eq(submissionRefs.learningActivityId, learningActivities.id),
-          eq(submissionRefs.userId, userId),
-          isNull(submissionRefs.deletedAt),
-          eq(submissionRefs.attempt, submission),
+          eq(submissions.learningActivityId, learningActivities.id),
+          eq(submissions.userId, userId),
+          isNull(submissions.deletedAt),
+          eq(submissions.attempt, submission),
         ),
       )
       .innerJoin(learningSpaces, eq(learningSpaces.id, learningActivities.learningSpaceId))
@@ -118,7 +116,7 @@ export class MyDeadlinesRepository {
   /** Only the newest attempt speaks for the student on a deadline card. */
   private latestSubmission(userId: string): SQL<number> {
     return sql<number>`(
-      select max(latest.attempt) from ${submissionRefs} as latest
+      select max(latest.attempt) from ${submissions} as latest
       where latest.learning_activity_id = ${learningActivities.id}
         and latest.user_id = ${userId}
         and latest.deleted_at is null

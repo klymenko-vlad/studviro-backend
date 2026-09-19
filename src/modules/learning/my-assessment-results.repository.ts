@@ -24,7 +24,6 @@ export interface MyAssessmentResultRow {
   countsTowardFinalGrade: boolean;
   activityId: string | null;
   activityType: LearningActivityType | null;
-  activityUrl: string | null;
   dueAt: Date | null;
   submissionState: SubmissionState | null;
   submittedAt: Date | null;
@@ -42,7 +41,7 @@ export interface MyAssessmentResultFilter {
 /** The newest attempt only — an earlier draft does not describe the work now. */
 function latestSubmission<T>(userId: string, column: SQL): SQL<T> {
   return sql<T>`(
-    select submission.${column} from submission_refs as submission
+    select submission.${column} from submissions as submission
     where submission.learning_activity_id = ${learningActivities.id}
       and submission.user_id = ${userId}
       and submission.deleted_at is null
@@ -88,7 +87,6 @@ export class MyAssessmentResultsRepository {
         countsTowardFinalGrade: assessments.countsTowardFinalGrade,
         activityId: learningActivities.id,
         activityType: learningActivities.type,
-        activityUrl: learningActivities.url,
         dueAt: sql<Date | null>`${learningActivities.dueAt}`.mapWith(learningActivities.dueAt),
         submissionState: latestSubmission<SubmissionState | null>(userId, sql`state`),
         submittedAt: latestSubmission<Date | null>(userId, sql`submitted_at`).mapWith(

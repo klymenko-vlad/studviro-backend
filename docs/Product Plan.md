@@ -79,9 +79,20 @@ The reason to replace rather than tolerate them.
 | U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | **Done**    |
 | U2  | Study progress against the programme, not just a grade list         | step 42      | **Backend** |
 | U3  | Search across everything the caller may see                         | step 51      | **Backend** |
-| U4  | WCAG 2.2 AA pass                                                    | step 52      | Not started |
-| U5  | Mobile-first review of every screen                                 | step 21      | Not started |
+| U4  | WCAG 2.2 AA pass                                                    | step 52      | **Done**    |
+| U5  | Mobile-first review of every screen                                 | step 21      | **Done**    |
 | U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      | Not started |
+
+**U4, U5 and O9 landed together**, frontend only, and are written up in
+`frontend/docs/Accessibility.md` — every criterion checked, every measured contrast ratio in
+both themes, what was fixed at the primitive level and what was deliberately deferred. In
+short: a skip link and `id="main-content"` on every screen; `CardTitle` and the card headings
+made real headings; `--input` raised to 3:1 in both themes and light-mode `--success` to
+4.5:1; `color-scheme` and `theme-color` declared; the `Table` primitive given a required
+caption, a keyboard-reachable named scroll region and a visible scroll affordance, which is
+also the answer to the five-column table on a 375 px phone; `Switch` given a 24 px target;
+`Skeleton` made a named live region. `vitest-axe` with a `renderAndAudit` helper in
+`@/shared/test` asserts no violations on a screen of each shape.
 
 ## Phase 4 — Fit to run
 
@@ -95,7 +106,7 @@ The reason to replace rather than tolerate them.
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | **Done**    |
 | O8  | Performance and load tests                    | step 61      | Not started |
-| O9  | Accessibility tests                           | step 62      | Not started |
+| O9  | Accessibility tests                           | step 62      | **Done**    |
 | O10 | Administrator and user documentation          | steps 68, 69 | Not started |
 
 **O5 was renamed.** "Freshness" meant lag behind the upstream system, and ADR 0024 removed

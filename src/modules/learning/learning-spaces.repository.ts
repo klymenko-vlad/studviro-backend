@@ -19,7 +19,7 @@ export interface LearningSpaceRow {
   id: string;
   name: string;
   shortName: string | null;
-  url: string | null;
+  summary: string | null;
   visible: boolean;
   offeringId: string | null;
   courseCode: string | null;
@@ -33,18 +33,24 @@ export interface LearningSpaceRow {
 export class LearningSpacesRepository {
   constructor(private readonly txHost: TransactionHost) {}
 
-  findSpaces(institutionId: string, limit: number): Promise<LearningSpaceRow[]> {
+  findSpaces(
+    institutionId: string,
+    limit: number,
+    offeringId?: string,
+  ): Promise<LearningSpaceRow[]> {
     const conditions: SQL[] = [
       eq(learningSpaces.institutionId, institutionId),
       isNull(learningSpaces.deletedAt),
     ];
+
+    if (offeringId) conditions.push(eq(learningSpaces.courseOfferingId, offeringId));
 
     return this.txHost.db
       .select({
         id: learningSpaces.id,
         name: learningSpaces.name,
         shortName: learningSpaces.shortName,
-        url: learningSpaces.url,
+        summary: learningSpaces.summary,
         visible: learningSpaces.visible,
         offeringId: courseOfferings.id,
         courseCode: courses.code,

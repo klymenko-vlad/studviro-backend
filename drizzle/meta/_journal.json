@@ -162,6 +162,20 @@
       "when": 1789813664953,
       "tag": "0022_omniscient_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789815653460,
+      "tag": "0023_thin_killraven",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789815672582,
+      "tag": "0024_premium_red_shift",
+      "breakpoints": true
     }
   ]
 }

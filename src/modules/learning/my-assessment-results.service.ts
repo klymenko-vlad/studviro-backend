@@ -25,7 +25,6 @@ export interface MyAssessmentResult {
   activity: {
     id: string;
     type: LearningActivityType;
-    url: string | null;
     dueAt: Date | null;
     completionState: ActivityCompletionState | null;
     submission: { state: SubmissionState; submittedAt: Date | null; isLate: boolean } | null;
@@ -69,7 +68,6 @@ function compose(row: MyAssessmentResultRow): MyAssessmentResult {
         : {
             id: row.activityId,
             type: row.activityType ?? 'other',
-            url: row.activityUrl,
             dueAt: row.dueAt,
             completionState: row.completionState,
             submission:

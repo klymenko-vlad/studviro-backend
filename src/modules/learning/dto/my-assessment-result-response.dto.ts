@@ -26,7 +26,6 @@ export class AssessmentSubmissionDto {
 export class AssessmentActivityDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: LEARNING_ACTIVITY_TYPES }) type!: LearningActivityType;
-  @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
 
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })

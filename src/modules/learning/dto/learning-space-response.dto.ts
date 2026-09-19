@@ -9,7 +9,7 @@ export class LearningSpaceDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() name!: string;
   @Expose() @ApiProperty({ type: String, nullable: true }) shortName!: string | null;
-  @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
+  @Expose() @ApiProperty({ type: String, nullable: true }) summary!: string | null;
   @Expose() @ApiProperty() visible!: boolean;
 
   @Expose()

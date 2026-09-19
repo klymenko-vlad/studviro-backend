@@ -28,6 +28,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
+    "load:day": "k6 run load-test/university-day.js",
     "load:smoke": "k6 run load-test/smoke.js",
     "openapi:check": "pnpm openapi:generate && git diff --exit-code -- openapi.json",
     "openapi:generate": "nest build -p tsconfig.build.json && node dist/openapi.js",

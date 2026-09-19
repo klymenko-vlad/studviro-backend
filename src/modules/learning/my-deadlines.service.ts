@@ -26,7 +26,7 @@ export interface MyDeadline {
   id: string;
   type: LearningActivityType;
   name: string;
-  url: string | null;
+  brief: string | null;
   opensAt: Date | null;
   dueAt: Date;
   isOpen: boolean;
@@ -34,7 +34,7 @@ export interface MyDeadline {
   /** Null when the learner has handed nothing in, or is teaching the course. */
   submission: DeadlineSubmission | null;
   attendance: DeadlineAttendance;
-  learningSpace: { id: string; name: string; url: string | null };
+  learningSpace: { id: string; name: string };
   offering: { id: string };
   course: { id: string; code: string; title: string };
   term: { id: string; code: string; name: string };
@@ -65,7 +65,7 @@ function compose(row: MyDeadlineRow, now: Date): MyDeadline {
     id: row.activityId,
     type: row.type,
     name: row.name,
-    url: row.url,
+    brief: row.brief,
     opensAt: row.opensAt,
     dueAt: row.dueAt,
     isOpen: !isOverdue && (row.opensAt === null || row.opensAt.getTime() <= now.getTime()),
@@ -79,7 +79,7 @@ function compose(row: MyDeadlineRow, now: Date): MyDeadline {
             isLate: row.submissionIsLate ?? false,
           },
     attendance: row.teaching ? 'teaching' : 'enrolled',
-    learningSpace: { id: row.spaceId, name: row.spaceName, url: row.spaceUrl },
+    learningSpace: { id: row.spaceId, name: row.spaceName },
     offering: { id: row.offeringId },
     course: { id: row.courseId, code: row.courseCode, title: row.courseTitle },
     term: { id: row.termId, code: row.termCode, name: row.termName },

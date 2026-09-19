@@ -17,7 +17,7 @@ import {
 export class DeadlineLearningSpaceDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
+  @Expose() @ApiProperty({ type: String, nullable: true }) brief!: string | null;
 }
 
 @Exclude()
@@ -55,7 +55,7 @@ export class MyDeadlineResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: LEARNING_ACTIVITY_TYPES }) type!: LearningActivityType;
   @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
+  @Expose() @ApiProperty({ type: String, nullable: true }) brief!: string | null;
 
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })

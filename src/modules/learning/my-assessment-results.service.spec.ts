@@ -18,7 +18,6 @@ const row = (overrides: Partial<MyAssessmentResultRow> = {}): MyAssessmentResult
   countsTowardFinalGrade: true,
   activityId: 'activity-1',
   activityType: 'assignment',
-  activityUrl: 'https://lms.example/mod/assignment/view.php?idnumber=A1',
   dueAt: new Date('2026-11-05T21:00:00.000Z'),
   submissionState: 'graded',
   submittedAt: new Date('2026-11-05T12:00:00.000Z'),

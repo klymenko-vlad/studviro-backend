@@ -15,9 +15,12 @@ export interface LearningSpaceSummary {
 export class LearningSpacesService {
   constructor(private readonly spaces: LearningSpacesRepository) {}
 
-  async listForInstitution(institutionId: string): Promise<LearningSpaceSummary> {
+  async listForInstitution(
+    institutionId: string,
+    offeringId?: string,
+  ): Promise<LearningSpaceSummary> {
     const [rows, counts] = await Promise.all([
-      this.spaces.findSpaces(institutionId, LEARNING_SPACE_PAGE_SIZE),
+      this.spaces.findSpaces(institutionId, LEARNING_SPACE_PAGE_SIZE, offeringId),
       this.spaces.countSpaces(institutionId),
     ]);
 
