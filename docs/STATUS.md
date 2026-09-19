@@ -58,49 +58,57 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N2: org units and rooms an institution can create
+## Next task — N3: course offerings an institution can create
 
-**Phase 0 is done and N1 is done.** `pnpm db:seed` writes a whole demo university — ~5,900
+**Phase 0, N1 and N2 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
 rows, fifteen tables, about a second — so every screen has something on it. Sign in as
 `ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
 `admin@studviro.local`; the password is `correct horse battery staple` unless the account
 already existed on this machine. ADR 0025 records what the seed is.
 
-**N1 shipped**: `/institutions/:id/catalogue` now carries an _Academic terms_ card above the
-programmes — list, create with an enrolment window, retire. Writes take `institution:manage`;
-the card says of each term whether enrolment is open, opens later, closed, or never opens.
+- **N1**: `/institutions/:id/catalogue` carries an _Academic terms_ card — list, create with
+  an enrolment window, retire. `institution:manage`.
+- **N2**: `/institutions/:id/org-units` carries a create form and a Retire action on every
+  node (`institution:manage`), and a _Rooms_ card (`schedule:manage`, its first real route).
+  The tree cannot close into a ring; nothing retires while something hangs off it.
 
-**Phase 1 of `Product Plan.md` is the live queue.** Its table carries a Status column now;
-keep it current. What is left, in dependency order:
+**Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left,
+in dependency order:
 
 | #   | Missing               | Consequence                                                           |
 | --- | --------------------- | --------------------------------------------------------------------- |
-| N2  | Org units and rooms   | No faculties, no place to hold a class                                |
 | N3  | Course offerings      | `PATCH` exists; there is no `POST`                                    |
 | N4  | Teaching assignments  | Nobody can be made a course's teacher                                 |
 | N5  | Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
 | N6  | Study groups          | No seminar or lab groups                                              |
-| N7  | Timetable events      | `schedule:manage` still gates nothing                                 |
+| N7  | Timetable events      | `schedule:manage` gates rooms only                                    |
 | N8  | Exam terms            | Students can register for exams nobody can create                     |
 | N9  | Bulk entry            | A term's worth of offerings and people, pasted                        |
 
-**N2 means**: `POST`/`PATCH`/`DELETE` for org units (a tree: university → faculty →
-department) and for rooms, and an editing surface on `/institutions/:id/org-units`, which
-today only reads. Org units are what a programme, a course and a room hang off, and a
-scoped role grant points at one.
+**N3 means**: `POST /institutions/:id/course-offerings` under `offering:manage`, pairing a
+course with a term and setting capacity, language and status, plus a screen. The `PATCH`
+already exists on `offering-administration.controller.ts`; `POST` and a list are missing.
 
-**After Phase 1, Phase 2 is the Moodle half** — file storage first, then learning spaces,
-materials, assignments, submissions and marking. **L1 needs a decision from the user: which
-object store, and whether it costs money.**
+**Phase 2 is the Moodle half** and **L1 is decided**: the user will use Cloudflare R2 or
+AWS S3, so build one S3-compatible client behind a `StorageService`, run MinIO in
+`docker-compose` for local and CI, and take bucket, region, endpoint and credentials from
+the environment. **No credentials are needed until deploy**; do not create a bucket.
+
+**The user has ruled: local only.** Do not deploy, do not create hosted resources, do not
+spend money. Record what a release will need in `docs/Deployment.md` instead.
 
 ## Caveats
 
-- The client bundle is at 442.13 kB gzipped against a 450 kB guard, and `pnpm size` is
-  green — the breach recorded here on 2026-09-18 was closed by the integration removal.
-  There is about 8 kB of headroom, so a large new screen will need the guard revisited.
-- `/enroll` and `/exams` render the same card-and-reason shape twice, and
-  `EnrollableOfferingCard` repeats `ExamTermCard`'s window and seats logic. One shared
-  component would cover both.
+- **The client bundle is at 448.45 kB against a 450 kB guard: 1.55 kB of headroom.** The
+  next screen breaches it. `.size-limit.mjs` insists a reduction be looked for before a
+  raise, and it names the one that is left: `/enroll` and `/exams` render the same
+  card-and-reason shape twice, and `EnrollableOfferingCard` repeats `ExamTermCard`'s window
+  and seats logic. Take that extraction before N3's screen.
+- `pnpm arch` was red on `dev` before this session for a widget-to-widget import; it is
+  green now. `offering-grades` was folded into `course-offering`, the only widget that
+  rendered it.
+- `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `className="w-full"`
+  on the control does nothing. Every select in the app is natural width.
 - `pnpm db:seed` does not reset an existing user's password, deliberately. On this
   machine's dev database `admin@studviro.local` is `newpassword123`, not the seed default.
 - The demo seed's anchor is fixed at 2026-10-15, which is what makes it deterministic. The

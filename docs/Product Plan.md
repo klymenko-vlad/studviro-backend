@@ -46,7 +46,7 @@ set up at all.
 | #   | Step                                                                | Carries over | Status      |
 | --- | ------------------------------------------------------------------- | ------------ | ----------- |
 | N1  | Academic terms: create, edit, set the enrolment window              | —            | **Done**    |
-| N2  | Org units and rooms: create and edit                                | —            | Not started |
+| N2  | Org units and rooms: create and edit                                | —            | **Done**    |
 | N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            | Not started |
 | N4  | Teaching assignments: make somebody a course's teacher              | —            | Not started |
 | N5  | Programme memberships: make somebody a student of a programme       | —            | Not started |
