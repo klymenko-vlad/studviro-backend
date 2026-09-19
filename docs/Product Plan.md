@@ -43,60 +43,60 @@ for and why re-running it replaces the demo rather than merging into it.
 Everything below previously arrived only by import. Without it, a fresh institution cannot be
 set up at all.
 
-| #   | Step                                                                | Carries over |
-| --- | ------------------------------------------------------------------- | ------------ |
-| N1  | Academic terms: create, edit, set the enrolment window              | —            |
-| N2  | Org units and rooms: create and edit                                | —            |
-| N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            |
-| N4  | Teaching assignments: make somebody a course's teacher              | —            |
-| N5  | Programme memberships: make somebody a student of a programme       | —            |
-| N6  | Study groups and their membership                                   | —            |
-| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      |
-| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      |
-| N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      |
+| #   | Step                                                                | Carries over | Status      |
+| --- | ------------------------------------------------------------------- | ------------ | ----------- |
+| N1  | Academic terms: create, edit, set the enrolment window              | —            | **Done**    |
+| N2  | Org units and rooms: create and edit                                | —            | Not started |
+| N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            | Not started |
+| N4  | Teaching assignments: make somebody a course's teacher              | —            | Not started |
+| N5  | Programme memberships: make somebody a student of a programme       | —            | Not started |
+| N6  | Study groups and their membership                                   | —            | Not started |
+| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | Not started |
+| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | Not started |
+| N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | Not started |
 
 ## Phase 2 — The learning half, natively
 
 The Moodle replacement. This is the larger half and it needs storage the platform does not
 have yet.
 
-| #   | Step                                                                        | Carries over |
-| --- | --------------------------------------------------------------------------- | ------------ |
-| L1  | File storage: object store, upload limits, virus posture, signed reads      | —            |
-| L2  | Learning spaces authored per offering, not derived                          | step 32      |
-| L3  | Materials: files, links, text, ordering, visibility                         | step 33      |
-| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      |
-| L5  | Student submissions: upload, resubmit, late marking                         | step 33      |
-| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      |
-| L7  | Quizzes — decide explicitly whether this is in scope at all                 | —            |
+| #   | Step                                                                        | Carries over | Status      |
+| --- | --------------------------------------------------------------------------- | ------------ | ----------- |
+| L1  | File storage: object store, upload limits, virus posture, signed reads      | —            | Not started |
+| L2  | Learning spaces authored per offering, not derived                          | step 32      | Not started |
+| L3  | Materials: files, links, text, ordering, visibility                         | step 33      | Not started |
+| L4  | Assignments: brief, open/due dates, attempt policy                          | step 33      | Not started |
+| L5  | Student submissions: upload, resubmit, late marking                         | step 33      | Not started |
+| L6  | Marking: per-submission feedback, rubric-free first, into the working grade | step 41      | Not started |
+| L7  | Quizzes — decide explicitly whether this is in scope at all                 | —            | Not started |
 
 ## Phase 3 — What the two systems never did well
 
 The reason to replace rather than tolerate them.
 
-| #   | Step                                                                | Carries over |
-| --- | ------------------------------------------------------------------- | ------------ |
-| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   |
-| U2  | Study progress against the programme, not just a grade list         | step 42      |
-| U3  | Search across everything the caller may see                         | step 51      |
-| U4  | WCAG 2.2 AA pass                                                    | step 52      |
-| U5  | Mobile-first review of every screen                                 | step 21      |
-| U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      |
+| #   | Step                                                                | Carries over | Status      |
+| --- | ------------------------------------------------------------------- | ------------ | ----------- |
+| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | Not started |
+| U2  | Study progress against the programme, not just a grade list         | step 42      | Not started |
+| U3  | Search across everything the caller may see                         | step 51      | Not started |
+| U4  | WCAG 2.2 AA pass                                                    | step 52      | Not started |
+| U5  | Mobile-first review of every screen                                 | step 21      | Not started |
+| U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      | Not started |
 
 ## Phase 4 — Fit to run
 
-| #   | Step                                          | Carries over |
-| --- | --------------------------------------------- | ------------ |
-| O1  | GDPR data inventory and DPIA                  | step 19      |
-| O2  | Threat model                                  | step 20      |
-| O3  | Structured audit events                       | step 49      |
-| O4  | Personal-data export and erasure              | step 50      |
-| O5  | Metrics and freshness observability           | step 53      |
-| O6  | Backup and restore, proven by a restore drill | step 55      |
-| O7  | Authorization-negative and security tests     | step 60      |
-| O8  | Performance and load tests                    | step 61      |
-| O9  | Accessibility tests                           | step 62      |
-| O10 | Administrator and user documentation          | steps 68, 69 |
+| #   | Step                                          | Carries over | Status      |
+| --- | --------------------------------------------- | ------------ | ----------- |
+| O1  | GDPR data inventory and DPIA                  | step 19      | Not started |
+| O2  | Threat model                                  | step 20      | Not started |
+| O3  | Structured audit events                       | step 49      | Not started |
+| O4  | Personal-data export and erasure              | step 50      | Not started |
+| O5  | Metrics and freshness observability           | step 53      | Not started |
+| O6  | Backup and restore, proven by a restore drill | step 55      | Not started |
+| O7  | Authorization-negative and security tests     | step 60      | Not started |
+| O8  | Performance and load tests                    | step 61      | Not started |
+| O9  | Accessibility tests                           | step 62      | Not started |
+| O10 | Administrator and user documentation          | steps 68, 69 | Not started |
 
 ## Void
 

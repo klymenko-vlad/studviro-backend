@@ -58,21 +58,23 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N1: academic terms an institution can create
+## Next task — N2: org units and rooms an institution can create
 
-**Phase 0 of `Product Plan.md` is done.** `pnpm db:seed` writes a whole demo university —
-~5,900 rows, fifteen tables, about a second — so every screen has something on it. Sign in
-as `ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
+**Phase 0 is done and N1 is done.** `pnpm db:seed` writes a whole demo university — ~5,900
+rows, fifteen tables, about a second — so every screen has something on it. Sign in as
+`ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
 `admin@studviro.local`; the password is `correct horse battery staple` unless the account
-already existed on this machine. ADR 0025 records what the seed is and why it replaces
-rather than merges.
+already existed on this machine. ADR 0025 records what the seed is.
 
-**Now Phase 1 of `Product Plan.md`: the registry an institution can actually run.** None of
-these can be created today, because every one of them arrived by import:
+**N1 shipped**: `/institutions/:id/catalogue` now carries an _Academic terms_ card above the
+programmes — list, create with an enrolment window, retire. Writes take `institution:manage`;
+the card says of each term whether enrolment is open, opens later, closed, or never opens.
+
+**Phase 1 of `Product Plan.md` is the live queue.** Its table carries a Status column now;
+keep it current. What is left, in dependency order:
 
 | #   | Missing               | Consequence                                                           |
 | --- | --------------------- | --------------------------------------------------------------------- |
-| N1  | Academic terms        | Nothing to enrol into; the enrolment window lives here                |
 | N2  | Org units and rooms   | No faculties, no place to hold a class                                |
 | N3  | Course offerings      | `PATCH` exists; there is no `POST`                                    |
 | N4  | Teaching assignments  | Nobody can be made a course's teacher                                 |
@@ -82,20 +84,20 @@ these can be created today, because every one of them arrived by import:
 | N8  | Exam terms            | Students can register for exams nobody can create                     |
 | N9  | Bulk entry            | A term's worth of offerings and people, pasted                        |
 
-Take them in that order: it is dependency order, and N5 unblocks a feature that already
-exists. **N1 means**: `POST`/`PATCH` on academic terms under `institution:manage`, and a
-screen under `/institutions/:id/` where an administrator creates a term and sets its
-enrolment window.
+**N2 means**: `POST`/`PATCH`/`DELETE` for org units (a tree: university → faculty →
+department) and for rooms, and an editing surface on `/institutions/:id/org-units`, which
+today only reads. Org units are what a programme, a course and a room hang off, and a
+scoped role grant points at one.
 
 **After Phase 1, Phase 2 is the Moodle half** — file storage first, then learning spaces,
-materials, assignments, submissions and marking. It is the larger of the two halves and it
-needs object storage the platform does not have.
+materials, assignments, submissions and marking. **L1 needs a decision from the user: which
+object store, and whether it costs money.**
 
 ## Caveats
 
-- **Steps 1–22 of the old plan were inferred from documents, not re-verified.**
-- The client bundle is at 458.02 kB gzipped against a 480 kB guard. The guard was raised
-  deliberately on 2026-09-18; the reasoning is in `.size-limit.mjs`. R2 will give a lot back.
+- The client bundle is at 442.13 kB gzipped against a 450 kB guard, and `pnpm size` is
+  green — the breach recorded here on 2026-09-18 was closed by the integration removal.
+  There is about 8 kB of headroom, so a large new screen will need the guard revisited.
 - `/enroll` and `/exams` render the same card-and-reason shape twice, and
   `EnrollableOfferingCard` repeats `ExamTermCard`'s window and seats logic. One shared
   component would cover both.
