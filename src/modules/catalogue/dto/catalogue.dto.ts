@@ -199,3 +199,63 @@ export class CorrectedEnrollmentResponseDto {
     return Object.assign(new CorrectedEnrollmentResponseDto(), entity);
   }
 }
+
+export class CreateCourseOfferingDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  courseId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  academicTermId!: string;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(0)
+  capacity?: number | null;
+
+  @ApiPropertyOptional({ enum: COURSE_OFFERING_STATUSES })
+  @IsOptional()
+  @IsIn(COURSE_OFFERING_STATUSES)
+  status?: CourseOfferingStatus;
+
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: MAX_CODE })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(MAX_CODE)
+  language?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Defaults to the course’s own org unit.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  orgUnitId?: string | null;
+}
+
+/** What a scheduling screen needs: the offering plus the names either side of it. */
+@Exclude()
+export class CourseOfferingListItemDto {
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) courseId!: string;
+  @Expose() @ApiProperty() courseCode!: string;
+  @Expose() @ApiProperty() courseTitle!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) academicTermId!: string;
+  @Expose() @ApiProperty() termCode!: string;
+  @Expose() @ApiProperty() termName!: string;
+  @Expose() @ApiProperty({ enum: COURSE_OFFERING_STATUSES }) status!: CourseOfferingStatus;
+  @Expose() @ApiProperty({ type: Number, nullable: true }) capacity!: number | null;
+  @Expose() @ApiProperty({ type: Number }) enrolled!: number;
+  @Expose() @ApiProperty({ type: String, nullable: true }) language!: string | null;
+  @Expose() @ApiProperty({ type: Number }) teacherCount!: number;
+
+  static from(row: CourseOfferingListItemDto): CourseOfferingListItemDto {
+    return Object.assign(new CourseOfferingListItemDto(), row);
+  }
+}

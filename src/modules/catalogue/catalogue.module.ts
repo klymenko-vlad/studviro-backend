@@ -9,11 +9,17 @@ import {
   ProgramsCatalogueRepository,
 } from './catalogue.repository';
 import { CatalogueService } from './catalogue.service';
+import { CourseOfferingsController } from './course-offerings.controller';
 import { OfferingAdministrationController } from './offering-administration.controller';
 import { OfferingAdministrationService } from './offering-administration.service';
 
 @Module({
-  controllers: [AcademicTermsController, CatalogueController, OfferingAdministrationController],
+  controllers: [
+    AcademicTermsController,
+    CatalogueController,
+    CourseOfferingsController,
+    OfferingAdministrationController,
+  ],
   providers: [
     AcademicTermsService,
     AcademicTermsRepository,

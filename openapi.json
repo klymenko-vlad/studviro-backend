@@ -1481,6 +1481,92 @@
           "courses"
         ]
       },
+      "delete": {
+        "description": "An offering with enrolments is cancelled, not retired — the students’ record of having taken it has to survive.",
+        "operationId": "removeCourseOffering",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Retire an offering nobody enrolled on",
+        "tags": [
+          "catalogue"
+        ]
+      },
       "patch": {
         "description": "Capacity may not be cut below the places already taken, because the count would then be a lie.",
         "operationId": "updateCourseOffering",
@@ -5802,6 +5888,180 @@
           }
         ],
         "summary": "Retire a course",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings": {
+      "get": {
+        "operationId": "listCourseOfferings",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseOfferingListItemDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Everything the institution has on offer, newest term first",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "post": {
+        "description": "A course runs at most once in a term: a second attempt is a conflict, and two parallel groups are study groups rather than two offerings.",
+        "operationId": "createCourseOffering",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourseOfferingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOfferingAdminResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Put a course on in a term",
         "tags": [
           "catalogue"
         ]
@@ -10263,9 +10523,84 @@
           }
         }
       },
-      "UpdateCourseOfferingDto": {
+      "CourseOfferingListItemDto": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "courseTitle": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "termCode": {
+            "type": "string"
+          },
+          "termName": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "enrolled": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "teacherCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "courseId",
+          "courseCode",
+          "courseTitle",
+          "academicTermId",
+          "termCode",
+          "termName",
+          "status",
+          "capacity",
+          "enrolled",
+          "language",
+          "teacherCount"
+        ]
+      },
+      "CreateCourseOfferingDto": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "academicTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "capacity": {
             "type": "number",
             "nullable": true,
@@ -10285,8 +10620,18 @@
             "type": "string",
             "nullable": true,
             "maxLength": 64
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Defaults to the course’s own org unit."
           }
-        }
+        },
+        "required": [
+          "courseId",
+          "academicTermId"
+        ]
       },
       "CourseOfferingAdminResponseDto": {
         "type": "object",
@@ -10320,6 +10665,31 @@
           "status",
           "language"
         ]
+      },
+      "UpdateCourseOfferingDto": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64
+          }
+        }
       },
       "CorrectEnrollmentDto": {
         "type": "object",
