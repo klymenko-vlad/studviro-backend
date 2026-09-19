@@ -39,9 +39,14 @@ export class LearningSpaceAuthoringService {
     return space;
   }
 
-  async create(institutionId: string, input: NewLearningSpace): Promise<LearningSpace> {
+  async create(
+    institutionId: string,
+    input: NewLearningSpace,
+    userId: string,
+  ): Promise<LearningSpace> {
     return this.txHost.run(async () => {
       await this.access.assertOffering(institutionId, input.courseOfferingId);
+      await this.access.assertAuthorOfOffering(institutionId, input.courseOfferingId, userId);
       await this.assertOfferingFree(institutionId, input.courseOfferingId);
 
       const [created] = await this.client
@@ -68,8 +73,13 @@ export class LearningSpaceAuthoringService {
     institutionId: string,
     spaceId: string,
     changes: LearningSpaceChanges,
+    userId: string,
   ): Promise<LearningSpace> {
     return this.txHost.run(async () => {
+      this.access.assertAuthor(
+        await this.access.contextForSpace(institutionId, spaceId, userId),
+      );
+
       const [updated] = await this.client
         .update(learningSpaces)
         .set({

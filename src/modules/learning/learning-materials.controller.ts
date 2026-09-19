@@ -66,7 +66,7 @@ export class LearningMaterialsController {
   }
 
   @Post('upload-tickets')
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createMaterialUploadTicket',
     summary: 'Ask for somewhere to PUT a file',
@@ -87,7 +87,7 @@ export class LearningMaterialsController {
   }
 
   @Post()
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createLearningMaterial',
     summary: 'Add a file, a link or a note to a course page',
@@ -106,7 +106,7 @@ export class LearningMaterialsController {
   }
 
   @Patch(':materialId')
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'updateLearningMaterial',
     summary: 'Retitle a material, move it, hide or show it',
@@ -127,7 +127,7 @@ export class LearningMaterialsController {
 
   @Delete(':materialId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'removeLearningMaterial',
     summary: 'Take a material off the page',

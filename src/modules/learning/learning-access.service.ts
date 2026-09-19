@@ -87,10 +87,22 @@ export class LearningAccessService {
   assertAuthor(context: LearningSpaceContext): void {
     if (context.stance === 'author') return;
 
-    throw new PermissionDeniedError(
-      'LEARNING_AUTHORING_DENIED',
-      'Only somebody teaching this course, or administering its offerings, may change its space',
-    );
+    throw authoringDenied();
+  }
+
+  /**
+   * The same question before a space exists to ask it about. Creating one is
+   * the only authoring act with no space to hang the check on, so it is
+   * answered against the offering instead.
+   */
+  async assertAuthorOfOffering(
+    institutionId: string,
+    offeringId: string,
+    userId: string,
+  ): Promise<void> {
+    if ((await this.stance(institutionId, offeringId, userId)) === 'author') return;
+
+    throw authoringDenied();
   }
 
   async assertOffering(institutionId: string, offeringId: string): Promise<void> {
@@ -145,4 +157,11 @@ export class LearningAccessService {
   private get reader() {
     return this.txHost.reader();
   }
+}
+
+function authoringDenied(): PermissionDeniedError {
+  return new PermissionDeniedError(
+    'LEARNING_AUTHORING_DENIED',
+    'Only somebody teaching this course, or administering its offerings, may change its space',
+  );
 }

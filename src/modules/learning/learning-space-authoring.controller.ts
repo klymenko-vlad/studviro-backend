@@ -27,7 +27,7 @@ export class LearningSpaceAuthoringController {
   constructor(private readonly spaces: LearningSpaceAuthoringService) {}
 
   @Post()
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createLearningSpace',
     summary: 'Open the learning space for an offering',
@@ -39,8 +39,11 @@ export class LearningSpaceAuthoringController {
   async create(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Body() dto: CreateLearningSpaceDto,
+    @CurrentUser('id') userId: string,
   ): Promise<LearningSpaceDetailResponseDto> {
-    return LearningSpaceDetailResponseDto.from(await this.spaces.create(institutionId, dto));
+    return LearningSpaceDetailResponseDto.from(
+      await this.spaces.create(institutionId, dto, userId),
+    );
   }
 
   @Get(':spaceId')
@@ -63,7 +66,7 @@ export class LearningSpaceAuthoringController {
   }
 
   @Patch(':spaceId')
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'updateLearningSpace',
     summary: 'Rename a space, rewrite its summary, publish or unpublish it',
@@ -74,9 +77,10 @@ export class LearningSpaceAuthoringController {
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('spaceId', ParseUUIDPipe) spaceId: string,
     @Body() dto: UpdateLearningSpaceDto,
+    @CurrentUser('id') userId: string,
   ): Promise<LearningSpaceDetailResponseDto> {
     return LearningSpaceDetailResponseDto.from(
-      await this.spaces.update(institutionId, spaceId, dto),
+      await this.spaces.update(institutionId, spaceId, dto, userId),
     );
   }
 }

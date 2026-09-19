@@ -76,7 +76,7 @@ export class AssignmentsController {
   }
 
   @Post()
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createAssignment',
     summary: 'Set an assignment: a brief, a window and an attempt policy',
@@ -97,7 +97,7 @@ export class AssignmentsController {
   }
 
   @Patch(':assignmentId')
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'updateAssignment',
     summary: 'Change a brief, a date, the attempt policy or what it is worth',
@@ -118,7 +118,7 @@ export class AssignmentsController {
 
   @Delete(':assignmentId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission('offering:manage', INSTITUTION_SCOPE)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'removeAssignment',
     summary: 'Withdraw an assignment and its gradebook column',

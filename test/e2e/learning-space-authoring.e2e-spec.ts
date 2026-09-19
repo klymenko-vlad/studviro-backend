@@ -127,6 +127,55 @@ describe('Learning space authoring (e2e)', () => {
     expect(refused.statusCode).toBe(403);
   });
 
+  it('lets the teacher of an offering open its space without an administrator', async () => {
+    const created = await request(fixture.teacher, 'POST', '', {
+      courseOfferingId: fixture.offeringId,
+      name: 'Algorithms, mine',
+    });
+
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({
+      courseOfferingId: fixture.offeringId,
+      visible: false,
+    });
+  });
+
+  it('lets that teacher publish the space they opened', async () => {
+    const space = (
+      await request(fixture.teacher, 'POST', '', {
+        courseOfferingId: fixture.offeringId,
+        name: 'Algorithms, mine',
+      })
+    ).json();
+
+    const published = await request(fixture.teacher, 'PATCH', `/${space.id}`, {
+      visible: true,
+    });
+
+    expect(published.statusCode).toBe(200);
+    expect(published.json().visible).toBe(true);
+  });
+
+  it('refuses the teacher of another offering, who teaches nothing here', async () => {
+    const refused = await request(fixture.otherTeacher, 'POST', '', {
+      courseOfferingId: fixture.offeringId,
+      name: 'Not mine',
+    });
+
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json().code).toBe('LEARNING_AUTHORING_DENIED');
+  });
+
+  it('refuses that teacher a change to a space they do not author', async () => {
+    const space = (await openSpace({ visible: true })).json();
+
+    const refused = await request(fixture.otherTeacher, 'PATCH', `/${space.id}`, {
+      name: 'Not mine either',
+    });
+
+    expect(refused.statusCode).toBe(403);
+  });
+
   it('will not show a space to somebody from another institution', async () => {
     const space = (await openSpace({ visible: true })).json();
     const elsewhere = await harness.actingAs({ email: 'elsewhere@example.com' });
