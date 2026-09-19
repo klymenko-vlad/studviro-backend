@@ -33,6 +33,7 @@ import { LearningModule } from './modules/learning/learning.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -150,6 +151,7 @@ function workerModules(): DynamicModule[] {
     MarketingModule,
     NotificationsModule,
     SchedulingModule,
+    StorageModule,
     EnrollmentModule,
     CatalogueModule,
     UsersModule,

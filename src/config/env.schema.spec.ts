@@ -14,7 +14,8 @@ const production = {
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
   METRICS_TOKEN: 'm'.repeat(32),
-  CONNECTOR_CREDENTIAL_SECRET: 'c'.repeat(32),
+  STORAGE_ACCESS_KEY_ID: 'real-object-store-key',
+  STORAGE_SECRET_ACCESS_KEY: 'real-object-store-secret',
 };
 
 describe('validateEnv', () => {
@@ -94,12 +95,6 @@ describe('validateEnv', () => {
       ).toThrow(/JWT_REFRESH_SECRET/);
     });
 
-    it('rejects the development connector credential secret', () => {
-      const { CONNECTOR_CREDENTIAL_SECRET: _omitted, ...withoutConnectorSecret } = production;
-
-      expect(() => validateEnv(withoutConnectorSecret)).toThrow(/CONNECTOR_CREDENTIAL_SECRET/);
-    });
-
     it('requires a metrics token when metrics are enabled', () => {
       const { METRICS_TOKEN: _omitted, ...withoutMetricsToken } = production;
 
@@ -110,6 +105,42 @@ describe('validateEnv', () => {
       expect(() =>
         validateEnv({ ...base, NODE_ENV: 'development', CORS_ORIGINS: '*' }),
       ).not.toThrow();
+    });
+  });
+
+  describe('object storage', () => {
+    it('defaults to the MinIO in docker compose, so development needs no account', () => {
+      const env = validateEnv(base);
+
+      expect(env.STORAGE_BUCKET).toBe('studviro');
+      expect(env.STORAGE_FORCE_PATH_STYLE).toBe(true);
+      expect(env.STORAGE_ENDPOINT).toBeUndefined();
+    });
+
+    it.each(['STORAGE_ACCESS_KEY_ID', 'STORAGE_SECRET_ACCESS_KEY'] as const)(
+      'refuses to boot production with the development %s',
+      (key) => {
+        expect(() => validateEnv({ ...production, [key]: 'studviro' })).toThrow(
+          new RegExp(key, 'u'),
+        );
+      },
+    );
+
+    it('lets a deployment that does not use storage skip the credentials', () => {
+      expect(() =>
+        validateEnv({
+          ...production,
+          STORAGE_ENABLED: 'false',
+          STORAGE_ACCESS_KEY_ID: 'studviro',
+          STORAGE_SECRET_ACCESS_KEY: 'studviro',
+        }),
+      ).not.toThrow();
+    });
+
+    it('caps a signed read URL at an hour', () => {
+      expect(() => validateEnv({ ...base, STORAGE_SIGNED_URL_TTL_S: '7200' })).toThrow(
+        /STORAGE_SIGNED_URL_TTL_S/u,
+      );
     });
   });
 });

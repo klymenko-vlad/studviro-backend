@@ -7,8 +7,6 @@ export const AppRole = z.enum(['api', 'worker', 'all']);
 export type AppRole = z.infer<typeof AppRole>;
 
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
-const DEV_CONNECTOR_CREDENTIAL_SECRET =
-  'dev-only-insecure-connector-credential-secret-do-not-use';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -51,18 +49,38 @@ export const envSchema = z.object({
   REDIS_DB: z.coerce.number().int().min(0).default(0),
   REDIS_TLS: bool('false'),
 
+  /**
+   * Object storage, S3-compatible. The production target is Cloudflare R2 or
+   * AWS S3; `docker compose` runs MinIO locally and in CI so neither an
+   * account nor a bill is needed to develop against it.
+   *
+   * `STORAGE_ENDPOINT` is what makes it portable: unset for AWS, set to the
+   * R2 or MinIO endpoint otherwise. Anything that is not AWS also needs
+   * path-style addressing, because virtual-host style requires DNS per bucket.
+   */
+  STORAGE_ENABLED: bool('true'),
+  STORAGE_BUCKET: z.string().default('studviro'),
+  STORAGE_REGION: z.string().default('auto'),
+  STORAGE_ENDPOINT: z.url().optional(),
+  STORAGE_FORCE_PATH_STYLE: bool('true'),
+  STORAGE_ACCESS_KEY_ID: z.string().default('studviro'),
+  STORAGE_SECRET_ACCESS_KEY: z.string().default('studviro'),
+
+  /**
+   * 64 MiB. Large enough for a slide deck or a recorded seminar's handout,
+   * small enough that one submission cannot fill a bucket. Enforced twice:
+   * pinned into the presigned upload so the store itself refuses a larger
+   * body, and checked again when the upload is confirmed.
+   */
+  STORAGE_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(67_108_864),
+
+  /** Short-lived by design: a read link that outlives the reader's session is a leak. */
+  STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(3_600).default(300),
+
   QUEUE_PREFIX: z.string().default('studviro'),
   QUEUE_DEFAULT_ATTEMPTS: z.coerce.number().int().positive().default(3),
   QUEUE_DEFAULT_BACKOFF_MS: z.coerce.number().int().positive().default(1_000),
   QUEUE_UI_ENABLED: bool('false'),
-
-  /**
-   * The synchronization schedule (G10). Off by default: a deployment that has
-   * not chosen a cadence should not acquire one by upgrading.
-   */
-  SYNC_SCHEDULE_ENABLED: bool('false'),
-  SYNC_SCHEDULE_CRON: z.string().default('0 3 * * *'),
-  SYNC_SCHEDULE_MODE: z.enum(['incremental', 'full']).default('incremental'),
 
   THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
@@ -87,8 +105,6 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32).default(DEV_JWT_SECRET),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
-
-  CONNECTOR_CREDENTIAL_SECRET: z.string().min(32).default(DEV_CONNECTOR_CREDENTIAL_SECRET),
 
   METRICS_ENABLED: bool('true'),
   METRICS_TOKEN: z.string().min(32).optional(),
@@ -155,8 +171,12 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     );
   }
 
-  if (env.CONNECTOR_CREDENTIAL_SECRET === DEV_CONNECTOR_CREDENTIAL_SECRET) {
-    reject('CONNECTOR_CREDENTIAL_SECRET', 'must be set to a unique secret in production');
+  if (env.STORAGE_ENABLED) {
+    for (const key of ['STORAGE_ACCESS_KEY_ID', 'STORAGE_SECRET_ACCESS_KEY'] as const) {
+      if (env[key] === 'studviro') {
+        reject(key, 'must be set to the real object-store credential in production');
+      }
+    }
   }
 
   if (env.METRICS_ENABLED && !env.METRICS_TOKEN) {

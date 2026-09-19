@@ -40,10 +40,16 @@ export interface QueueConfig {
   readonly uiEnabled: boolean;
 }
 
-export interface SyncScheduleConfig {
-  readonly enabled: boolean;
-  readonly cron: string;
-  readonly mode: 'incremental' | 'full';
+export interface StorageConfig {
+  enabled: boolean;
+  bucket: string;
+  region: string;
+  endpoint: string | undefined;
+  forcePathStyle: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
+  maxUploadBytes: number;
+  signedUrlTtlSeconds: number;
 }
 
 export interface ThrottleConfig {
@@ -134,14 +140,6 @@ export class AppConfigService {
     };
   }
 
-  get syncSchedule(): SyncScheduleConfig {
-    return {
-      enabled: this.config.get<boolean>('SYNC_SCHEDULE_ENABLED'),
-      cron: this.config.get<string>('SYNC_SCHEDULE_CRON'),
-      mode: this.config.get<'incremental' | 'full'>('SYNC_SCHEDULE_MODE'),
-    };
-  }
-
   get throttle(): ThrottleConfig {
     return {
       ttlMs: this.config.get<number>('THROTTLE_TTL_MS'),
@@ -174,8 +172,18 @@ export class AppConfigService {
     };
   }
 
-  get connectorCredentialSecret(): string {
-    return this.config.get<string>('CONNECTOR_CREDENTIAL_SECRET');
+  get storage(): StorageConfig {
+    return {
+      enabled: this.config.get<boolean>('STORAGE_ENABLED'),
+      bucket: this.config.get<string>('STORAGE_BUCKET'),
+      region: this.config.get<string>('STORAGE_REGION'),
+      endpoint: this.config.get<string | undefined>('STORAGE_ENDPOINT'),
+      forcePathStyle: this.config.get<boolean>('STORAGE_FORCE_PATH_STYLE'),
+      accessKeyId: this.config.get<string>('STORAGE_ACCESS_KEY_ID'),
+      secretAccessKey: this.config.get<string>('STORAGE_SECRET_ACCESS_KEY'),
+      maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
+      signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
+    };
   }
 
   get cacheTtlMs(): number {

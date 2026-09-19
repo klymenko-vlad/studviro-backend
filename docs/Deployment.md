@@ -45,27 +45,39 @@ purpose. Create the first account through the client's `/sign-up` screen, which 
 `POST /api/v1/auth/register`. Elevated roles are granted afterwards from the institution
 roles screen.
 
-## The synchronization schedule
+## Object storage
 
-Off by default, because a deployment that has not chosen a cadence should not
-acquire one by upgrading. Three variables turn it on:
+Learning materials and student submissions live in an S3-compatible bucket, never on the
+application's disk (ADR 0027). `docker compose` runs MinIO for development and CI; a
+deployment points the same client somewhere real by changing these:
 
-| Variable                | Default       | Meaning                                                |
-| ----------------------- | ------------- | ------------------------------------------------------ |
-| `SYNC_SCHEDULE_ENABLED` | `false`       | Register the repeatable job at all                     |
-| `SYNC_SCHEDULE_CRON`    | `0 3 * * *`   | When it fires                                          |
-| `SYNC_SCHEDULE_MODE`    | `incremental` | `full` re-reads everything and applies `accept_source` |
+| Variable                    | Default             | Meaning                                                    |
+| --------------------------- | ------------------- | ---------------------------------------------------------- |
+| `STORAGE_ENABLED`           | `true`              | Turn the whole file half off                               |
+| `STORAGE_BUCKET`            | `studviro`          | The bucket. It must already exist                          |
+| `STORAGE_REGION`            | `auto`              | `auto` for R2; a real region for AWS                       |
+| `STORAGE_ENDPOINT`          | unset               | **Unset for AWS.** Set for R2, MinIO or anything else      |
+| `STORAGE_FORCE_PATH_STYLE`  | `true`              | `false` only for AWS S3                                    |
+| `STORAGE_ACCESS_KEY_ID`     | `studviro`          | Must be changed in production or the app refuses to boot   |
+| `STORAGE_SECRET_ACCESS_KEY` | `studviro`          | Likewise                                                   |
+| `STORAGE_MAX_UPLOAD_BYTES`  | `67108864` (64 MiB) | Pinned into the presigned upload, so the store enforces it |
+| `STORAGE_SIGNED_URL_TTL_S`  | `300`               | How long a read or write link lives. Capped at an hour     |
 
-One repeatable job serves the whole deployment: the handler fans out to every
-institution with a connector configured, queueing a run per configured source
-system. A run already in flight returns itself rather than queueing a second, so
-a schedule that fires while yesterday's run is still going is harmless.
+**Cloudflare R2**: `STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`,
+`STORAGE_REGION=auto`, `STORAGE_FORCE_PATH_STYLE=true`. The credentials are an R2 API token
+scoped to the one bucket — not an account-wide token.
 
-It must run where the workers do (`ROLE=worker` or `ROLE=all`). Registering it is
-deliberately not fatal: a broker briefly unreachable at boot logs and starts
-anyway, and the next deployment registers it again. Turning it off removes the
-existing job rather than merely not adding one, so the last deployment that had
-it on does not keep running it for ever.
+**AWS S3**: leave `STORAGE_ENDPOINT` unset, set a real region, and
+`STORAGE_FORCE_PATH_STYLE=false`.
 
-A schedule is also what the write-back outbox needs: a `pending` intent whose
-delayed job was lost waits for a human to press Retry without one.
+**The bucket must be private.** Nothing in the application ever produces a public URL; every
+read is a short-lived presigned `GET`. A bucket left world-readable would make every
+submission in the institution public, and the application cannot detect that for you.
+
+**CORS on the bucket is required**, because the browser uploads to it directly. Allow `PUT`
+from the client's origin with the `content-type` header. Without it uploads fail in the
+browser while working perfectly from a server, which is a confusing afternoon.
+
+**`TODO(institution)`**: the bucket's lifecycle and retention rules, whether object
+versioning is on, and whether uploads must be virus-scanned before a marker can download
+them. ADR 0027 records that there is no scanner today and what the seam for one would be.
