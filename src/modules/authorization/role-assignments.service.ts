@@ -7,7 +7,13 @@ import {
   InvalidInputError,
   PermissionDeniedError,
 } from '../../common/errors/domain.error';
-import { roleAssignments, type NewRoleAssignment } from '../../database/schema';
+import {
+  roleAssignments,
+  type NewRoleAssignment,
+  type RoleAssignment,
+} from '../../database/schema';
+import { TransactionHost } from '../../database/transaction.host';
+import { AuditService } from '../audit/audit.service';
 import { UsersRepository } from '../users/users.repository';
 
 import type { ScopeRef } from './authorization.constants';
@@ -27,6 +33,8 @@ export class RoleAssignmentsService {
     private readonly hierarchy: ScopeHierarchyService,
     private readonly authorization: AuthorizationService,
     private readonly derivedRoles: DerivedRolesRepository,
+    private readonly txHost: TransactionHost,
+    private readonly audit: AuditService,
   ) {}
 
   async listForInstitution(
@@ -95,7 +103,22 @@ export class RoleAssignmentsService {
 
     await this.assertNotAlreadyGranted(institutionId, dto);
 
-    const created = await this.assignments.create(this.toRow(institutionId, dto));
+    const created = await this.txHost.run(async () => {
+      const assignment = await this.assignments.create(this.toRow(institutionId, dto));
+
+      await this.audit.record({
+        institutionId,
+        actorUserId: granterId,
+        action: 'role.granted',
+        subjectType: 'role_assignment',
+        subjectId: assignment.id,
+        summary: `Granted ${assignment.role} at ${assignment.scopeType}`,
+        before: null,
+        after: assignmentSnapshot(assignment),
+      });
+
+      return assignment;
+    });
 
     return RoleAssignmentResponseDto.fromEntity(created);
   }
@@ -131,7 +154,20 @@ export class RoleAssignmentsService {
       }
     }
 
-    await this.assignments.softDelete(id);
+    await this.txHost.run(async () => {
+      await this.assignments.softDelete(id);
+
+      await this.audit.record({
+        institutionId,
+        actorUserId: revokerId,
+        action: 'role.revoked',
+        subjectType: 'role_assignment',
+        subjectId: assignment.id,
+        summary: `Revoked ${assignment.role} at ${assignment.scopeType}`,
+        before: assignmentSnapshot(assignment),
+        after: null,
+      });
+    });
   }
 
   private async assertMayGrant(
@@ -236,4 +272,15 @@ export class RoleAssignmentsService {
       validUntil: dto.validUntil ?? null,
     };
   }
+}
+
+function assignmentSnapshot(assignment: RoleAssignment): Record<string, unknown> {
+  return {
+    userId: assignment.userId,
+    role: assignment.role,
+    scopeType: assignment.scopeType,
+    scopeId: assignment.scopeId,
+    validFrom: assignment.validFrom,
+    validUntil: assignment.validUntil,
+  };
 }

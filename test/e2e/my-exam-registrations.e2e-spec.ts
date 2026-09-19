@@ -393,7 +393,11 @@ describe('My exam registrations (e2e)', () => {
         .update(examTerms)
         .set({ cancelledAt: new Date('2026-06-01T00:00:00.000Z') })
         .where(eq(examTerms.id, doomed));
-      await cancellations.releaseSeats(doomed, new Date('2026-06-01T00:00:00.000Z'));
+      await cancellations.releaseSeats(
+        institutionId,
+        doomed,
+        new Date('2026-06-01T00:00:00.000Z'),
+      );
 
       expect((await registerFor(actor, replacement)).statusCode).toBe(201);
     });
@@ -406,7 +410,7 @@ describe('My exam registrations (e2e)', () => {
 
       await harness.app
         .get(ExamTermCancellationService)
-        .releaseSeats(doomed, new Date('2026-06-01T00:00:00.000Z'));
+        .releaseSeats(institutionId, doomed, new Date('2026-06-01T00:00:00.000Z'));
 
       expect(await seatsOf(actor, doomed)).toMatchObject({
         registeredCount: 0,

@@ -6,6 +6,8 @@ import {
   InvalidInputError,
 } from '../../common/errors/domain.error';
 import type { RoleAssignment } from '../../database/schema';
+import type { TransactionHost } from '../../database/transaction.host';
+import type { AuditService } from '../audit/audit.service';
 import type { UsersRepository } from '../users/users.repository';
 
 import type { AuthorizationService } from './authorization.service';
@@ -94,6 +96,8 @@ function serviceWith(
       hierarchy as unknown as ScopeHierarchyService,
       authorization as unknown as AuthorizationService,
       derivedRoles as unknown as DerivedRolesRepository,
+      { run: (fn: () => Promise<unknown>) => fn() } as unknown as TransactionHost,
+      { record: vi.fn() } as unknown as AuditService,
     ),
   };
 }
@@ -119,6 +123,7 @@ const ALL_PERMISSIONS = [
   'role:assign',
   'institution:read',
   'institution:manage',
+  'audit:read',
   'sync:read',
   'sync:run',
   'connector:configure',

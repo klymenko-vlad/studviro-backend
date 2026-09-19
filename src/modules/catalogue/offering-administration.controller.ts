@@ -2,6 +2,7 @@ import { Body, Controller, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 
 import {
@@ -55,6 +56,7 @@ export class OfferingAdministrationController {
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
     @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
     @Body() dto: CorrectEnrollmentDto,
+    @CurrentUser('id') actorUserId: string,
   ): Promise<CorrectedEnrollmentResponseDto> {
     return CorrectedEnrollmentResponseDto.fromEntity(
       await this.offerings.correctEnrollment(
@@ -62,6 +64,7 @@ export class OfferingAdministrationController {
         offeringId,
         enrollmentId,
         dto.status,
+        actorUserId,
       ),
     );
   }

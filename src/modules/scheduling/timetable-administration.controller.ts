@@ -24,6 +24,8 @@ import { RequirePermission } from '../authorization/decorators/require-permissio
 
 import {
   CreateTimetableEventDto,
+  ScheduledEventsResponseDto,
+  TimetableEventRefDto,
   TimetableEventResponseDto,
   UpdateTimetableEventDto,
 } from './dto/timetable-administration.dto';
@@ -65,32 +67,32 @@ export class TimetableAdministrationController {
     description:
       'With `repeatWeekly`, one slot becomes a row per week until the term ends, so moving or cancelling a single week is an ordinary edit. A room already booked for any part of the slot is refused.',
   })
-  @ApiCreatedResponse({ description: 'The number of classes scheduled.' })
+  @ApiCreatedResponse({ type: ScheduledEventsResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   async create(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
     @Body() dto: CreateTimetableEventDto,
-  ): Promise<{ created: number }> {
+  ): Promise<ScheduledEventsResponseDto> {
     const events = await this.timetable.create(institutionId, offeringId, dto);
 
-    return { created: events.length };
+    return ScheduledEventsResponseDto.of(events.length);
   }
 
   @Patch(':eventId')
   @RequirePermission('schedule:manage', INSTITUTION_SCOPE)
   @ApiOperation({ operationId: 'updateTimetableEvent', summary: 'Move a single class' })
-  @ApiOkResponse()
+  @ApiOkResponse({ type: TimetableEventRefDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   async update(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: UpdateTimetableEventDto,
-  ): Promise<{ id: string }> {
+  ): Promise<TimetableEventRefDto> {
     const updated = await this.timetable.update(institutionId, offeringId, eventId, dto);
 
-    return { id: updated.id };
+    return TimetableEventRefDto.of(updated.id);
   }
 
   @Post(':eventId/cancellation')
@@ -101,16 +103,16 @@ export class TimetableAdministrationController {
     description:
       'A cancelled class stays visible and struck through: a student who turns up needs to see it was called off, not find nothing where it used to be.',
   })
-  @ApiOkResponse()
+  @ApiOkResponse({ type: TimetableEventRefDto })
   @ApiErrorResponses({ notFound: true })
   async cancel(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
     @Param('eventId', ParseUUIDPipe) eventId: string,
-  ): Promise<{ id: string }> {
+  ): Promise<TimetableEventRefDto> {
     const cancelled = await this.timetable.cancel(institutionId, offeringId, eventId);
 
-    return { id: cancelled.id };
+    return TimetableEventRefDto.of(cancelled.id);
   }
 
   @Delete(':eventId/cancellation')
@@ -119,16 +121,16 @@ export class TimetableAdministrationController {
     operationId: 'restoreTimetableEvent',
     summary: 'Put a cancelled class back on',
   })
-  @ApiOkResponse()
+  @ApiOkResponse({ type: TimetableEventRefDto })
   @ApiErrorResponses({ notFound: true })
   async restore(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
     @Param('eventId', ParseUUIDPipe) eventId: string,
-  ): Promise<{ id: string }> {
+  ): Promise<TimetableEventRefDto> {
     const restored = await this.timetable.restore(institutionId, offeringId, eventId);
 
-    return { id: restored.id };
+    return TimetableEventRefDto.of(restored.id);
   }
 
   @Delete(':eventId')

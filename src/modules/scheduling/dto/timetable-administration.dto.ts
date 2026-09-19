@@ -94,3 +94,26 @@ export class TimetableEventResponseDto {
     return Object.assign(new TimetableEventResponseDto(), entry);
   }
 }
+
+@Exclude()
+export class ScheduledEventsResponseDto {
+  @Expose()
+  @ApiProperty({
+    type: Number,
+    description: 'How many classes were written — one, or a week each to the end of term.',
+  })
+  created!: number;
+
+  static of(created: number): ScheduledEventsResponseDto {
+    return Object.assign(new ScheduledEventsResponseDto(), { created });
+  }
+}
+
+@Exclude()
+export class TimetableEventRefDto {
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
+
+  static of(id: string): TimetableEventRefDto {
+    return Object.assign(new TimetableEventRefDto(), { id });
+  }
+}

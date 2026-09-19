@@ -89,7 +89,7 @@ The reason to replace rather than tolerate them.
 | --- | --------------------------------------------- | ------------ | ----------- |
 | O1  | GDPR data inventory and DPIA                  | step 19      | **Drafted** |
 | O2  | Threat model                                  | step 20      | **Drafted** |
-| O3  | Structured audit events                       | step 49      | Not started |
+| O3  | Structured audit events                       | step 49      | **Backend** |
 | O4  | Personal-data export and erasure              | step 50      | Not started |
 | O5  | Metrics and freshness observability           | step 53      | Not started |
 | O6  | Backup and restore, proven by a restore drill | step 55      | Not started |

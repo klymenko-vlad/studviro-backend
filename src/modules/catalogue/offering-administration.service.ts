@@ -15,6 +15,7 @@ import {
   type EnrollmentStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { AuditService } from '../audit/audit.service';
 
 export interface NewOffering {
   readonly courseId: string;
@@ -58,7 +59,10 @@ export const CORRECTABLE_ENROLLMENT_STATUSES: readonly EnrollmentStatus[] = [
 
 @Injectable()
 export class OfferingAdministrationService {
-  constructor(private readonly txHost: TransactionHost) {}
+  constructor(
+    private readonly txHost: TransactionHost,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Every offering in the institution, newest term first, with the names
@@ -264,6 +268,7 @@ export class OfferingAdministrationService {
     offeringId: string,
     enrollmentId: string,
     status: EnrollmentStatus,
+    actorUserId: string | null = null,
     now = new Date(),
   ): Promise<Enrollment> {
     return this.txHost.run(async () => {
@@ -294,6 +299,20 @@ export class OfferingAdministrationService {
         .returning();
 
       if (!corrected) throw new EntityNotFoundError('enrollment', enrollmentId);
+
+      await this.audit.record(
+        {
+          institutionId,
+          actorUserId,
+          action: 'enrollment.corrected',
+          subjectType: 'enrollment',
+          subjectId: enrollmentId,
+          summary: `Corrected the enrolment from ${existing.status} to ${corrected.status}`,
+          before: enrollmentSnapshot(existing),
+          after: enrollmentSnapshot(corrected),
+        },
+        now,
+      );
 
       return corrected;
     });
@@ -347,4 +366,14 @@ export class OfferingAdministrationService {
   private get reader() {
     return this.txHost.reader();
   }
+}
+
+function enrollmentSnapshot(enrollment: Enrollment): Record<string, unknown> {
+  return {
+    courseOfferingId: enrollment.courseOfferingId,
+    userId: enrollment.userId,
+    status: enrollment.status,
+    enrolledAt: enrollment.enrolledAt,
+    withdrawnAt: enrollment.withdrawnAt,
+  };
 }

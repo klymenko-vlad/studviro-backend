@@ -14,6 +14,7 @@ import {
   type OfficialCourseResultStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { AuditService } from '../audit/audit.service';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { GradeNotificationsService } from '../notifications/grade-notifications.service';
 
@@ -69,6 +70,7 @@ export class OfferingResultsService {
     private readonly authorization: AuthorizationService,
     private readonly txHost: TransactionHost,
     private readonly notifications: GradeNotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async findForViewer(
@@ -147,6 +149,20 @@ export class OfferingResultsService {
           ...(input.conflictNote === undefined ? {} : { conflictNote: input.conflictNote }),
         },
         existing?.id ?? null,
+      );
+
+      await this.audit.record(
+        {
+          institutionId,
+          actorUserId: userId,
+          action: publishes ? 'grade.published' : 'grade.proposed',
+          subjectType: 'course_result',
+          subjectId: written.id,
+          summary: gradeSummary(publishes, written),
+          before: existing ? gradeSnapshot(existing) : null,
+          after: gradeSnapshot(written),
+        },
+        now,
       );
 
       if (publishes && input.officialGrade !== null) {
@@ -235,6 +251,24 @@ export class OfferingResultsService {
       scope: { type: 'institution', id: institutionId },
     });
   }
+}
+
+function gradeSnapshot(result: OfficialCourseResult): Record<string, unknown> {
+  return {
+    attempt: result.attempt,
+    status: result.status,
+    proposedGrade: result.proposedGrade,
+    officialGrade: result.officialGrade,
+  };
+}
+
+function gradeSummary(publishes: boolean, written: OfficialCourseResult): string {
+  const grade = publishes ? written.officialGrade : written.proposedGrade;
+  const verb = publishes ? 'Published' : 'Proposed';
+
+  return grade === null
+    ? `${verb === 'Published' ? 'Withdrew the official' : 'Cleared the proposed'} grade on attempt ${written.attempt}`
+    : `${verb} ${grade} on attempt ${written.attempt}`;
 }
 
 function statusFor({

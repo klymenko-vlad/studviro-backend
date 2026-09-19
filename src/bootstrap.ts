@@ -19,6 +19,7 @@ import { REQUEST_ID_HEADER } from './common/logger/logger.module';
 import { AppConfigService } from './config/app-config.service';
 import { validateEnv } from './config/env.schema';
 import { parseTrustProxy } from './config/trust-proxy';
+import { runWithRequestId } from './modules/audit/request-id.context';
 import { buildOpenApiDocument } from './openapi.document';
 
 export async function createApp(): Promise<NestFastifyApplication> {
@@ -52,6 +53,13 @@ export async function createApp(): Promise<NestFastifyApplication> {
     contentSecurityPolicy: config.swaggerEnabled ? false : undefined,
   });
   await app.register(compress, { encodings: ['br', 'gzip', 'deflate'], threshold: 1024 });
+
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRequest', (request, _reply, done) => {
+      runWithRequestId(request.id, done);
+    });
 
   app
     .getHttpAdapter()

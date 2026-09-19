@@ -17,6 +17,7 @@ import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
@@ -138,6 +139,7 @@ function workerModules(): DynamicModule[] {
     MetricsModule,
     HealthModule,
     AuthModule,
+    AuditModule,
     AuthorizationModule,
     CoursesModule,
     GradesModule,

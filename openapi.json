@@ -861,6 +861,149 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/audit-events": {
+      "get": {
+        "description": "Keyset-paginated over `(occurredAt, id)`. Only `institution_admin` holds `audit:read`.",
+        "operationId": "listAuditEvents",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "grade.proposed",
+                "grade.published",
+                "role.granted",
+                "role.revoked",
+                "enrollment.corrected",
+                "exam_term.cancelled"
+              ]
+            }
+          },
+          {
+            "name": "subjectType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "course_result",
+                "role_assignment",
+                "enrollment",
+                "exam_term"
+              ]
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read what was done in an institution, newest first",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/role-assignments": {
       "get": {
         "operationId": "listRoleAssignments",
@@ -4696,7 +4839,14 @@
         },
         "responses": {
           "201": {
-            "description": "The number of classes scheduled."
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledEventsResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
@@ -4801,7 +4951,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
@@ -4981,7 +5138,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
@@ -5064,7 +5228,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation failed or the payload was malformed.",
@@ -8253,6 +8424,116 @@
           "desc"
         ]
       },
+      "AuditEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "grade.proposed",
+              "grade.published",
+              "role.granted",
+              "role.revoked",
+              "enrollment.corrected",
+              "exam_term.cancelled"
+            ]
+          },
+          "subjectType": {
+            "type": "string",
+            "enum": [
+              "course_result",
+              "role_assignment",
+              "enrollment",
+              "exam_term"
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "before": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "institutionId",
+          "action",
+          "subjectType",
+          "subjectId",
+          "occurredAt"
+        ]
+      },
+      "CursorPageMetaDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "limit",
+          "hasNextPage",
+          "nextCursor"
+        ]
+      },
+      "AuditEventPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CursorPageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
       "RoleAssignmentResponseDto": {
         "type": "object",
         "properties": {
@@ -8419,7 +8700,8 @@
                 "role:read",
                 "role:assign",
                 "institution:read",
-                "institution:manage"
+                "institution:manage",
+                "audit:read"
               ]
             }
           }
@@ -11763,6 +12045,18 @@
           "endsAt"
         ]
       },
+      "ScheduledEventsResponseDto": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "number",
+            "description": "How many classes were written — one, or a week each to the end of term."
+          }
+        },
+        "required": [
+          "created"
+        ]
+      },
       "UpdateTimetableEventDto": {
         "type": "object",
         "properties": {
@@ -11802,6 +12096,18 @@
             "description": "Restrict the class to one seminar or lab group."
           }
         }
+      },
+      "TimetableEventRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
       },
       "EnrollmentAvailabilityDto": {
         "type": "object",

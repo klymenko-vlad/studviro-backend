@@ -12,11 +12,13 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "build": "nest build -p tsconfig.build.json",
+    "db:backup": "bash scripts/backup.sh",
     "db:check": "drizzle-kit check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/database/migrate.ts",
     "db:migrate:prod": "node dist/database/migrate.js",
     "db:push": "drizzle-kit push",
+    "db:restore": "bash scripts/restore.sh",
     "db:seed": "tsx src/database/seed.ts",
     "db:studio": "drizzle-kit studio",
     "docker:down": "docker compose down",
