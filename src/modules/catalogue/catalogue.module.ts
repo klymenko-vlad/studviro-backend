@@ -46,6 +46,11 @@ import { TeachingAssignmentsService } from './teaching-assignments.service';
     StudyGroupsService,
     TeachingAssignmentsService,
   ],
-  exports: [AcademicTermsService, CatalogueService, OfferingAdministrationService],
+  exports: [
+    AcademicTermsService,
+    CatalogueService,
+    InstitutionMembershipService,
+    OfferingAdministrationService,
+  ],
 })
 export class CatalogueModule {}

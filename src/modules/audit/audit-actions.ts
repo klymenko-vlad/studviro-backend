@@ -5,6 +5,7 @@ export const AUDIT_ACTIONS = [
   'role.revoked',
   'enrollment.corrected',
   'exam_term.cancelled',
+  'personal_data.erased',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -14,6 +15,7 @@ export const AUDIT_SUBJECT_TYPES = [
   'role_assignment',
   'enrollment',
   'exam_term',
+  'personal_data_erasure',
 ] as const;
 
 export type AuditSubjectType = (typeof AUDIT_SUBJECT_TYPES)[number];

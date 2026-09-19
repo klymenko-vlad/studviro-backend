@@ -32,6 +32,7 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { SearchModule } from './modules/search/search.module';
 import { StorageModule } from './modules/storage/storage.module';
@@ -151,6 +152,7 @@ function workerModules(): DynamicModule[] {
     LearningModule,
     MarketingModule,
     NotificationsModule,
+    PrivacyModule,
     SchedulingModule,
     SearchModule,
     StorageModule,

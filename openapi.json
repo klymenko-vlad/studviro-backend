@@ -914,7 +914,8 @@
                 "role.granted",
                 "role.revoked",
                 "enrollment.corrected",
-                "exam_term.cancelled"
+                "exam_term.cancelled",
+                "personal_data.erased"
               ]
             }
           },
@@ -928,7 +929,8 @@
                 "course_result",
                 "role_assignment",
                 "enrollment",
-                "exam_term"
+                "exam_term",
+                "personal_data_erasure"
               ]
             }
           },
@@ -6262,9 +6264,10 @@
         ]
       }
     },
-    "/api/v1/institutions/{institutionId}/me/timetable-events": {
+    "/api/v1/institutions/{institutionId}/me/personal-data": {
       "get": {
-        "operationId": "listMyTimetableEvents",
+        "description": "One document covering the account, the sign-in trail, the academic record, the learning record, notifications and the storage keys of your files.",
+        "operationId": "exportMyPersonalData",
         "parameters": [
           {
             "name": "institutionId",
@@ -6272,49 +6275,6 @@
             "in": "path",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "lecture",
-                "seminar",
-                "lab",
-                "consultation",
-                "exam",
-                "other"
-              ]
             }
           }
         ],
@@ -6324,10 +6284,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MyTimetableEventResponseDto"
-                  }
+                  "$ref": "#/components/schemas/PersonalDataExportDto"
                 }
               }
             }
@@ -6368,221 +6325,16 @@
             "access-token": []
           }
         ],
-        "summary": "List the current user’s timetable events overlapping a date range",
+        "summary": "Take a copy of everything this institution holds about you",
         "tags": [
-          "schedule"
+          "privacy"
         ]
       }
     },
-    "/api/v1/institutions/{institutionId}/me/exam-terms": {
-      "get": {
-        "operationId": "listMyExamTerms",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "kind",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "regular",
-                "first_retake",
-                "second_retake",
-                "state_exam"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MyExamTermResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "List the exam terms of the courses the current user attends or teaches",
-        "tags": [
-          "schedule"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/me/exam-registrations": {
-      "post": {
-        "operationId": "registerForExamTerm",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterForExamTermDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExamRegistrationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Register the current user for an exam term",
-        "tags": [
-          "schedule"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/me/exam-registrations/{id}": {
+    "/api/v1/institutions/{institutionId}/people/{userId}/personal-data": {
       "delete": {
-        "operationId": "cancelExamRegistration",
+        "description": "Irreversible. The account is anonymised, credentials and stored files are destroyed, free text written about the person is cleared, and enrolments, results and registrations stay — pointing at a row that no longer says who they were. Refused while another institution still has an active relationship with them.",
+        "operationId": "erasePersonalData",
         "parameters": [
           {
             "name": "institutionId",
@@ -6593,7 +6345,7 @@
             }
           },
           {
-            "name": "id",
+            "name": "userId",
             "required": true,
             "in": "path",
             "schema": {
@@ -6607,187 +6359,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExamRegistrationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Cancel the current user’s registration for an exam term",
-        "tags": [
-          "schedule"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable": {
-      "get": {
-        "operationId": "listOfferingTimetable",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TimetableEventResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Every class scheduled for this offering, in time order",
-        "tags": [
-          "scheduling"
-        ]
-      },
-      "post": {
-        "description": "With `repeatWeekly`, one slot becomes a row per week until the term ends, so moving or cancelling a single week is an ordinary edit. A room already booked for any part of the slot is refused.",
-        "operationId": "createTimetableEvent",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTimetableEventDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ScheduledEventsResponseDto"
+                  "$ref": "#/components/schemas/PersonalDataErasureResponseDto"
                 }
               }
             }
@@ -6848,1234 +6420,9 @@
             "access-token": []
           }
         ],
-        "summary": "Schedule a class, once or weekly to the end of term",
+        "summary": "Anonymise a person and keep their academic record",
         "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}": {
-      "patch": {
-        "operationId": "updateTimetableEvent",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "eventId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTimetableEventDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimetableEventRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Move a single class",
-        "tags": [
-          "scheduling"
-        ]
-      },
-      "delete": {
-        "description": "Cancelling says it was called off; removing says it never existed.",
-        "operationId": "removeTimetableEvent",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "eventId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Remove a class that should never have been scheduled",
-        "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}/cancellation": {
-      "post": {
-        "description": "A cancelled class stays visible and struck through: a student who turns up needs to see it was called off, not find nothing where it used to be.",
-        "operationId": "cancelTimetableEvent",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "eventId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimetableEventRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Call a class off, leaving it on the calendar",
-        "tags": [
-          "scheduling"
-        ]
-      },
-      "delete": {
-        "operationId": "restoreTimetableEvent",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "eventId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimetableEventRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Put a cancelled class back on",
-        "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms": {
-      "get": {
-        "operationId": "listOfferingExamTerms",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExamTermAdminResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Every exam term offered on this course, in time order",
-        "tags": [
-          "scheduling"
-        ]
-      },
-      "post": {
-        "description": "The registration window must close before the exam starts, and the examiner must be somebody who teaches the offering.",
-        "operationId": "createExamTerm",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateExamTermDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExamTermRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Offer an exam term",
-        "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}": {
-      "patch": {
-        "description": "Capacity may not be cut below the seats already held. A cancelled term cannot be changed.",
-        "operationId": "updateExamTerm",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "examTermId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateExamTermDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExamTermRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Move a term, or change its capacity or registration window",
-        "tags": [
-          "scheduling"
-        ]
-      },
-      "delete": {
-        "description": "Cancelling says it was called off; removing says it never existed.",
-        "operationId": "removeExamTerm",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "examTermId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Remove a term that should never have been offered",
-        "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}/cancellation": {
-      "post": {
-        "description": "A cancelled term stays on the record so that the students who held a seat can see it was called off.",
-        "operationId": "cancelExamTerm",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offeringId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "examTermId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExamTermRefDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Call a term off, releasing the seats it held",
-        "tags": [
-          "scheduling"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/search": {
-      "get": {
-        "description": "Permission decides what is searched rather than what is filtered afterwards, so a kind the caller cannot read is never queried and an empty result cannot be read as proof that something does not exist.",
-        "operationId": "search",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "required": true,
-            "in": "query",
-            "description": "At least two characters.",
-            "schema": {
-              "maxLength": 200,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchResultsDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Search everything the caller may see",
-        "tags": [
-          "search"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/me/enrollments/enrollable": {
-      "get": {
-        "operationId": "listEnrollableOfferings",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "termId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EnrollableOfferingResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "List the courses the caller may take, and say why not where they may not",
-        "tags": [
-          "courses"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/me/enrollments": {
-      "post": {
-        "description": "A request, not a place: the row is `requested` until the registrar’s system acknowledges it, and `active` immediately where no connector can be told.",
-        "operationId": "requestEnrollment",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RequestEnrollmentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Ask for a place on a course",
-        "tags": [
-          "courses"
-        ]
-      }
-    },
-    "/api/v1/institutions/{institutionId}/me/enrollments/{id}": {
-      "delete": {
-        "operationId": "withdrawFromCourse",
-        "parameters": [
-          {
-            "name": "institutionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the payload was malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflicts with an existing record.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Withdraw from a course while the window is still open",
-        "tags": [
-          "courses"
+          "privacy"
         ]
       }
     },
@@ -10804,6 +9151,1823 @@
           "catalogue"
         ]
       }
+    },
+    "/api/v1/institutions/{institutionId}/me/timetable-events": {
+      "get": {
+        "operationId": "listMyTimetableEvents",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lecture",
+                "seminar",
+                "lab",
+                "consultation",
+                "exam",
+                "other"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyTimetableEventResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the current user’s timetable events overlapping a date range",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/exam-terms": {
+      "get": {
+        "operationId": "listMyExamTerms",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "regular",
+                "first_retake",
+                "second_retake",
+                "state_exam"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyExamTermResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the exam terms of the courses the current user attends or teaches",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/exam-registrations": {
+      "post": {
+        "operationId": "registerForExamTerm",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterForExamTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamRegistrationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Register the current user for an exam term",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/exam-registrations/{id}": {
+      "delete": {
+        "operationId": "cancelExamRegistration",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamRegistrationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Cancel the current user’s registration for an exam term",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable": {
+      "get": {
+        "operationId": "listOfferingTimetable",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimetableEventResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Every class scheduled for this offering, in time order",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "post": {
+        "description": "With `repeatWeekly`, one slot becomes a row per week until the term ends, so moving or cancelling a single week is an ordinary edit. A room already booked for any part of the slot is refused.",
+        "operationId": "createTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTimetableEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledEventsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Schedule a class, once or weekly to the end of term",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}": {
+      "patch": {
+        "operationId": "updateTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimetableEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move a single class",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "delete": {
+        "description": "Cancelling says it was called off; removing says it never existed.",
+        "operationId": "removeTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a class that should never have been scheduled",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}/cancellation": {
+      "post": {
+        "description": "A cancelled class stays visible and struck through: a student who turns up needs to see it was called off, not find nothing where it used to be.",
+        "operationId": "cancelTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Call a class off, leaving it on the calendar",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "delete": {
+        "operationId": "restoreTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableEventRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Put a cancelled class back on",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms": {
+      "get": {
+        "operationId": "listOfferingExamTerms",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExamTermAdminResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Every exam term offered on this course, in time order",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "post": {
+        "description": "The registration window must close before the exam starts, and the examiner must be somebody who teaches the offering.",
+        "operationId": "createExamTerm",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExamTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamTermRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Offer an exam term",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}": {
+      "patch": {
+        "description": "Capacity may not be cut below the seats already held. A cancelled term cannot be changed.",
+        "operationId": "updateExamTerm",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examTermId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExamTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamTermRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move a term, or change its capacity or registration window",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "delete": {
+        "description": "Cancelling says it was called off; removing says it never existed.",
+        "operationId": "removeExamTerm",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examTermId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a term that should never have been offered",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}/cancellation": {
+      "post": {
+        "description": "A cancelled term stays on the record so that the students who held a seat can see it was called off.",
+        "operationId": "cancelExamTerm",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examTermId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamTermRefDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Call a term off, releasing the seats it held",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/search": {
+      "get": {
+        "description": "Permission decides what is searched rather than what is filtered afterwards, so a kind the caller cannot read is never queried and an empty result cannot be read as proof that something does not exist.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "At least two characters.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResultsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Search everything the caller may see",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments/enrollable": {
+      "get": {
+        "operationId": "listEnrollableOfferings",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnrollableOfferingResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the courses the caller may take, and say why not where they may not",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments": {
+      "post": {
+        "description": "A request, not a place: the row is `requested` until the registrar’s system acknowledges it, and `active` immediately where no connector can be told.",
+        "operationId": "requestEnrollment",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEnrollmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Ask for a place on a course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/me/enrollments/{id}": {
+      "delete": {
+        "operationId": "withdrawFromCourse",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Withdraw from a course while the window is still open",
+        "tags": [
+          "courses"
+        ]
+      }
     }
   },
   "info": {
@@ -11148,7 +11312,8 @@
               "role.granted",
               "role.revoked",
               "enrollment.corrected",
-              "exam_term.cancelled"
+              "exam_term.cancelled",
+              "personal_data.erased"
             ]
           },
           "subjectType": {
@@ -11157,7 +11322,8 @@
               "course_result",
               "role_assignment",
               "enrollment",
-              "exam_term"
+              "exam_term",
+              "personal_data_erasure"
             ]
           },
           "subjectId": {
@@ -14864,6 +15030,2013 @@
           "status"
         ]
       },
+      "ExportedAccountDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "sk"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "invited",
+              "active",
+              "suspended"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "locale",
+          "role",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ExportedEmailDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "institutionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "address",
+          "institutionId",
+          "verifiedAt",
+          "isPrimary",
+          "createdAt"
+        ]
+      },
+      "ExportedExternalIdentityDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "externalUsername": {
+            "type": "string",
+            "nullable": true
+          },
+          "assertedEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastAuthenticatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "issuer",
+          "subject",
+          "externalUsername",
+          "assertedEmail",
+          "lastAuthenticatedAt"
+        ]
+      },
+      "ExportedSessionDto": {
+        "type": "object",
+        "properties": {
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userAgent",
+          "ipAddress",
+          "createdAt",
+          "expiresAt",
+          "revokedAt"
+        ]
+      },
+      "ExportedPasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "consumedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "requestedAt",
+          "expiresAt",
+          "consumedAt"
+        ]
+      },
+      "ExportedInvitationDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "teacher",
+              "teaching_assistant",
+              "course_coordinator",
+              "program_coordinator",
+              "registrar",
+              "org_unit_manager",
+              "institution_admin"
+            ]
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "institution",
+              "org_unit",
+              "program",
+              "course_offering"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "address",
+          "role",
+          "scopeType",
+          "expiresAt",
+          "acceptedAt",
+          "createdAt"
+        ]
+      },
+      "ExportedRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "teacher",
+              "teaching_assistant",
+              "course_coordinator",
+              "program_coordinator",
+              "registrar",
+              "org_unit_manager",
+              "institution_admin"
+            ]
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "institution",
+              "org_unit",
+              "program",
+              "course_offering"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "role",
+          "scopeType",
+          "scopeId",
+          "validFrom",
+          "validUntil"
+        ]
+      },
+      "ExportedTeachingAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "courseTitle": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "lecturer",
+              "seminar_leader",
+              "lab_supervisor",
+              "examiner",
+              "assistant"
+            ]
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "courseOfferingId",
+          "courseCode",
+          "courseTitle",
+          "role",
+          "isPrimary"
+        ]
+      },
+      "ExportedProgramMembershipDto": {
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programCode": {
+            "type": "string"
+          },
+          "programName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "interrupted",
+              "graduated",
+              "terminated"
+            ]
+          },
+          "studyYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "programId",
+          "programCode",
+          "programName",
+          "status",
+          "studyYear",
+          "startedAt",
+          "endedAt"
+        ]
+      },
+      "ExportedEnrollmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "courseTitle": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ]
+          },
+          "requirementType": {
+            "type": "string",
+            "enum": [
+              "compulsory",
+              "optional",
+              "elective"
+            ]
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "enrolledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "courseOfferingId",
+          "courseCode",
+          "courseTitle",
+          "status",
+          "requirementType",
+          "attempt",
+          "enrolledAt",
+          "withdrawnAt"
+        ]
+      },
+      "ExportedCourseResultDto": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "calculated",
+              "proposed",
+              "official",
+              "corrected",
+              "annulled",
+              "disputed"
+            ]
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "calculatedPoints": {
+            "type": "number",
+            "nullable": true
+          },
+          "calculatedGrade": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed"
+            ]
+          },
+          "proposedGrade": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed"
+            ]
+          },
+          "proposedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "officialGrade": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "FX",
+              "passed",
+              "failed"
+            ]
+          },
+          "officialRecordedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "conflictNote": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "courseCode",
+          "status",
+          "attempt",
+          "calculatedPoints",
+          "calculatedGrade",
+          "proposedGrade",
+          "proposedAt",
+          "officialGrade",
+          "officialRecordedAt",
+          "conflictNote"
+        ]
+      },
+      "ExportedExamRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "examTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "registered",
+              "cancelled",
+              "attended",
+              "no_show",
+              "excused"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "registeredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "examTermId",
+          "courseCode",
+          "status",
+          "startsAt",
+          "registeredAt",
+          "cancelledAt"
+        ]
+      },
+      "ExportedStudyGroupMembershipDto": {
+        "type": "object",
+        "properties": {
+          "studyGroupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "studyGroupId",
+          "code",
+          "courseOfferingId"
+        ]
+      },
+      "ExportedAssessmentResultDto": {
+        "type": "object",
+        "properties": {
+          "assessmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assessmentName": {
+            "type": "string"
+          },
+          "points": {
+            "type": "number",
+            "nullable": true
+          },
+          "normalizedScore": {
+            "type": "number",
+            "nullable": true
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "gradedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "assessmentName",
+          "points",
+          "normalizedScore",
+          "feedback",
+          "gradedAt"
+        ]
+      },
+      "ExportedActivityCompletionDto": {
+        "type": "object",
+        "properties": {
+          "learningActivityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityName": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "incomplete",
+              "complete",
+              "complete_pass",
+              "complete_fail"
+            ]
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "learningActivityId",
+          "activityName",
+          "state",
+          "completedAt"
+        ]
+      },
+      "ExportedFileDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "storageKey",
+          "filename",
+          "contentType",
+          "sizeBytes"
+        ]
+      },
+      "ExportedSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "learningActivityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityName": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "returned",
+              "graded"
+            ]
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isLate": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedFileDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "learningActivityId",
+          "activityName",
+          "state",
+          "attempt",
+          "submittedAt",
+          "isLate",
+          "notes",
+          "files"
+        ]
+      },
+      "ExportedNotificationDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "exam_term_published",
+              "exam_term_rescheduled",
+              "exam_term_cancelled",
+              "assignment_due_published",
+              "assignment_due_rescheduled",
+              "grade_published",
+              "grade_corrected",
+              "enrollment_confirmed",
+              "enrollment_rejected",
+              "timetable_event_rescheduled",
+              "timetable_event_cancelled",
+              "exam_registration_confirmed",
+              "exam_registration_cancelled",
+              "exam_registration_refused"
+            ]
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "type",
+          "occurredAt",
+          "payload",
+          "readAt"
+        ]
+      },
+      "PersonalDataExportDto": {
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "account": {
+            "$ref": "#/components/schemas/ExportedAccountDto"
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedEmailDto"
+            }
+          },
+          "externalIdentities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedExternalIdentityDto"
+            }
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedSessionDto"
+            }
+          },
+          "passwordResets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedPasswordResetDto"
+            }
+          },
+          "invitations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedInvitationDto"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedRoleDto"
+            }
+          },
+          "teachingAssignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedTeachingAssignmentDto"
+            }
+          },
+          "programMemberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedProgramMembershipDto"
+            }
+          },
+          "enrollments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedEnrollmentDto"
+            }
+          },
+          "courseResults": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedCourseResultDto"
+            }
+          },
+          "examRegistrations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedExamRegistrationDto"
+            }
+          },
+          "studyGroupMemberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedStudyGroupMembershipDto"
+            }
+          },
+          "assessmentResults": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedAssessmentResultDto"
+            }
+          },
+          "activityCompletions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedActivityCompletionDto"
+            }
+          },
+          "submissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedSubmissionDto"
+            }
+          },
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedNotificationDto"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedFileDto"
+            }
+          }
+        },
+        "required": [
+          "institutionId",
+          "generatedAt",
+          "account",
+          "emails",
+          "externalIdentities",
+          "sessions",
+          "passwordResets",
+          "invitations",
+          "roles",
+          "teachingAssignments",
+          "programMemberships",
+          "enrollments",
+          "courseResults",
+          "examRegistrations",
+          "studyGroupMemberships",
+          "assessmentResults",
+          "activityCompletions",
+          "submissions",
+          "notifications",
+          "files"
+        ]
+      },
+      "ErasureTallyDto": {
+        "type": "object",
+        "properties": {
+          "refreshTokens": {
+            "type": "number"
+          },
+          "passwordResetTokens": {
+            "type": "number"
+          },
+          "userEmails": {
+            "type": "number"
+          },
+          "externalIdentities": {
+            "type": "number"
+          },
+          "invitations": {
+            "type": "number"
+          },
+          "submissionFiles": {
+            "type": "number"
+          },
+          "storedObjects": {
+            "type": "number"
+          },
+          "conflictNotes": {
+            "type": "number"
+          },
+          "assessmentFeedback": {
+            "type": "number"
+          },
+          "submissionNotes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "refreshTokens",
+          "passwordResetTokens",
+          "userEmails",
+          "externalIdentities",
+          "invitations",
+          "submissionFiles",
+          "storedObjects",
+          "conflictNotes",
+          "assessmentFeedback",
+          "submissionNotes"
+        ]
+      },
+      "PersonalDataErasureResponseDto": {
+        "type": "object",
+        "properties": {
+          "erasureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "erasedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tally": {
+            "$ref": "#/components/schemas/ErasureTallyDto"
+          }
+        },
+        "required": [
+          "erasureId",
+          "erasedAt",
+          "tally"
+        ]
+      },
+      "AcademicTermResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "semester",
+              "trimester",
+              "summer",
+              "year",
+              "other"
+            ],
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enrollmentOpensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enrollmentClosesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "academicYear",
+          "startsAt",
+          "endsAt",
+          "enrollmentOpensAt",
+          "enrollmentClosesAt"
+        ]
+      },
+      "CreateAcademicTermDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "2026W"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Winter semester 2026/2027"
+          },
+          "kind": {
+            "enum": [
+              "semester",
+              "trimester",
+              "summer",
+              "year",
+              "other"
+            ],
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "example": "2026/2027"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enrollmentOpensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Left unset, the term never opens for self-service enrolment."
+          },
+          "enrollmentClosesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "academicYear",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UpdateAcademicTermDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "2026W"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Winter semester 2026/2027"
+          },
+          "kind": {
+            "enum": [
+              "semester",
+              "trimester",
+              "summer",
+              "year",
+              "other"
+            ],
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "example": "2026/2027"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enrollmentOpensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Left unset, the term never opens for self-service enrolment."
+          },
+          "enrollmentClosesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        }
+      },
+      "BulkImportDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000000,
+            "description": "Delimited text pasted from a spreadsheet. Tab, semicolon and comma are all accepted; the first row names the columns."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Defaults to true. A dry run reports what would happen, row by row, and writes nothing."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "BulkRowResultDto": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "skipped",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "line",
+          "status",
+          "code",
+          "detail"
+        ]
+      },
+      "BulkImportResultDto": {
+        "type": "object",
+        "properties": {
+          "dryRun": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "number"
+          },
+          "created": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkRowResultDto"
+            }
+          }
+        },
+        "required": [
+          "dryRun",
+          "total",
+          "created",
+          "skipped",
+          "failed",
+          "rows"
+        ]
+      },
+      "ProgramResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "degreeLevel": {
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral",
+              "other"
+            ],
+            "type": "string"
+          },
+          "studyForm": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "distance"
+            ],
+            "type": "string"
+          },
+          "standardLengthSemesters": {
+            "type": "number",
+            "nullable": true
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "degreeLevel",
+          "studyForm",
+          "standardLengthSemesters",
+          "orgUnitId"
+        ]
+      },
+      "CreateProgramDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "degreeLevel": {
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral",
+              "other"
+            ],
+            "type": "string"
+          },
+          "studyForm": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "distance"
+            ],
+            "type": "string"
+          },
+          "standardLengthSemesters": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 20
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateProgramDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "degreeLevel": {
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral",
+              "other"
+            ],
+            "type": "string"
+          },
+          "studyForm": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "distance"
+            ],
+            "type": "string"
+          },
+          "standardLengthSemesters": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 20
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
+      "CourseResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "description",
+          "credits",
+          "orgUnitId"
+        ]
+      },
+      "CreateCourseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 120
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "title"
+        ]
+      },
+      "UpdateCourseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "credits": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 120
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
+      "CourseOfferingListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseCode": {
+            "type": "string"
+          },
+          "courseTitle": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "termCode": {
+            "type": "string"
+          },
+          "termName": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "enrolled": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "teacherCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "courseId",
+          "courseCode",
+          "courseTitle",
+          "academicTermId",
+          "termCode",
+          "termName",
+          "status",
+          "capacity",
+          "enrolled",
+          "language",
+          "teacherCount"
+        ]
+      },
+      "CreateCourseOfferingDto": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "academicTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64
+          },
+          "orgUnitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Defaults to the course’s own org unit."
+          }
+        },
+        "required": [
+          "courseId",
+          "academicTermId"
+        ]
+      },
+      "CourseOfferingAdminResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "capacity",
+          "status",
+          "language"
+        ]
+      },
+      "UpdateCourseOfferingDto": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "open",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 64
+          }
+        }
+      },
+      "CorrectEnrollmentDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string",
+            "description": "The correction verb: a registrar may put an enrolment into any state, including past a full course or back from a mistaken withdrawal."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CorrectedEnrollmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "ProgramMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "interrupted",
+              "graduated",
+              "terminated"
+            ],
+            "type": "string"
+          },
+          "studyYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "displayName",
+          "email",
+          "status",
+          "studyYear",
+          "startedAt",
+          "endedAt"
+        ]
+      },
+      "AdmitToProgramDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studyYear": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10
+          },
+          "status": {
+            "enum": [
+              "active",
+              "interrupted",
+              "graduated",
+              "terminated"
+            ],
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "UpdateProgramMembershipDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "interrupted",
+              "graduated",
+              "terminated"
+            ],
+            "type": "string",
+            "description": "Anything other than `active` takes the `student` role away and stamps the end date."
+          },
+          "studyYear": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10
+          },
+          "endedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        }
+      },
+      "StudyGroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "email"
+        ]
+      },
+      "StudyGroupResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "seminar",
+              "lab",
+              "exercise",
+              "project",
+              "other"
+            ],
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudyGroupMemberDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "code",
+          "name",
+          "capacity",
+          "members"
+        ]
+      },
+      "CreateStudyGroupDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "S1"
+          },
+          "kind": {
+            "enum": [
+              "seminar",
+              "lab",
+              "exercise",
+              "project",
+              "other"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "UpdateStudyGroupDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "S1"
+          },
+          "kind": {
+            "enum": [
+              "seminar",
+              "lab",
+              "exercise",
+              "project",
+              "other"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
+      },
+      "AddStudyGroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "TeachingAssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "lecturer",
+              "seminar_leader",
+              "lab_supervisor",
+              "examiner",
+              "assistant"
+            ],
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "displayName",
+          "email",
+          "role",
+          "isPrimary"
+        ]
+      },
+      "AssignTeacherDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "lecturer",
+              "seminar_leader",
+              "lab_supervisor",
+              "examiner",
+              "assistant"
+            ],
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "description": "At most one per offering — promoting a second demotes the first."
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
       "TimetableRoomDto": {
         "type": "object",
         "properties": {
@@ -16098,1027 +18271,6 @@
           "status",
           "enrolledAt",
           "withdrawnAt"
-        ]
-      },
-      "AcademicTermResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "kind": {
-            "enum": [
-              "semester",
-              "trimester",
-              "summer",
-              "year",
-              "other"
-            ],
-            "type": "string"
-          },
-          "academicYear": {
-            "type": "string"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "enrollmentOpensAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "enrollmentClosesAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "name",
-          "kind",
-          "academicYear",
-          "startsAt",
-          "endsAt",
-          "enrollmentOpensAt",
-          "enrollmentClosesAt"
-        ]
-      },
-      "CreateAcademicTermDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "example": "2026W"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "example": "Winter semester 2026/2027"
-          },
-          "kind": {
-            "enum": [
-              "semester",
-              "trimester",
-              "summer",
-              "year",
-              "other"
-            ],
-            "type": "string"
-          },
-          "academicYear": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 32,
-            "example": "2026/2027"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "enrollmentOpensAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time",
-            "description": "Left unset, the term never opens for self-service enrolment."
-          },
-          "enrollmentClosesAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "code",
-          "name",
-          "academicYear",
-          "startsAt",
-          "endsAt"
-        ]
-      },
-      "UpdateAcademicTermDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "example": "2026W"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "example": "Winter semester 2026/2027"
-          },
-          "kind": {
-            "enum": [
-              "semester",
-              "trimester",
-              "summer",
-              "year",
-              "other"
-            ],
-            "type": "string"
-          },
-          "academicYear": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 32,
-            "example": "2026/2027"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "enrollmentOpensAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time",
-            "description": "Left unset, the term never opens for self-service enrolment."
-          },
-          "enrollmentClosesAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        }
-      },
-      "BulkImportDto": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2000000,
-            "description": "Delimited text pasted from a spreadsheet. Tab, semicolon and comma are all accepted; the first row names the columns."
-          },
-          "dryRun": {
-            "type": "boolean",
-            "description": "Defaults to true. A dry run reports what would happen, row by row, and writes nothing."
-          }
-        },
-        "required": [
-          "text"
-        ]
-      },
-      "BulkRowResultDto": {
-        "type": "object",
-        "properties": {
-          "line": {
-            "type": "number"
-          },
-          "status": {
-            "enum": [
-              "created",
-              "skipped",
-              "failed"
-            ],
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "detail": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "line",
-          "status",
-          "code",
-          "detail"
-        ]
-      },
-      "BulkImportResultDto": {
-        "type": "object",
-        "properties": {
-          "dryRun": {
-            "type": "boolean"
-          },
-          "total": {
-            "type": "number"
-          },
-          "created": {
-            "type": "number"
-          },
-          "skipped": {
-            "type": "number"
-          },
-          "failed": {
-            "type": "number"
-          },
-          "rows": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BulkRowResultDto"
-            }
-          }
-        },
-        "required": [
-          "dryRun",
-          "total",
-          "created",
-          "skipped",
-          "failed",
-          "rows"
-        ]
-      },
-      "ProgramResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "degreeLevel": {
-            "enum": [
-              "bachelor",
-              "master",
-              "doctoral",
-              "other"
-            ],
-            "type": "string"
-          },
-          "studyForm": {
-            "enum": [
-              "full_time",
-              "part_time",
-              "distance"
-            ],
-            "type": "string"
-          },
-          "standardLengthSemesters": {
-            "type": "number",
-            "nullable": true
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "name",
-          "degreeLevel",
-          "studyForm",
-          "standardLengthSemesters",
-          "orgUnitId"
-        ]
-      },
-      "CreateProgramDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "degreeLevel": {
-            "enum": [
-              "bachelor",
-              "master",
-              "doctoral",
-              "other"
-            ],
-            "type": "string"
-          },
-          "studyForm": {
-            "enum": [
-              "full_time",
-              "part_time",
-              "distance"
-            ],
-            "type": "string"
-          },
-          "standardLengthSemesters": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 20
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "code",
-          "name"
-        ]
-      },
-      "UpdateProgramDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "degreeLevel": {
-            "enum": [
-              "bachelor",
-              "master",
-              "doctoral",
-              "other"
-            ],
-            "type": "string"
-          },
-          "studyForm": {
-            "enum": [
-              "full_time",
-              "part_time",
-              "distance"
-            ],
-            "type": "string"
-          },
-          "standardLengthSemesters": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 20
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        }
-      },
-      "CourseResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "credits": {
-            "type": "number",
-            "nullable": true
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "title",
-          "description",
-          "credits",
-          "orgUnitId"
-        ]
-      },
-      "CreateCourseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "description": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 2000
-          },
-          "credits": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 120
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "code",
-          "title"
-        ]
-      },
-      "UpdateCourseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "description": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 2000
-          },
-          "credits": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 120
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          }
-        }
-      },
-      "CourseOfferingListItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "courseId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "courseCode": {
-            "type": "string"
-          },
-          "courseTitle": {
-            "type": "string"
-          },
-          "academicTermId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "termCode": {
-            "type": "string"
-          },
-          "termName": {
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "planned",
-              "open",
-              "running",
-              "closed",
-              "cancelled"
-            ],
-            "type": "string"
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true
-          },
-          "enrolled": {
-            "type": "number"
-          },
-          "language": {
-            "type": "string",
-            "nullable": true
-          },
-          "teacherCount": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "courseId",
-          "courseCode",
-          "courseTitle",
-          "academicTermId",
-          "termCode",
-          "termName",
-          "status",
-          "capacity",
-          "enrolled",
-          "language",
-          "teacherCount"
-        ]
-      },
-      "CreateCourseOfferingDto": {
-        "type": "object",
-        "properties": {
-          "courseId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "academicTermId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0
-          },
-          "status": {
-            "enum": [
-              "planned",
-              "open",
-              "running",
-              "closed",
-              "cancelled"
-            ],
-            "type": "string"
-          },
-          "language": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 64
-          },
-          "orgUnitId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid",
-            "description": "Defaults to the course’s own org unit."
-          }
-        },
-        "required": [
-          "courseId",
-          "academicTermId"
-        ]
-      },
-      "CourseOfferingAdminResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true
-          },
-          "status": {
-            "enum": [
-              "planned",
-              "open",
-              "running",
-              "closed",
-              "cancelled"
-            ],
-            "type": "string"
-          },
-          "language": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "capacity",
-          "status",
-          "language"
-        ]
-      },
-      "UpdateCourseOfferingDto": {
-        "type": "object",
-        "properties": {
-          "capacity": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0
-          },
-          "status": {
-            "enum": [
-              "planned",
-              "open",
-              "running",
-              "closed",
-              "cancelled"
-            ],
-            "type": "string"
-          },
-          "language": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 64
-          }
-        }
-      },
-      "CorrectEnrollmentDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "enum": [
-              "requested",
-              "provisioning",
-              "active",
-              "completed",
-              "withdrawn",
-              "rejected"
-            ],
-            "type": "string",
-            "description": "The correction verb: a registrar may put an enrolment into any state, including past a full course or back from a mistaken withdrawal."
-          }
-        },
-        "required": [
-          "status"
-        ]
-      },
-      "CorrectedEnrollmentResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
-            "enum": [
-              "requested",
-              "provisioning",
-              "active",
-              "completed",
-              "withdrawn",
-              "rejected"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "status"
-        ]
-      },
-      "ProgramMemberResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "active",
-              "interrupted",
-              "graduated",
-              "terminated"
-            ],
-            "type": "string"
-          },
-          "studyYear": {
-            "type": "number",
-            "nullable": true
-          },
-          "startedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "endedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "userId",
-          "displayName",
-          "email",
-          "status",
-          "studyYear",
-          "startedAt",
-          "endedAt"
-        ]
-      },
-      "AdmitToProgramDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "studyYear": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 10
-          },
-          "status": {
-            "enum": [
-              "active",
-              "interrupted",
-              "graduated",
-              "terminated"
-            ],
-            "type": "string"
-          },
-          "startedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "userId"
-        ]
-      },
-      "UpdateProgramMembershipDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "enum": [
-              "active",
-              "interrupted",
-              "graduated",
-              "terminated"
-            ],
-            "type": "string",
-            "description": "Anything other than `active` takes the `student` role away and stamps the end date."
-          },
-          "studyYear": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 1,
-            "maximum": 10
-          },
-          "endedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          }
-        }
-      },
-      "StudyGroupMemberDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "userId",
-          "displayName",
-          "email"
-        ]
-      },
-      "StudyGroupResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "enum": [
-              "seminar",
-              "lab",
-              "exercise",
-              "project",
-              "other"
-            ],
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true
-          },
-          "members": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StudyGroupMemberDto"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "code",
-          "name",
-          "capacity",
-          "members"
-        ]
-      },
-      "CreateStudyGroupDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "example": "S1"
-          },
-          "kind": {
-            "enum": [
-              "seminar",
-              "lab",
-              "exercise",
-              "project",
-              "other"
-            ],
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": [
-          "code"
-        ]
-      },
-      "UpdateStudyGroupDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "example": "S1"
-          },
-          "kind": {
-            "enum": [
-              "seminar",
-              "lab",
-              "exercise",
-              "project",
-              "other"
-            ],
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "capacity": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 1000
-          }
-        }
-      },
-      "AddStudyGroupMemberDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "userId"
-        ]
-      },
-      "TeachingAssignmentResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "role": {
-            "enum": [
-              "lecturer",
-              "seminar_leader",
-              "lab_supervisor",
-              "examiner",
-              "assistant"
-            ],
-            "type": "string"
-          },
-          "isPrimary": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "userId",
-          "displayName",
-          "email",
-          "role",
-          "isPrimary"
-        ]
-      },
-      "AssignTeacherDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "lecturer",
-              "seminar_leader",
-              "lab_supervisor",
-              "examiner",
-              "assistant"
-            ],
-            "type": "string"
-          },
-          "isPrimary": {
-            "type": "boolean",
-            "description": "At most one per offering — promoting a second demotes the first."
-          }
-        },
-        "required": [
-          "userId"
         ]
       }
     }
