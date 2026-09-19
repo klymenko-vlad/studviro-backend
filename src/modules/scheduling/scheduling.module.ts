@@ -12,6 +12,8 @@ import { MyExamTermsService } from './my-exam-terms.service';
 import { MyTimetableEventsController } from './my-timetable-events.controller';
 import { MyTimetableEventsRepository } from './my-timetable-events.repository';
 import { MyTimetableEventsService } from './my-timetable-events.service';
+import { TimetableAdministrationController } from './timetable-administration.controller';
+import { TimetableAdministrationService } from './timetable-administration.service';
 
 @Module({
   imports: [NotificationsModule],
@@ -19,6 +21,7 @@ import { MyTimetableEventsService } from './my-timetable-events.service';
     MyTimetableEventsController,
     MyExamTermsController,
     MyExamRegistrationsController,
+    TimetableAdministrationController,
   ],
   providers: [
     ExamTermCancellationService,
@@ -28,6 +31,7 @@ import { MyTimetableEventsService } from './my-timetable-events.service';
     MyExamTermsRepository,
     MyExamRegistrationsService,
     MyExamRegistrationsRepository,
+    TimetableAdministrationService,
   ],
   exports: [
     MyTimetableEventsService,

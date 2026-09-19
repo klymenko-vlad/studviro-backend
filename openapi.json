@@ -4577,6 +4577,547 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable": {
+      "get": {
+        "operationId": "listOfferingTimetable",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimetableEventResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Every class scheduled for this offering, in time order",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "post": {
+        "description": "With `repeatWeekly`, one slot becomes a row per week until the term ends, so moving or cancelling a single week is an ordinary edit. A room already booked for any part of the slot is refused.",
+        "operationId": "createTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTimetableEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The number of classes scheduled."
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Schedule a class, once or weekly to the end of term",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}": {
+      "patch": {
+        "operationId": "updateTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimetableEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move a single class",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "delete": {
+        "description": "Cancelling says it was called off; removing says it never existed.",
+        "operationId": "removeTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a class that should never have been scheduled",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/timetable/{eventId}/cancellation": {
+      "post": {
+        "description": "A cancelled class stays visible and struck through: a student who turns up needs to see it was called off, not find nothing where it used to be.",
+        "operationId": "cancelTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Call a class off, leaving it on the calendar",
+        "tags": [
+          "scheduling"
+        ]
+      },
+      "delete": {
+        "operationId": "restoreTimetableEvent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Put a cancelled class back on",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/me/enrollments/enrollable": {
       "get": {
         "operationId": "listEnrollableOfferings",
@@ -11106,6 +11647,161 @@
           "registeredAt",
           "cancelledAt"
         ]
+      },
+      "TimetableEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "enum": [
+              "lecture",
+              "seminar",
+              "lab",
+              "consultation",
+              "exam",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "roomId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "roomCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "studyGroupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "studyGroupCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "startsAt",
+          "endsAt",
+          "cancelledAt",
+          "roomId",
+          "roomCode",
+          "studyGroupId",
+          "studyGroupCode"
+        ]
+      },
+      "CreateTimetableEventDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "lecture",
+              "seminar",
+              "lab",
+              "consultation",
+              "exam",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "roomId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "studyGroupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Restrict the class to one seminar or lab group."
+          },
+          "repeatWeekly": {
+            "type": "boolean",
+            "description": "Repeat the slot every week until the term ends. A university timetables a weekly slot, not one class at a time."
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UpdateTimetableEventDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "lecture",
+              "seminar",
+              "lab",
+              "consultation",
+              "exam",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "roomId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "studyGroupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Restrict the class to one seminar or lab group."
+          }
+        }
       },
       "EnrollmentAvailabilityDto": {
         "type": "object",
