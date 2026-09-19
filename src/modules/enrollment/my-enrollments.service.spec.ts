@@ -5,6 +5,7 @@ import {
   EntityNotFoundError,
   InvalidInputError,
 } from '../../common/errors/domain.error';
+import { retryOnSerializationFailure } from '../../database/serializable-retry';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
 
@@ -38,6 +39,8 @@ describe('MyEnrollmentsService', () => {
 
   const txHost = {
     run: (fn: () => Promise<unknown>) => fn(),
+    runSerializable: (fn: () => Promise<unknown>) =>
+      retryOnSerializationFailure(fn, { sleep: () => Promise.resolve() }),
   } as unknown as TransactionHost;
 
   let service: MyEnrollmentsService;
@@ -72,6 +75,24 @@ describe('MyEnrollmentsService', () => {
       await expect(ask()).resolves.toMatchObject({ status: 'active' });
       expect(activate).toHaveBeenCalledWith('enrollment-1', NOW);
       expect(applied).toHaveBeenCalled();
+    });
+
+    it('replays a request that lost a serialisation race, rather than refusing it', async () => {
+      findEnrollable
+        .mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: '40001' }))
+        .mockResolvedValue(offering());
+
+      await expect(ask()).resolves.toMatchObject({ status: 'active' });
+      expect(findEnrollable).toHaveBeenCalledTimes(2);
+    });
+
+    it('answers a replay honestly when the race filled the last place', async () => {
+      findEnrollable
+        .mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: '40001' }))
+        .mockResolvedValue(offering({ capacity: 30, occupiedSeats: 30 }));
+
+      await expect(ask()).rejects.toMatchObject({ code: 'OFFERING_FULL' });
+      expect(request).not.toHaveBeenCalled();
     });
 
     it('reuses the row a student withdrew from rather than opening a second', async () => {

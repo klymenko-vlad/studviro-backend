@@ -30,28 +30,19 @@ export class MyExamRegistrationsService {
     examTermId: string,
     now = new Date(),
   ): Promise<ExamRegistration> {
-    const registration = await this.txHost.run(
-      async () => {
-        const term = await this.repository.findRegistrableTerm(
-          institutionId,
-          userId,
-          examTermId,
-        );
+    const registration = await this.txHost.runSerializable(async () => {
+      const term = await this.repository.findRegistrableTerm(institutionId, userId, examTermId);
 
-        if (!term) throw new EntityNotFoundError('exam term', examTermId);
+      if (!term) throw new EntityNotFoundError('exam term', examTermId);
 
-        this.assertEnrolled(term);
-        this.assertLaddered(term);
-        this.assertOpen(term, now);
-        await this.assertNotAlreadyRegistered(institutionId, userId, term);
-        this.assertSeatFree(term);
+      this.assertEnrolled(term);
+      this.assertLaddered(term);
+      this.assertOpen(term, now);
+      await this.assertNotAlreadyRegistered(institutionId, userId, term);
+      this.assertSeatFree(term);
 
-        const created = await this.repository.register(institutionId, userId, examTermId, now);
-
-        return created;
-      },
-      { isolationLevel: 'serializable' },
-    );
+      return this.repository.register(institutionId, userId, examTermId, now);
+    });
 
     await this.notifications.confirmed(registration, now);
 

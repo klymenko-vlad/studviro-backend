@@ -6,6 +6,7 @@ import {
   InvalidInputError,
 } from '../../common/errors/domain.error';
 import type { ExamRegistration } from '../../database/schema';
+import { retryOnSerializationFailure } from '../../database/serializable-retry';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
 
@@ -59,6 +60,8 @@ describe(MyExamRegistrationsService.name, () => {
 
   const txHost = {
     run: (fn: () => Promise<unknown>) => fn(),
+    runSerializable: (fn: () => Promise<unknown>) =>
+      retryOnSerializationFailure(fn, { sleep: () => Promise.resolve() }),
   } as unknown as TransactionHost;
 
   const confirmed = vi.fn();

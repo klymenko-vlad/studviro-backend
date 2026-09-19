@@ -2,6 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { type Database, DRIZZLE, DRIZZLE_RO, type Transaction } from './database.tokens';
 import {
+  retryOnSerializationFailure,
+  type SerializableRetryOptions,
+} from './serializable-retry';
+import {
   currentTransaction,
   runInTransaction,
   type TransactionOptions,
@@ -69,6 +73,31 @@ export class TransactionHost {
    */
   run<T>(fn: (tx: Transaction) => Promise<T>, options?: TransactionOptions): Promise<T> {
     return runInTransaction(this.primary, fn, options);
+  }
+
+  /**
+   * A serialisable transaction that replays itself when it loses a race.
+   *
+   * `serializable` is what makes a capacity check honest — the seat count is
+   * read and written inside the transaction, so a conflicting pair cannot both
+   * commit. The cost is that under a herd a large share of callers are told to
+   * retry, and without this they are told that instead of being served.
+   *
+   * A replay re-reads: the attempt that finds the course full now gets a
+   * correct `OFFERING_FULL` rather than a conflict. `fn` must therefore be safe
+   * to run more than once, which it is — the rolled-back attempt left nothing.
+   *
+   * Joined transactions are not retried: the outer transaction is already
+   * doomed, so replaying only the inner part would commit nothing.
+   */
+  runSerializable<T>(
+    fn: (tx: Transaction) => Promise<T>,
+    retry?: SerializableRetryOptions,
+  ): Promise<T> {
+    const attempt = (): Promise<T> =>
+      runInTransaction(this.primary, fn, { isolationLevel: 'serializable' });
+
+    return this.isActive ? attempt() : retryOnSerializationFailure(attempt, retry);
   }
 }
 

@@ -33,27 +33,20 @@ export class MyEnrollmentsService {
     offeringId: string,
     now = new Date(),
   ): Promise<Enrollment> {
-    const enrollment = await this.txHost.run(
-      async () => {
-        const offering = await this.repository.findEnrollable(
-          institutionId,
-          userId,
-          offeringId,
-        );
-        if (!offering) throw new EntityNotFoundError('course offering', offeringId);
+    const enrollment = await this.txHost.runSerializable(async () => {
+      const offering = await this.repository.findEnrollable(institutionId, userId, offeringId);
+      if (!offering) throw new EntityNotFoundError('course offering', offeringId);
 
-        this.assertOnOffer(offering);
-        this.assertOpen(offering, now);
-        this.assertNotAlreadyIn(offering);
-        await this.assertStudent(institutionId, userId);
-        this.assertSeatFree(offering);
+      this.assertOnOffer(offering);
+      this.assertOpen(offering, now);
+      this.assertNotAlreadyIn(offering);
+      await this.assertStudent(institutionId, userId);
+      this.assertSeatFree(offering);
 
-        return offering.myEnrollmentId
-          ? this.repository.reopen(offering.myEnrollmentId, now)
-          : this.repository.request(institutionId, userId, offeringId, now);
-      },
-      { isolationLevel: 'serializable' },
-    );
+      return offering.myEnrollmentId
+        ? this.repository.reopen(offering.myEnrollmentId, now)
+        : this.repository.request(institutionId, userId, offeringId, now);
+    });
 
     // StudViro is the system of record, so a place asked for is a place given:
     // there is nobody upstream to approve it (ADR 0024).
