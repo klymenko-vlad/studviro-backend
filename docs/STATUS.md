@@ -2,19 +2,17 @@
 
 Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
 
-Last updated: 2026-09-18 (**the product pivoted — read ADR 0024 before anything else**)
+Last updated: 2026-09-19 (**the product pivoted — read ADR 0024 before anything else**)
 
 ## What this is
 
 **A standalone academic platform that does the job AIS2 and Moodle do between them.** The
 institution enters its own data and StudViro is where that data lives. There is no upstream.
 
-This changed on 2026-09-18. It was scoped as a unified surface _over_ those two systems, and
-the integration was never connected to anything — no HTTP client exists anywhere in
-`modules/connectors`, both registered connectors generate data in-process from a seed, and
-`healthCheck()` returns `reachable: true` without checking. ADR 0024 records the decision and
-what it costs. `docs/Product Plan.md` is the backlog now; `Tasks Plan.md` is superseded
-research output kept for the record.
+That changed on 2026-09-18: it had been scoped as a surface _over_ those two systems and the
+integration was never connected to anything. ADR 0024 records the decision and what it cost.
+`docs/Product Plan.md` is the backlog; `Tasks Plan.md` and `Task Tracker.md` are superseded
+research output kept for the record — believe their banners.
 
 ## Stack
 
@@ -54,46 +52,40 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   seat holders and the examiner, not everyone enrolled.
 - **Institution configuration means something** — a feature flag closes the door and the
   navigation hides the tab; flags that gate nothing say so.
+- **A demo university** — `pnpm db:seed` writes ~5,900 canonical rows so a fresh checkout
+  has something to open (ADR 0025).
 - **Public surface, API, CI, deployment** — home and audience landings, `/contact` over a
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — R6: a demo seed, because there is nothing to look at
+## Next task — N1: academic terms an institution can create
 
-**Phase 0 of `Product Plan.md` is done except R6, and R6 blocks everything else being
-demonstrable.** `pnpm db:seed` currently creates two users and no institution, so a fresh
-checkout has no programmes, no courses, no term, no students — nothing to open a screen on.
+**Phase 0 of `Product Plan.md` is done.** `pnpm db:seed` writes a whole demo university —
+~5,900 rows, fifteen tables, about a second — so every screen has something on it. Sign in
+as `ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
+`admin@studviro.local`; the password is `correct horse battery staple` unless the account
+already existed on this machine. ADR 0025 records what the seed is and why it replaces
+rather than merges.
 
-The `mock-sis` dataset generator was the only realistic synthetic university this project had
-(~5,000 linked records: faculties, departments, programmes, courses, offerings, teachers,
-students, enrolments, timetables, exam terms, results). It was deleted with
-`modules/connectors`. **Recover it from git at `9d28d63~1`**, under
-`src/modules/connectors/mock-sis/`, and rewrite it as a seeding script:
+**Now Phase 1 of `Product Plan.md`: the registry an institution can actually run.** None of
+these can be created today, because every one of them arrived by import:
 
-- It currently emits `ConnectorRecord<T>` objects for an importer to apply. It should write
-  canonical rows directly through the repositories, in dependency order.
-- Drop `externalId`, `sourceVersion` and `sourceUpdatedAt` — those columns are gone.
-- Keep the deterministic seed, so two runs produce the same university.
-- Wire it behind `pnpm db:seed` for a named demo institution, and make it idempotent or
-  clearly destructive — say which.
+| #   | Missing               | Consequence                                                           |
+| --- | --------------------- | --------------------------------------------------------------------- |
+| N1  | Academic terms        | Nothing to enrol into; the enrolment window lives here                |
+| N2  | Org units and rooms   | No faculties, no place to hold a class                                |
+| N3  | Course offerings      | `PATCH` exists; there is no `POST`                                    |
+| N4  | Teaching assignments  | Nobody can be made a course's teacher                                 |
+| N5  | Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
+| N6  | Study groups          | No seminar or lab groups                                              |
+| N7  | Timetable events      | `schedule:manage` still gates nothing                                 |
+| N8  | Exam terms            | Students can register for exams nobody can create                     |
+| N9  | Bulk entry            | A term's worth of offerings and people, pasted                        |
 
-**Then Phase 1 of `Product Plan.md`: the registry an institution can actually run.** This is
-the real remaining scope and it is larger than it sounds. None of these can be created today,
-because every one of them arrived by import:
-
-| Missing               | Consequence                                                           |
-| --------------------- | --------------------------------------------------------------------- |
-| Academic terms        | Nothing to enrol into; the enrolment window lives here                |
-| Org units and rooms   | No faculties, no place to hold a class                                |
-| Course offerings      | `PATCH` exists; there is no `POST`                                    |
-| Teaching assignments  | Nobody can be made a course's teacher                                 |
-| Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
-| Study groups          | No seminar or lab groups                                              |
-| Timetable events      | `schedule:manage` still gates nothing                                 |
-| Exam terms            | Students can register for exams nobody can create                     |
-
-Take them roughly in that order: it is dependency order, and programme memberships are the
-one that unblocks a feature that already exists.
+Take them in that order: it is dependency order, and N5 unblocks a feature that already
+exists. **N1 means**: `POST`/`PATCH` on academic terms under `institution:manage`, and a
+screen under `/institutions/:id/` where an administrator creates a term and sets its
+enrolment window.
 
 **After Phase 1, Phase 2 is the Moodle half** — file storage first, then learning spaces,
 materials, assignments, submissions and marking. It is the larger of the two halves and it
@@ -107,8 +99,16 @@ needs object storage the platform does not have.
 - `/enroll` and `/exams` render the same card-and-reason shape twice, and
   `EnrollableOfferingCard` repeats `ExamTermCard`'s window and seats logic. One shared
   component would cover both.
-- `admin@studviro.local`'s password on this machine's dev database is `newpassword123`, not
-  the seed default; `pnpm db:seed` does not reset an existing user's password.
+- `pnpm db:seed` does not reset an existing user's password, deliberately. On this
+  machine's dev database `admin@studviro.local` is `newpassword123`, not the seed default.
+- The demo seed's anchor is fixed at 2026-10-15, which is what makes it deterministic. The
+  seeded academic year is 2026/2027; once real time leaves it, move the anchor.
+- The seed only deletes the institution it owns. Institutions created by hand during
+  earlier sessions stay, and a user who belongs to both sees both in the institution
+  switcher.
+- `test/setup/global-setup.ts` reuses `DATABASE_URL` when it is set, and the e2e harness
+  truncates every table. Running `pnpm test:e2e` against the dev database wipes it —
+  re-seed afterwards.
 - `UsersRepository.findInvitedByEmail` is not scoped to the inviting institution — two
   institutions inviting the same address would contend for one shadow row. See ADR 0018.
 - The frontend dev server does not reliably hot-reload `messages/*.json` under Turbopack;

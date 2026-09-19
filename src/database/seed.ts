@@ -5,15 +5,30 @@ import postgres from 'postgres';
 
 import { PasswordService } from '../common/crypto/password.service';
 
+import {
+  buildPlan,
+  DEFAULT_DEMO_SEED_OPTIONS,
+  DEFAULT_NAMED_ACCOUNTS,
+  writePlan,
+} from './demo-seed';
 import * as schema from './schema';
-import { users } from './schema';
+
+const DEMO_PASSWORD = 'correct horse battery staple';
 
 /**
- * Idempotent development data. Safe to run repeatedly: every row is upserted on
- * its natural key, so re-seeding never duplicates and never wipes.
+ * Writes a whole demo university: a named institution with faculties,
+ * departments, rooms, terms, programmes, courses, offerings, teachers,
+ * students, enrolments, study groups, a timetable, exam terms and a past
+ * year's results.
  *
- * Refuses to run against production — a seed that overwrites a real admin
- * password is a very short path to an incident.
+ * **Destructive for the demo institution only.** Re-running replaces it: the
+ * institution is deleted by code and the cascade takes everything scoped to it
+ * with it, so two runs leave the same university rather than two of it. The
+ * named accounts below are updated in place and never deleted, and an existing
+ * account's password is left alone — a seed that silently resets a password
+ * somebody changed is a support ticket waiting to happen.
+ *
+ * Refuses to run against production.
  */
 async function main(): Promise<void> {
   if (process.env.NODE_ENV === 'production') {
@@ -28,32 +43,24 @@ async function main(): Promise<void> {
   const passwords = new PasswordService();
 
   try {
-    const passwordHash = await passwords.hash('correct horse battery staple');
+    const passwordHash = await passwords.hash(DEMO_PASSWORD);
+    const options = DEFAULT_DEMO_SEED_OPTIONS;
+    const plan = buildPlan(options);
 
-    const seeded = await db
-      .insert(users)
-      .values([
-        {
-          email: 'admin@studviro.local',
-          displayName: 'Studviro Admin',
-          role: 'admin' as const,
-          passwordHash,
-        },
-        {
-          email: 'ada@studviro.local',
-          displayName: 'Ada Lovelace',
-          role: 'user' as const,
-          passwordHash,
-        },
-      ])
-      .onConflictDoNothing()
-      .returning({ email: users.email });
+    const started = Date.now();
+    const summary = await writePlan(db, plan, options, passwordHash);
+    const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
-    console.log(
-      seeded.length > 0
-        ? `seeded ${seeded.length} user(s): ${seeded.map((u) => u.email).join(', ')}`
-        : 'nothing to seed — the users already exist',
-    );
+    console.log(`seeded ${options.universityName} (${summary.institutionId}) in ${seconds}s`);
+    for (const [table, count] of Object.entries(summary.counts)) {
+      console.log(`  ${table.padEnd(24)} ${count}`);
+    }
+    console.log('\nsign in with any of these — password:', JSON.stringify(DEMO_PASSWORD));
+    console.log(`  administrator  ${DEFAULT_NAMED_ACCOUNTS.adminEmail}`);
+    console.log(`  registrar      ${DEFAULT_NAMED_ACCOUNTS.registrarEmail}`);
+    console.log(`  teacher        ${DEFAULT_NAMED_ACCOUNTS.teacherEmail}`);
+    console.log(`  student        ${DEFAULT_NAMED_ACCOUNTS.studentEmail}`);
+    console.log('(an account that already existed keeps the password it had)');
   } finally {
     await client.end();
   }

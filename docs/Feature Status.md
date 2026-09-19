@@ -9,7 +9,7 @@ What a user can actually do in StudViro today, by audience. This is the product 
 `docs/STATUS.md` is the handoff note. Update the affected row in the same commit as the
 work, per the `ship-backlog-step` skill.
 
-Last updated: 2026-09-18
+Last updated: 2026-09-19
 
 ## States
 
@@ -83,13 +83,14 @@ Last updated: 2026-09-18
 
 ## Platform
 
-| Capability                           | State     | Notes                                                                                          |
-| ------------------------------------ | --------- | ---------------------------------------------------------------------------------------------- |
-| Canonical academic model             | `Live`    | 25 institution-scoped tables covering the whole academic year, soft-deleted rather than erased |
-| Learning spaces and activities       | `Partial` | Tables and read surfaces exist; nothing creates them yet — Phase 2 of `Product Plan.md`        |
-| Assessments, submissions and marking | `Planned` | Tables exist and nothing writes them. The Moodle half — Phase 2 of `Product Plan.md`           |
-| Generated API contract               | `Live`    | `openapi.json` drift-checked; the client is generated from it                                  |
-| Observability                        | `Partial` | Pino correlation logs, health probes, Prometheus metrics                                       |
-| Containerized deployment             | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                          |
-| Backup and restore                   | `Planned` | Step 55                                                                                        |
-| End-to-end and security tests        | `Planned` | Steps 59–62; unit and domain tests are continuous                                              |
+| Capability                           | State     | Notes                                                                                                                                                                                                                                                                                    |
+| ------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canonical academic model             | `Live`    | 25 institution-scoped tables covering the whole academic year, soft-deleted rather than erased                                                                                                                                                                                           |
+| A demo university to open            | `Live`    | `pnpm db:seed` writes ~5,900 canonical rows across fifteen tables — faculties, rooms, terms, programmes, courses, offerings, teachers, students, enrolments, groups, timetable, exam terms and a past year's results. Deterministic; destructive for its own institution only (ADR 0025) |
+| Learning spaces and activities       | `Partial` | Tables and read surfaces exist; nothing creates them yet — Phase 2 of `Product Plan.md`                                                                                                                                                                                                  |
+| Assessments, submissions and marking | `Planned` | Tables exist and nothing writes them. The Moodle half — Phase 2 of `Product Plan.md`                                                                                                                                                                                                     |
+| Generated API contract               | `Live`    | `openapi.json` drift-checked; the client is generated from it                                                                                                                                                                                                                            |
+| Observability                        | `Partial` | Pino correlation logs, health probes, Prometheus metrics                                                                                                                                                                                                                                 |
+| Containerized deployment             | `Partial` | Backend Dockerfile and compose ship; the client's deployment does not                                                                                                                                                                                                                    |
+| Backup and restore                   | `Planned` | Step 55                                                                                                                                                                                                                                                                                  |
+| End-to-end and security tests        | `Planned` | Steps 59–62; unit and domain tests are continuous                                                                                                                                                                                                                                        |
