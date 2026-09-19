@@ -12,6 +12,8 @@ import { CatalogueService } from './catalogue.service';
 import { CourseOfferingsController } from './course-offerings.controller';
 import { OfferingAdministrationController } from './offering-administration.controller';
 import { OfferingAdministrationService } from './offering-administration.service';
+import { TeachingAssignmentsController } from './teaching-assignments.controller';
+import { TeachingAssignmentsService } from './teaching-assignments.service';
 
 @Module({
   controllers: [
@@ -19,6 +21,7 @@ import { OfferingAdministrationService } from './offering-administration.service
     CatalogueController,
     CourseOfferingsController,
     OfferingAdministrationController,
+    TeachingAssignmentsController,
   ],
   providers: [
     AcademicTermsService,
@@ -27,6 +30,7 @@ import { OfferingAdministrationService } from './offering-administration.service
     ProgramsCatalogueRepository,
     CoursesCatalogueRepository,
     OfferingAdministrationService,
+    TeachingAssignmentsService,
   ],
   exports: [AcademicTermsService, CatalogueService, OfferingAdministrationService],
 })
