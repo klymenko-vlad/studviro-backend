@@ -102,18 +102,18 @@ also the answer to the five-column table on a 375 px phone; `Switch` given a 24 
 
 ## Phase 4 — Fit to run
 
-| #   | Step                                          | Carries over | Status      |
-| --- | --------------------------------------------- | ------------ | ----------- |
-| O1  | GDPR data inventory and DPIA                  | step 19      | **Drafted** |
-| O2  | Threat model                                  | step 20      | **Drafted** |
-| O3  | Structured audit events                       | step 49      | **Done**    |
-| O4  | Personal-data export and erasure              | step 50      | **Done**    |
-| O5  | Metrics and operational liveness              | step 53      | **Done**    |
-| O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
-| O7  | Authorization-negative and security tests     | step 60      | **Done**    |
-| O8  | Performance and load tests                    | step 61      | **Done**    |
-| O9  | Accessibility tests                           | step 62      | **Done**    |
-| O10 | Administrator and user documentation          | steps 68, 69 | **Done**    |
+| #   | Step                                          | Carries over | Status   |
+| --- | --------------------------------------------- | ------------ | -------- |
+| O1  | GDPR data inventory and DPIA                  | step 19      | **Done** |
+| O2  | Threat model                                  | step 20      | **Done** |
+| O3  | Structured audit events                       | step 49      | **Done** |
+| O4  | Personal-data export and erasure              | step 50      | **Done** |
+| O5  | Metrics and operational liveness              | step 53      | **Done** |
+| O6  | Backup and restore, proven by a restore drill | step 55      | **Done** |
+| O7  | Authorization-negative and security tests     | step 60      | **Done** |
+| O8  | Performance and load tests                    | step 61      | **Done** |
+| O9  | Accessibility tests                           | step 62      | **Done** |
+| O10 | Administrator and user documentation          | steps 68, 69 | **Done** |
 
 **O4 is `src/modules/privacy/`**, built to ADR 0030. `GET /institutions/:institutionId/me/personal-data`
 answers Article 15 for the caller and nobody else — account, sign-in trail, roles,
@@ -145,6 +145,13 @@ institution from nothing to a running term in the order the screens require, the
 the ongoing jobs, naming the permission and the screen for each. The second is two short
 audiences, student and teacher. Both end with what is deliberately absent, so nobody
 hunts for a screen that is not there.
+
+**O1 and O2 are as complete as this repository can make them.** `GDPR Data Inventory.md`,
+`DPIA.md` and `Threat Model.md` are written from the code, field by field and boundary by
+boundary. What is left in them is a table at the top of each headed _What the institution
+must supply_ — the controller's identity, the DPO, retention periods, the lawful basis per
+purpose, the hosting provider's controls. Those are not knowable from source and were
+deliberately marked `TODO(institution)` rather than invented.
 
 **O5 was renamed.** "Freshness" meant lag behind the upstream system, and ADR 0024 removed
 the upstream: on a system of record there is nothing to be stale relative to. It is now
