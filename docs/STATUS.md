@@ -53,7 +53,10 @@ machine, which keeps the password it had. `admin@studviro.local` here is `newpas
   learning spaces, materials, assignments, submissions and marking (ADR 0028), all on the
   course offering page. L7 decided: **no quizzes**, and why.
 - **Phase 3** — U1, U4, U5 done. U2 and U3 have backends. **U6 is not started.**
-- **Phase 4** — O1, O2, O5, O6, O7, O9 done. O3 has a backend. **O4 is not started.**
+- **Phase 4** — O1, O2, O5, O6, O7, O8, O9, O10 done. O3 has a backend. **O4 is not
+  started.**
+
+**28 of the 33 backlog items are complete.** The five that are not are listed below.
 
 ## What to do next
 
@@ -72,7 +75,17 @@ org-unit tree**. `useTerminology(institutionId)` already exists in
 `frontend/src/entities/institution-configuration`; the work is applying it across the
 screens and keying the strings that are still hard-coded English nouns.
 
-**3. O4 — personal-data export and erasure. The largest correctness gap left.**
+**3. Two defects the load test found, both in `docs/Performance.md`.** Roughly a quarter
+of an enrolment rush gets `409 SERIALIZATION_FAILURE` and **nothing retries it** — a
+bounded retry around `MyEnrollmentsService.request` is the fix. And raising
+`DATABASE_POOL_MAX` from 10 to 40 makes it _worse_: conflicts reach 80.6% and places go
+unsold. The small pool is accidental admission control; do not "optimise" it away.
+
+**4. The two guides do not yet cover the learning half or search.** `Administrator Guide.md`
+and `User Guide.md` were written while L2–L6 and U3 were still landing, so materials,
+assignments, submissions, marking and the search box are missing from both.
+
+**5. O4 — personal-data export and erasure. The largest correctness gap left.**
 **ADR 0030 already settles the design; read it before writing code.** The urgency is in
 `docs/GDPR Data Inventory.md`: **nothing in this system ever hard-deletes.**
 `BaseRepository.hardDelete` has no caller outside refresh-token purging, every removal verb
