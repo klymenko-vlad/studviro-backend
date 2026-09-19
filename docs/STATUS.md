@@ -1,8 +1,8 @@
 # Status
 
-Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
+Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-09-19 (**the product pivoted — read ADR 0024 before anything else**)
+Last updated: 2026-09-19
 
 ## What this is
 
@@ -10,128 +10,124 @@ Last updated: 2026-09-19 (**the product pivoted — read ADR 0024 before anythin
 institution enters its own data and StudViro is where that data lives. There is no upstream.
 
 That changed on 2026-09-18: it had been scoped as a surface _over_ those two systems and the
-integration was never connected to anything. ADR 0024 records the decision and what it cost.
-`docs/Product Plan.md` is the backlog; `Tasks Plan.md` and `Task Tracker.md` are superseded
-research output kept for the record — believe their banners.
+integration was never connected to anything. **Read `adr/0024` first.** `docs/Product Plan.md`
+is the live backlog; `Tasks Plan.md` and `Task Tracker.md` are superseded research output
+kept for the record — believe their banners.
 
 ## Stack
 
-NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · generated OpenAPI · Vitest +
-Testcontainers. The client is Next.js 16 App Router with Feature-Sliced Design and acts as the
-BFF. Decisions live in `docs/adr/`.
+NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · MinIO (S3-compatible) · generated
+OpenAPI · Vitest + Testcontainers. The client is Next.js 16 App Router with Feature-Sliced
+Design and acts as the BFF. Decisions live in `docs/adr/`.
 
-## Done
+## Start here
 
-Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
+```
+cd backend  && pnpm docker:up && pnpm db:migrate && pnpm db:seed && pnpm build && node dist/main.js
+cd frontend && pnpm dev            # port 3001; the API is on 3010
+```
 
-- **Foundation** — modular monolith (ADR 0002), `ROLE=api|worker|all`, validated env, graceful
-  shutdown, Pino correlation logs, health, metrics, BullMQ, Redis locks, idempotency; Drizzle
-  migrations, transaction-mediated institution-scoped repositories, keyset pagination, soft
-  deletion and 25 academic tables (ADR 0009).
-- **Auth and authorization** — argon2 credentials, rotating JWT/refresh sessions (ADR 0003),
-  canonical roles, scope ancestry, the permission catalogue, `PermissionsGuard` /
-  `@RequirePermission`, and a platform-operator tier holding no academic permission (ADR 0016).
-- **Onboarding and the grant rules** (ADRs 0015–0018) — `student` derives from an active
-  programme membership and `teacher` from a teaching assignment, so neither is grantable by
-  hand; `role:assign` is checked at the scope being granted on; an institution's last admin
-  cannot be revoked. Institution creation, invitations, sign-up, password reset.
-- **The student's year** — courses and a 360° course page; grades with calculated/proposed/
-  official stages; a dashboard; the week calendar with exam terms and deadlines as layers
-  (ADR 0013, 0021); exam terms and registration with the server answering why a seat is out of
-  reach (ADR 0011); **self-service course enrolment**; the notification inbox with
-  `type:subject:day` deduplication (ADR 0012).
-- **The teacher's and registrar's year** — teaching offerings and rosters; **grade entry**
-  behind `grade:propose` / `grade:publish`, checked separately, where publishing spends the
-  attempt; **catalogue administration** of programmes, courses, offering capacity and status;
-  the registrar's enrolment correction verb.
-- **The rules mean what their enums say** — pass, fail and the 1–4 scale sit beside
-  `COURSE_GRADES`; the retake ladder is enforced and explained; a resit is a second attempt
-  rather than an overwrite; an annulled result has no standing; a cancelled term releases its
-  seats; a cancellation is recorded rather than erased.
-- **Eleven notification families** reaching the right people — a term that moves reaches the
-  seat holders and the examiner, not everyone enrolled.
-- **Institution configuration means something** — a feature flag closes the door and the
-  navigation hides the tab; flags that gate nothing say so.
-- **A demo university** — `pnpm db:seed` writes ~5,900 canonical rows so a fresh checkout
-  has something to open (ADR 0025).
-- **Public surface, API, CI, deployment** — home and audience landings, `/contact` over a
-  metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
-  typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
+`pnpm db:seed` writes a whole demo university — ~6,700 rows across twenty tables, including
+the learning half. Sign in at `/sign-in` as:
 
-## Next task — the frontend halves that are outstanding
+| Who           | Email                      |
+| ------------- | -------------------------- |
+| Administrator | `admin@studviro.local`     |
+| Registrar     | `registrar@studviro.local` |
+| Teacher       | `teacher@studviro.local`   |
+| Student       | `ada@studviro.local`       |
 
-**Phase 1 is complete.** An institution can be set up by hand from nothing: academic terms,
-org tree and rooms, programmes and courses, offerings, teaching assignments, programme
-memberships, study groups, timetables, exam terms, and bulk entry for a term's worth of
-either. `pnpm db:seed` writes a demo university to look at. Sign in as
-`ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
-`admin@studviro.local`; the password is `correct horse battery staple` unless the account
-already existed here.
+Password `correct horse battery staple` — **except** any account that already existed on this
+machine, which keeps the password it had. `admin@studviro.local` here is `newpassword123`.
 
-**What is done, by phase:**
+## Where the backlog stands
 
-- **Phase 0** — R1–R7. **Phase 1** — N1–N9, all with screens.
-- **Phase 2** — L1 (object storage, ADR 0027). L2–L7 were in flight when this was written;
-  check `Product Plan.md` for their real state.
-- **Phase 3** — U1 was already done. U2 and U3 have backends and **no screen yet**.
-- **Phase 4** — O1, O2, O5, O6, O7 done. O3 has a backend and **no screen yet**.
+`docs/Product Plan.md` carries the live status column and is the source of truth. In short:
 
-**The outstanding work is mostly frontend halves**, and each is small on its own:
+- **Phase 0 (remove the integration)** — done, R1–R7.
+- **Phase 1 (the registry)** — done, N1–N9. **An institution can now be set up by hand from
+  nothing**: academic terms, org tree, rooms, programmes, courses, offerings, teaching
+  assignments, programme memberships, study groups, timetables, exam terms, and bulk paste
+  for a term's worth of offerings or a cohort.
+- **Phase 2 (the learning half)** — L1 storage done (ADR 0027), L2–L6 backends done (ADR
+  0028), L7 decided: **no quizzes**, and why. The screens were the last thing in flight.
+- **Phase 3** — U1, U4, U5 done. U2 and U3 have backends. **U6 is not started.**
+- **Phase 4** — O1, O2, O5, O6, O7, O9 done. O3 has a backend. **O4 is not started.**
 
-| #   | What is missing                                                              |
-| --- | ---------------------------------------------------------------------------- |
-| U2  | A screen reading the `programmes` array now on `GET .../me/study-progress`   |
-| U3  | A search box reading `GET /institutions/:id/search`                          |
-| U6  | Terminology overrides render in the org-unit tree only; everywhere else next |
-| O3  | A screen reading `GET /institutions/:id/audit-events`                        |
-| O4  | Personal-data export and erasure — **not started, and the largest one left** |
+## What to do next
 
-**O4 is the one with teeth.** `docs/GDPR Data Inventory.md` records the finding that makes
-it urgent: **nothing in this system ever hard-deletes.** `BaseRepository.hardDelete` has no
-caller outside refresh-token purging, every removal verb is `softDelete`, so no
-`onDelete: 'cascade'` has ever fired and a "deleted" user keeps their email, display name
-and password digest indefinitely. Erasure must also reach the object store — ADR 0027 notes
-that nothing yet deletes a file when the row referencing it goes.
+**1. Whatever `Product Plan.md` still shows as `Backend`.** Each is a screen over an endpoint
+that already exists and is tested:
 
-**The user has ruled: local only.** Do not deploy, do not create hosted resources, do not
-spend money. **L1 is decided**: Cloudflare R2 or AWS S3; MinIO runs in `docker compose` for
-development and CI, and no credentials are needed until deploy. **O1/O2 are decided**: every
-institutional unknown is a `TODO(institution)` in a table at the top of each document.
+| #   | The endpoint that is waiting for a screen                   |
+| --- | ----------------------------------------------------------- |
+| U2  | `programmes[]` on `GET /institutions/:id/me/study-progress` |
+| U3  | `GET /institutions/:id/search` — one box over everything    |
+| O3  | `GET /institutions/:id/audit-events` — who changed what     |
 
-## Caveats
+**2. U6 — terminology overrides everywhere.** An institution can rename _faculty_, _student_,
+_course_ and eight other words in its settings. Today the override renders **only in the
+org-unit tree**. `useTerminology(institutionId)` already exists in
+`frontend/src/entities/institution-configuration`; the work is applying it across the
+screens and keying the strings that are still hard-coded English nouns.
 
-- The client bundle is at 477 kB against a **540 kB** guard, raised once for Phase 1 and
-  Phase 2 and to be **lowered back when they land**. The reduction `.size-limit.mjs`
-  reserved was taken and measured at **zero bytes**; do not re-attempt it.
+**3. O4 — personal-data export and erasure. The largest correctness gap left.**
+**ADR 0030 already settles the design; read it before writing code.** The urgency is in
+`docs/GDPR Data Inventory.md`: **nothing in this system ever hard-deletes.**
+`BaseRepository.hardDelete` has no caller outside refresh-token purging, every removal verb
+is `softDelete`, so no `onDelete: 'cascade'` has ever fired and a "deleted" user keeps their
+email, display name and password digest for ever. Erasure must also reach the object store —
+ADR 0027 notes nothing deletes a file when the row referencing it goes.
+
+## Standing decisions — do not re-ask these
+
+- **Object storage**: Cloudflare R2 or AWS S3, both S3-compatible. MinIO runs in
+  `docker compose` for development and CI. **No credentials are needed until deploy; do not
+  create a bucket.** Four env vars switch targets — see `docs/Deployment.md`.
+- **Local only.** Do not deploy, do not create hosted resources, do not spend money. Record
+  what a release needs in `docs/Deployment.md` instead.
+- **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
+  in a table at the top of each document. Do not invent them.
+- **No quizzes** (ADR 0028).
+
+## Traps that have cost time here
+
 - **Regenerate both halves of the contract together.** A server returning a permission the
-  client's generated Zod enum does not know makes every permissions response fail
-  validation and every `can()` answer false — the app renders as if the caller had no
-  rights. `pnpm openapi:check` catches it in CI; at runtime it looks like a permissions bug.
-- **Nothing ever hard-deletes.** See O4 above; this is the largest correctness gap left.
-- The person pickers on the teaching panel and the programme roll list the whole
-  institution directory unfiltered — 170-odd names after the demo seed. They want a
-  typeahead. Neither can filter by role, because a teacher need not hold one.
-- `pnpm db:seed` never resets an existing user's password, deliberately. On this machine
-  `admin@studviro.local` is `newpassword123`, not the seed default. The seed's anchor is
-  fixed at 2026-10-15 to stay deterministic; the seeded year is 2026/2027, so move the
-  anchor once real time leaves it. It deletes only the institution it owns.
-- A `requested` enrolment holds no place, so it is not on the roster and cannot join a
-  study group. On a term that has not started every enrolment is `requested`, which is why
-  the demo's summer offerings show a roster of zero against eight seats.
-- `test/setup/global-setup.ts` reuses `DATABASE_URL` when set and the harness truncates
-  every table — running `pnpm test:e2e` against the dev database wipes it. Re-seed after.
+  client's generated Zod enum does not know makes every permissions response fail validation
+  and every `can()` answer false — the app renders as if the caller had no rights. It looks
+  exactly like a permissions bug. `pnpm openapi:generate` then `pnpm api:generate`.
+- `nest start --watch` **does not release port 3010 on this machine**: every reload after the
+  first fails `EADDRINUSE` and the previous build keeps serving, silently invalidating any
+  live check. Build and run `node dist/main.js` when probing behaviour.
+- `pnpm db:generate` wants a TTY when drizzle-kit disambiguates a rename:
+  `script -qec "pnpm db:generate" /dev/null`.
 - **Importing a `@Global` module registers its `APP_GUARD` a second time and the second
   registration denies everything.** `FeatureFlagGuard` lives in `AppModule` for this reason.
-- `nest start --watch` does not release port 3010 on this machine: every reload after the
-  first fails `EADDRINUSE` and **the previous build keeps serving**, silently invalidating
-  any live check. Build and run `node dist/main.js` when probing behaviour.
-- `pnpm db:generate` wants a TTY when drizzle-kit disambiguates a rename. Run it as
-  `script -qec "pnpm db:generate" /dev/null`.
-- `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `w-full` on
-  the control does nothing. Every select in the app is natural width.
+- The frontend dev server does not reliably reload `messages/*.json` under Turbopack. Restart
+  it when a key renders as its own identifier.
+- `test/setup/global-setup.ts` reuses `DATABASE_URL` when set and the harness truncates every
+  table — `pnpm test:e2e` against the dev database wipes it. Re-seed after.
+- **Do not bulk-edit with regex across many files.** It has silently eaten closing braces here.
+
+## Caveats worth knowing
+
+- The client bundle is ~480 kB against a **540 kB** guard, raised once for Phases 1 and 2 and
+  **meant to be lowered back** now they have landed. The reduction `.size-limit.mjs` reserved
+  was taken and measured at **zero bytes**; do not re-attempt it.
+- **A teacher who is not a course coordinator cannot author their own learning space.**
+  `offering:manage` is institution-scoped while the derived `teacher` role is
+  offering-scoped. It needs a scope-aware guard; ADR 0028 records it.
+- The person pickers on the teaching panel and the programme roll list the whole institution
+  directory unfiltered — 170-odd names after the seed. They want a typeahead. Neither can
+  filter by role, because a teacher need not hold one.
+- A `requested` enrolment holds no place, so it is not on the roster and cannot join a study
+  group. On a term that has not started every enrolment is `requested`.
+- The seed's anchor is fixed at 2026-10-15 to stay deterministic; the seeded year is
+  2026/2027. **Move the anchor once real time leaves it.** It deletes only the institution it
+  owns, and never resets an existing user's password.
+- `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `w-full` on the
+  control does nothing. Every select in the app is natural width.
 - `UsersRepository.findInvitedByEmail` is not scoped to the inviting institution — two
   institutions inviting one address contend for a single shadow row. See ADR 0018.
-- The frontend dev server does not reliably reload `messages/*.json` under Turbopack;
-  restart it when a key renders as its own identifier.
-- What is left of **B4**: `no_show` and `excused` are never set — publishing a grade marks
-  a seat `attended`, but nobody can record an absence. **B2**: still no request-to-join.
+- What is left of **B4**: `no_show` and `excused` are never set — publishing a grade marks a
+  seat `attended`, but nobody can record an absence. **B2**: still no request-to-join.
