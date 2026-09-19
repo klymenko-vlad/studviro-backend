@@ -76,9 +76,9 @@ The reason to replace rather than tolerate them.
 
 | #   | Step                                                                | Carries over | Status      |
 | --- | ------------------------------------------------------------------- | ------------ | ----------- |
-| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | Not started |
-| U2  | Study progress against the programme, not just a grade list         | step 42      | Not started |
-| U3  | Search across everything the caller may see                         | step 51      | Not started |
+| U1  | One timeline: classes, deadlines and exams already share a calendar | step 39 ✅   | **Done**    |
+| U2  | Study progress against the programme, not just a grade list         | step 42      | **Backend** |
+| U3  | Search across everything the caller may see                         | step 51      | **Backend** |
 | U4  | WCAG 2.2 AA pass                                                    | step 52      | Not started |
 | U5  | Mobile-first review of every screen                                 | step 21      | Not started |
 | U6  | Terminology overrides rendered everywhere (rest of B7)              | step 28      | Not started |
@@ -93,7 +93,7 @@ The reason to replace rather than tolerate them.
 | O4  | Personal-data export and erasure              | step 50      | Not started |
 | O5  | Metrics and operational liveness              | step 53      | **Done**    |
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
-| O7  | Authorization-negative and security tests     | step 60      | Not started |
+| O7  | Authorization-negative and security tests     | step 60      | **Done**    |
 | O8  | Performance and load tests                    | step 61      | Not started |
 | O9  | Accessibility tests                           | step 62      | Not started |
 | O10 | Administrator and user documentation          | steps 68, 69 | Not started |
