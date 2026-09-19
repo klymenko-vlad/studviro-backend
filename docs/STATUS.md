@@ -58,36 +58,36 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N4: teaching assignments
+## Next task — N5: programme memberships, which is what makes a student
 
-**Phase 0 and N1–N3 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
-rows, fifteen tables, about a second — so every screen has something on it. Sign in as
-`ada@studviro.local` (student), `teacher@studviro.local`, `registrar@studviro.local` or
-`admin@studviro.local`; the password is `correct horse battery staple` unless the account
-already existed on this machine. ADR 0025 records what the seed is.
+**Phase 0 and N1–N4 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
+rows, fifteen tables, about a second. Sign in as `ada@studviro.local` (student),
+`teacher@studviro.local`, `registrar@studviro.local` or `admin@studviro.local`; the
+password is `correct horse battery staple` unless the account already existed here. ADR
+0025 records what the seed is.
 
 - **N1** — _Academic terms_ card on `/institutions/:id/catalogue`. `institution:manage`.
 - **N2** — `/institutions/:id/org-units` edits the tree (`institution:manage`) and carries a
   _Rooms_ card (`schedule:manage`).
-- **N3** — _Course offerings_ card on the catalogue screen: `GET`/`POST`
-  `/institutions/:id/course-offerings` and `DELETE` on one, `offering:manage`. The list
-  carries places taken and teacher count, and flags an offering with no teacher.
+- **N3** — _Course offerings_ card on the catalogue screen, `offering:manage`. Each row
+  links to the offering page.
+- **N4** — the teaching-staff panel on a course offering assigns and removes teachers,
+  `offering:manage`. The `teacher` role derives from it, so this is how a teacher exists.
 
 **Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left:
 
 | #   | Missing               | Consequence                                                           |
 | --- | --------------------- | --------------------------------------------------------------------- |
-| N4  | Teaching assignments  | Nobody can be made a course's teacher                                 |
 | N5  | Programme memberships | **Nobody can be made a student — this blocks self-service enrolment** |
 | N6  | Study groups          | No seminar or lab groups                                              |
 | N7  | Timetable events      | `schedule:manage` gates rooms only                                    |
 | N8  | Exam terms            | Students can register for exams nobody can create                     |
 | N9  | Bulk entry            | A term's worth of offerings and people, pasted                        |
 
-**N4 means**: list, add and remove `teaching_assignments` on an offering, under
-`offering:manage`. It is the one that turns somebody into a `teacher` — the role derives
-from the assignment and is not grantable by hand (ADRs 0015–0018), so this is how a teacher
-comes to exist at all. The offerings card already shows which offerings have nobody.
+**N5 means**: list, create and end `program_memberships` — a person, a programme, a study
+year, a status. `student` derives from an _active_ membership (ADRs 0015–0018), so this is
+the last thing standing between a fresh institution and a student who can enrol. Mirror N4:
+put it on the programme, under `program:manage`, reachable from the catalogue screen.
 
 **Phase 2 is the Moodle half** and **L1 is decided**: Cloudflare R2 or AWS S3, so build one
 S3-compatible client behind a `StorageService`, run MinIO in `docker-compose` for local and
@@ -103,13 +103,16 @@ spend money. Record what a release will need in `docs/Deployment.md` instead.
 
 ## Caveats
 
-- The client bundle is at 451.18 kB against a **540 kB** guard, raised once for the whole
+- The client bundle is at 455.13 kB against a **540 kB** guard, raised once for the whole
   of Phase 1 and Phase 2 and to be lowered back when they land. The reduction
   `.size-limit.mjs` reserved — sharing one card between `/enroll` and `/exams` — was taken
   and measured at **zero bytes**; it is kept as better code. Do not re-attempt it.
 - `pnpm arch` was red on `dev` before this session for a widget-to-widget import; it is
   green now. `offering-grades` was folded into `course-offering`, the only widget that
   rendered it.
+- The person picker on the teaching panel offers the whole institution directory,
+  students included. A teacher need not already hold a role, so it cannot be filtered by
+  one — but it is a long list once the demo seed has run.
 - `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `className="w-full"`
   on the control does nothing. Every select in the app is natural width.
 - `pnpm db:seed` does not reset an existing user's password, deliberately. On this
