@@ -27,8 +27,8 @@ cd backend  && pnpm docker:up && pnpm db:migrate && pnpm db:seed && pnpm build &
 cd frontend && pnpm dev            # port 3001; the API is on 3010
 ```
 
-`pnpm db:seed` writes a whole demo university — ~6,700 rows across twenty tables, including
-the learning half. Sign in at `/sign-in` as:
+`pnpm db:seed` writes a whole demo university — ~7,000 rows across twenty tables, including
+the learning half, with one assignment already marked and one still open. Sign in at `/sign-in` as:
 
 | Who           | Email                      |
 | ------------- | -------------------------- |
@@ -42,56 +42,47 @@ machine, which keeps the password it had. `admin@studviro.local` here is `newpas
 
 ## Where the backlog stands
 
-`docs/Product Plan.md` carries the live status column and is the source of truth. In short:
+**`Product Plan.md` is complete. All thirty-three items, Phases 0 to 4, both halves of
+each.** That document is now the record of what was built and why, not a queue.
 
-- **Phase 0 (remove the integration)** — done, R1–R7.
-- **Phase 1 (the registry)** — done, N1–N9. **An institution can now be set up by hand from
-  nothing**: academic terms, org tree, rooms, programmes, courses, offerings, teaching
-  assignments, programme memberships, study groups, timetables, exam terms, and bulk paste
-  for a term's worth of offerings or a cohort.
-- **Phase 2 (the learning half)** — **done, both halves.** Object storage (ADR 0027),
-  learning spaces, materials, assignments, submissions and marking (ADR 0028), all on the
-  course offering page. L7 decided: **no quizzes**, and why.
-- **Phase 3** — U1, U4, U5 done. U2 and U3 have backends. **U6 is not started.**
-- **Phase 4** — O1, O2, O5, O6, O7, O8, O9, O10 done. O3 has a backend. **O4 is not
-  started.**
-
-**28 of the 33 backlog items are complete.** The five that are not are listed below.
+- **Phase 0** — the integration removed, and the deleted dataset generator recovered as a
+  demo seed (ADR 0025).
+- **Phase 1** — the registry. An institution can be set up by hand from nothing: terms, org
+  tree, rooms, programmes, courses, offerings, teaching assignments, programme memberships,
+  study groups, timetables, exam terms, and bulk paste.
+- **Phase 2** — the learning half. Object storage (ADR 0027), spaces, materials,
+  assignments, submissions, marking (ADR 0028). Quizzes ruled out, with reasons.
+- **Phase 3** — one timeline, study progress against the programme (ADR 0029), search,
+  WCAG 2.2 AA, mobile, terminology overrides.
+- **Phase 4** — GDPR inventory, DPIA, threat model, audit events (ADR 0026), export and
+  erasure (ADR 0030), observability, backup with a real restore drill, authorization-negative
+  tests, load tests with real numbers, accessibility tests, and two guides.
 
 ## What to do next
 
-**1. Whatever `Product Plan.md` still shows as `Backend`.** Each is a screen over an endpoint
-that already exists and is tested:
+There is no next backlog item. What follows is what this session found and deliberately did
+not do — each is a defect or a gap with evidence behind it, not a wish.
 
-| #   | The endpoint that is waiting for a screen                   |
-| --- | ----------------------------------------------------------- |
-| U2  | `programmes[]` on `GET /institutions/:id/me/study-progress` |
-| U3  | `GET /institutions/:id/search` — one box over everything    |
-| O3  | `GET /institutions/:id/audit-events` — who changed what     |
+**1. An enrolment rush loses about a quarter of its writes.** `docs/Performance.md` has the
+measured run: ~26% of a 144-student rush gets `409 SERIALIZATION_FAILURE`, and **nothing
+retries it**. A bounded retry around `MyEnrollmentsService.request` is the fix. Note the
+counter-intuitive part before touching it: raising `DATABASE_POOL_MAX` from 10 to 40 made it
+_worse_ — 80.6% conflicts and twelve places left unsold. The small pool is accidental
+admission control.
 
-**2. U6 — terminology overrides everywhere.** An institution can rename _faculty_, _student_,
-_course_ and eight other words in its settings. Today the override renders **only in the
-org-unit tree**. `useTerminology(institutionId)` already exists in
-`frontend/src/entities/institution-configuration`; the work is applying it across the
-screens and keying the strings that are still hard-coded English nouns.
+**2. A teacher cannot author their own learning space.** `offering:manage` is
+institution-scoped while the derived `teacher` role is offering-scoped, so only a
+coordinator can. It needs a scope-aware guard; ADR 0028 records it.
 
-**3. Two defects the load test found, both in `docs/Performance.md`.** Roughly a quarter
-of an enrolment rush gets `409 SERIALIZATION_FAILURE` and **nothing retries it** — a
-bounded retry around `MyEnrollmentsService.request` is the fix. And raising
-`DATABASE_POOL_MAX` from 10 to 40 makes it _worse_: conflicts reach 80.6% and places go
-unsold. The small pool is accidental admission control; do not "optimise" it away.
+**3. The two guides predate the learning half and search.** `Administrator Guide.md` and
+`User Guide.md` were written while L2–L6 and U3 were landing, so materials, assignments,
+submissions, marking and the search box are missing from both.
 
-**4. The two guides do not yet cover the learning half or search.** `Administrator Guide.md`
-and `User Guide.md` were written while L2–L6 and U3 were still landing, so materials,
-assignments, submissions, marking and the search box are missing from both.
-
-**5. O4 — personal-data export and erasure. The largest correctness gap left.**
-**ADR 0030 already settles the design; read it before writing code.** The urgency is in
-`docs/GDPR Data Inventory.md`: **nothing in this system ever hard-deletes.**
-`BaseRepository.hardDelete` has no caller outside refresh-token purging, every removal verb
-is `softDelete`, so no `onDelete: 'cascade'` has ever fired and a "deleted" user keeps their
-email, display name and password digest for ever. Erasure must also reach the object store —
-ADR 0027 notes nothing deletes a file when the row referencing it goes.
+**4. Smaller, all real:** `RefreshTokensRepository.purgeExpired` still has no scheduler, so
+IP addresses and user agents accumulate; `DELETE /users/:id` is a soft delete that reads
+like an erasure and now sits beside a real one; the person pickers list the whole directory
+unfiltered and want a typeahead; and the bundle guard was raised to 540 kB for Phases 1–2
+and should come back down now they have landed (it measures 506 kB).
 
 ## Standing decisions — do not re-ask these
 

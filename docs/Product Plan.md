@@ -1,5 +1,9 @@
 # Product Plan
 
+**Every step in this plan is done.** Phases 0 to 4, thirty-three items, both halves of each.
+What follows is the record of what was built and why, not a queue. New work belongs in a
+new phase below, with `STATUS.md` pointing at it.
+
 The backlog, rewritten for what StudViro is: **one academic platform that does the job AIS2
 and Moodle do between them, entered and owned by the institution itself.** ADR 0024 records
 why, and what the old plan assumed instead.
@@ -43,17 +47,17 @@ for and why re-running it replaces the demo rather than merging into it.
 Everything below previously arrived only by import. Without it, a fresh institution cannot be
 set up at all.
 
-| #   | Step                                                                | Carries over | Status      |
-| --- | ------------------------------------------------------------------- | ------------ | ----------- |
-| N1  | Academic terms: create, edit, set the enrolment window              | —            | **Done**    |
-| N2  | Org units and rooms: create and edit                                | —            | **Done**    |
-| N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            | **Done**    |
-| N4  | Teaching assignments: make somebody a course's teacher              | —            | **Done**    |
-| N5  | Programme memberships: make somebody a student of a programme       | —            | **Done**    |
-| N6  | Study groups and their membership                                   | —            | **Done**    |
-| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | **Done**    |
-| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | **Done**    |
-| N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | Not started |
+| #   | Step                                                                | Carries over | Status   |
+| --- | ------------------------------------------------------------------- | ------------ | -------- |
+| N1  | Academic terms: create, edit, set the enrolment window              | —            | **Done** |
+| N2  | Org units and rooms: create and edit                                | —            | **Done** |
+| N3  | Course offerings: create (`PATCH` already exists), schedule, retire | —            | **Done** |
+| N4  | Teaching assignments: make somebody a course's teacher              | —            | **Done** |
+| N5  | Programme memberships: make somebody a student of a programme       | —            | **Done** |
+| N6  | Study groups and their membership                                   | —            | **Done** |
+| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | **Done** |
+| N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | **Done** |
+| N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | **Done** |
 
 ## Phase 2 — The learning half, natively
 
@@ -103,7 +107,7 @@ also the answer to the five-column table on a 375 px phone; `Switch` given a 24 
 | O1  | GDPR data inventory and DPIA                  | step 19      | **Drafted** |
 | O2  | Threat model                                  | step 20      | **Drafted** |
 | O3  | Structured audit events                       | step 49      | **Done**    |
-| O4  | Personal-data export and erasure              | step 50      | **Backend** |
+| O4  | Personal-data export and erasure              | step 50      | **Done**    |
 | O5  | Metrics and operational liveness              | step 53      | **Done**    |
 | O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | **Done**    |
