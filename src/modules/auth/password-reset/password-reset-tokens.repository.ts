@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 
 import type { Transaction } from '../../../database/database.tokens';
 import { BaseRepository } from '../../../database/repository/base.repository';
@@ -28,5 +28,14 @@ export class PasswordResetTokensRepository extends BaseRepository<typeof passwor
       { consistent: true, ...options },
       tx,
     );
+  }
+
+  /**
+   * Drops rows that can no longer reset anything. A consumed token is left
+   * until it expires as well, so a reset replayed inside the window is still
+   * recognised as a replay rather than as an unknown token.
+   */
+  purgeExpired(before = new Date(), tx?: Transaction): Promise<number> {
+    return this.hardDeleteMany(lt(passwordResetTokens.expiresAt, before), tx);
   }
 }

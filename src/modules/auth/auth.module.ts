@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ExpiredTokenPurgeService } from './expired-token-purge.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PasswordResetTokensRepository } from './password-reset/password-reset-tokens.repository';
@@ -30,6 +31,7 @@ import { TokenService } from './token.service';
     AuthService,
     TokenService,
     RefreshTokensRepository,
+    ExpiredTokenPurgeService,
     PasswordResetService,
     PasswordResetTokensRepository,
     JwtStrategy,
