@@ -51,7 +51,7 @@ set up at all.
 | N4  | Teaching assignments: make somebody a course's teacher              | —            | **Done**    |
 | N5  | Programme memberships: make somebody a student of a programme       | —            | **Done**    |
 | N6  | Study groups and their membership                                   | —            | **Done**    |
-| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | Backend     |
+| N7  | Timetable events: create, move, cancel — closes `schedule:manage`   | step 39      | **Done**    |
 | N8  | Exam terms: create, move, cancel, set capacity and window           | step 43      | Not started |
 | N9  | Bulk entry: paste or upload a term's worth of offerings and people  | step 63      | Not started |
 
@@ -92,7 +92,7 @@ The reason to replace rather than tolerate them.
 | O3  | Structured audit events                       | step 49      | **Backend** |
 | O4  | Personal-data export and erasure              | step 50      | Not started |
 | O5  | Metrics and freshness observability           | step 53      | Not started |
-| O6  | Backup and restore, proven by a restore drill | step 55      | Not started |
+| O6  | Backup and restore, proven by a restore drill | step 55      | **Done**    |
 | O7  | Authorization-negative and security tests     | step 60      | Not started |
 | O8  | Performance and load tests                    | step 61      | Not started |
 | O9  | Accessibility tests                           | step 62      | Not started |

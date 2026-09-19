@@ -58,49 +58,50 @@ Detail in `docs/Task Tracker.md` and `docs/Feature Status.md`. In short:
   metered `POST /api/v1/demo-requests`; generated drift-checked `openapi.json`; lint,
   typecheck, coverage, build and security gates in both repositories; migration-aware deploy.
 
-## Next task — N7: timetable events
+## Next task — N8: exam terms an institution can create
 
-**Phase 0 and N1–N6 are done.** `pnpm db:seed` writes a whole demo university — ~5,900
-rows, fifteen tables, about a second. Sign in as `ada@studviro.local` (student),
+**Phase 0 and N1–N7 are done**, and so are **O1, O2, O6** and the backend of **O3**.
+`pnpm db:seed` writes a whole demo university. Sign in as `ada@studviro.local` (student),
 `teacher@studviro.local`, `registrar@studviro.local` or `admin@studviro.local`; the
 password is `correct horse battery staple` unless the account already existed here.
 
 **An institution can now be set up by hand from nothing**: terms, org tree and rooms,
-programmes and courses, offerings, teachers, students, and seminar groups.
+programmes and courses, offerings, teachers, students, seminar groups and a timetable.
 
 - **N1** _Academic terms_ · **N2** org tree + _Rooms_ · **N3** _Course offerings_ ·
-  **N4** teaching staff on an offering · **N5** `/institutions/:id/programs/:programId` ·
-  **N6** _Groups_ panel on the offering page.
+  **N4** teaching staff · **N5** `/institutions/:id/programs/:programId` ·
+  **N6** _Groups_ · **N7** _Timetable_ — all on the catalogue or offering page.
+- **O1/O2** — `docs/GDPR Data Inventory.md`, `docs/DPIA.md`, `docs/Threat Model.md`.
+  Every institutional unknown is marked `TODO(institution)` in a table at the top of each.
+- **O3** — `audit_events` and `GET /institutions/:id/audit-events` behind `audit:read`
+  (ADR 0026). **No screen reads it yet** — that is the rest of O3.
+- **O6** — `pnpm db:backup` / `pnpm db:restore`, `docs/Backup and Restore.md`, with a
+  restore drill actually performed and its numbers recorded.
 
-**Phase 1 of `Product Plan.md` is the live queue** and its Status column is current. Left:
+**Phase 1 of `Product Plan.md`** has two left:
 
-| #   | Missing          | Consequence                                       |
-| --- | ---------------- | ------------------------------------------------- |
-| N7  | Timetable events | `schedule:manage` gates rooms only                |
-| N8  | Exam terms       | Students can register for exams nobody can create |
-| N9  | Bulk entry       | A term's worth of offerings and people, pasted    |
+| #   | Missing    | Consequence                                       |
+| --- | ---------- | ------------------------------------------------- |
+| N8  | Exam terms | Students can register for exams nobody can create |
+| N9  | Bulk entry | A term's worth of offerings and people, pasted    |
 
-**N7 means**: create, move and cancel `timetable_events` on an offering — type, title,
-room, study group, start and end — under `schedule:manage`. The student-facing week
-calendar already reads them (`my-timetable-events`); nothing writes them. A weekly
-repeat is what an institution actually wants, so generating a term's worth of events
-from one weekly slot is the feature, not a single event at a time.
+**N8 means**: create, move, cancel and set the capacity and registration window of an
+`exam_term` on an offering, under `schedule:manage`. Everything on the student's side
+already exists — registration, the retake ladder, the seat-release on cancellation
+(`ExamTermCancellationService`, which now also writes an audit event). Reuse that service
+for the cancel verb rather than writing a second one.
 
 **Phase 2 is the Moodle half** and **L1 is decided**: Cloudflare R2 or AWS S3, so build one
 S3-compatible client behind a `StorageService`, run MinIO in `docker-compose` for local and
 CI, and take bucket, region, endpoint and credentials from the environment. **No
 credentials are needed until deploy**; do not create a bucket.
 
-**O1 and O2 are decided too**: draft both fully from the code and mark the controller, DPO,
-retention periods and lawful basis as `TODO(institution)` placeholders, listed in one table
-at the top. Do not invent them.
-
 **The user has ruled: local only.** Do not deploy, do not create hosted resources, do not
-spend money. Record what a release will need in `docs/Deployment.md` instead.
+spend money.
 
 ## Caveats
 
-- The client bundle is at 463.98 kB against a **540 kB** guard, raised once for the whole
+- The client bundle is at 468.18 kB against a **540 kB** guard, raised once for the whole
   of Phase 1 and Phase 2 and to be lowered back when they land. The reduction
   `.size-limit.mjs` reserved — sharing one card between `/enroll` and `/exams` — was taken
   and measured at **zero bytes**; it is kept as better code. Do not re-attempt it.
@@ -111,6 +112,12 @@ spend money. Record what a release will need in `docs/Deployment.md` instead.
   institution directory — 170-odd names once the demo seed has run, unfiltered and
   unsearchable. Neither can filter by role (a teacher need not hold one), so what they
   want is a typeahead. Worth a step.
+- **Adding a permission to the catalogue breaks a stale client silently.** The generated
+  client validates responses against a Zod enum, so a server returning `audit:read` before
+  `pnpm api:generate` has run makes every permissions response fail validation and every
+  `can()` answer false — the app renders as if the caller had no rights. `pnpm openapi:check`
+  catches the drift in CI; at runtime it looks like a permissions bug. Regenerate both
+  halves together.
 - A `requested` enrolment holds no place, so it is not on the roster and cannot be put in
   a study group. On a term that has not started every enrolment is `requested`, which is
   why the demo's summer offerings show a roster of zero against a seat count of eight.
