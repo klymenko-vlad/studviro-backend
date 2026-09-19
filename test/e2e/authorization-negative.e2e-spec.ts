@@ -9,6 +9,7 @@ import {
   institutions,
   programs,
   roleAssignments,
+  teachingAssignments,
 } from '../../src/database/schema';
 import { PERMISSION_KEY } from '../../src/modules/authorization/decorators/require-permission.decorator';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
@@ -295,6 +296,93 @@ describe('Authorization, negatively (e2e)', () => {
       });
 
       expect(response.statusCode).toBe(403);
+    });
+  });
+
+  /**
+   * Teaching one offering makes somebody a teacher of the institution, so that
+   * institution-scoped routes answer them at all. These pin how far that goes:
+   * it buys reading and their own courses, and nothing administrative.
+   */
+  describe('teaching a course is not administering the institution', () => {
+    const lecturerOf = async (email: string) => {
+      const actor = await harness.actingAs({ email });
+      await harness.db
+        .insert(teachingAssignments)
+        .values({ institutionId, courseOfferingId: offeringId, userId: actor.user.id });
+
+      return actor;
+    };
+
+    const attempt = (
+      actor: { headers: Record<string, string> },
+      method: 'GET' | 'POST',
+      path: string,
+      payload?: Record<string, unknown>,
+    ) =>
+      harness.inject({
+        method,
+        url: `/api/v1/institutions/${institutionId}${path}`,
+        headers: actor.headers,
+        ...(payload === undefined ? {} : { payload }),
+      });
+
+    it('lets them read the courses they now have a reason to see', async () => {
+      const lecturer = await lecturerOf('lecturer-reads@example.com');
+
+      expect((await attempt(lecturer, 'GET', '/courses')).statusCode).toBe(200);
+    });
+
+    it('does not let them put a course on offer', async () => {
+      const lecturer = await lecturerOf('lecturer-offers@example.com');
+
+      const response = await attempt(lecturer, 'POST', '/course-offerings', {
+        courseId: '11111111-1111-4111-8111-111111111111',
+        academicTermId: '22222222-2222-4222-8222-222222222222',
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('does not let them name who else teaches it', async () => {
+      const lecturer = await lecturerOf('lecturer-staffs@example.com');
+
+      const response = await attempt(
+        lecturer,
+        'POST',
+        `/course-offerings/${offeringId}/teaching`,
+        { userId: lecturer.user.id, role: 'assistant' },
+      );
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('does not let them grant themselves a role', async () => {
+      const lecturer = await lecturerOf('lecturer-grants@example.com');
+
+      const response = await attempt(lecturer, 'POST', '/role-assignments', {
+        userId: lecturer.user.id,
+        role: 'institution_admin',
+        scopeType: 'institution',
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('does not let them administer the institution or read its audit trail', async () => {
+      const lecturer = await lecturerOf('lecturer-admins@example.com');
+
+      expect((await attempt(lecturer, 'GET', '/audit-events')).statusCode).toBe(403);
+
+      const term = await attempt(lecturer, 'POST', '/academic-terms', {
+        code: '2028W',
+        name: 'Winter',
+        academicYear: '2028/2029',
+        startsAt: '2028-09-20T00:00:00.000Z',
+        endsAt: '2029-02-13T00:00:00.000Z',
+      });
+
+      expect(term.statusCode).toBe(403);
     });
   });
 });

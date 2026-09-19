@@ -32,11 +32,16 @@ describe('Offering results (e2e)', () => {
     return actor;
   };
 
+  // The assignment has to match the role being tested: a `teaching_assistant`
+  // put on the offering as its lecturer is a lecturer, and would derive one.
   const teaching = async (role: CanonicalRole = 'teacher') => {
     const actor = await actingAs(role);
-    await harness.db
-      .insert(teachingAssignments)
-      .values({ institutionId, courseOfferingId: offeringId, userId: actor.user.id });
+    await harness.db.insert(teachingAssignments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: actor.user.id,
+      role: role === 'teaching_assistant' ? 'assistant' : 'lecturer',
+    });
 
     return actor;
   };

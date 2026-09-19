@@ -92,6 +92,29 @@ export class DerivedRolesRepository {
     if (hasActiveMembership) {
       derived.push({ role: 'student', scope: { type: 'institution', id: institutionId } });
     }
+
+    // Teaching anything here makes somebody a teacher *of the institution* as
+    // well as of each offering. Without this the two derivations are asymmetric
+    // — a student gets institution scope from one membership and a teacher got
+    // only offering scope — and every institution-scoped route reads as denied,
+    // so a teacher with no granted role saw an empty institution.
+    //
+    // It does not widen what they may change. `offering:manage` is not a
+    // teacher's permission at any scope, and the routes that admit them at the
+    // institution ask a second, per-offering question behind the guard.
+    //
+    // The institution-scoped role is the weakest one they hold anywhere, not
+    // `teacher` by default: somebody who only assists must keep `grade:propose`
+    // without `grade:publish`, and deriving `teacher` for them would hand an
+    // assistant the publishing decision the ladder exists to withhold.
+    const teachesAnywhere = teaching.some((entry) => entry.role === 'teacher');
+    if (teaching.length > 0) {
+      derived.push({
+        role: teachesAnywhere ? 'teacher' : 'teaching_assistant',
+        scope: { type: 'institution', id: institutionId },
+      });
+    }
+
     derived.push(...teaching);
 
     return derived;

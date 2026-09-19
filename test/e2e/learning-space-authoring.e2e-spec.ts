@@ -176,6 +176,21 @@ describe('Learning space authoring (e2e)', () => {
     expect(refused.statusCode).toBe(403);
   });
 
+  it('lets a teacher who holds no granted role author the course they teach', async () => {
+    const created = await request(fixture.derivedTeacher, 'POST', '', {
+      courseOfferingId: fixture.offeringId,
+      name: 'Algorithms, derived',
+    });
+
+    expect(created.statusCode).toBe(201);
+
+    const published = await request(fixture.derivedTeacher, 'PATCH', `/${created.json().id}`, {
+      visible: true,
+    });
+
+    expect(published.statusCode).toBe(200);
+  });
+
   it('will not show a space to somebody from another institution', async () => {
     const space = (await openSpace({ visible: true })).json();
     const elsewhere = await harness.actingAs({ email: 'elsewhere@example.com' });

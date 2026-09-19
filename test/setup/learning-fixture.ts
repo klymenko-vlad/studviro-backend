@@ -20,6 +20,12 @@ export interface LearningFixture {
   readonly teacher: ActingUser;
   /** Teaches `otherOfferingId` only. */
   readonly otherTeacher: ActingUser;
+  /**
+   * Teaches `offeringId` and holds no granted role at all — which is what the
+   * demo seed actually produces, and what every "a teacher can use the app"
+   * assertion has to be made against.
+   */
+  readonly derivedTeacher: ActingUser;
   /** Enrolled on `offeringId`. */
   readonly student: ActingUser;
   /** Enrolled on nothing. */
@@ -84,11 +90,18 @@ export async function seedLearningFixture(harness: TestHarness): Promise<Learnin
   const admin = await withRole('institution_admin', 'admin@example.com');
   const teacher = await withRole('teacher', 'teacher@example.com');
   const otherTeacher = await withRole('teacher', 'other-teacher@example.com');
+  const derivedTeacher = await harness.actingAs({ email: 'derived-teacher@example.com' });
   const student = await withRole('student', 'student@example.com');
   const stranger = await withRole('student', 'stranger@example.com');
 
   await harness.db.insert(teachingAssignments).values([
     { institutionId, courseOfferingId: offeringId, userId: teacher.user.id, role: 'lecturer' },
+    {
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: derivedTeacher.user.id,
+      role: 'lecturer',
+    },
     {
       institutionId,
       courseOfferingId: otherOfferingId,
@@ -111,6 +124,7 @@ export async function seedLearningFixture(harness: TestHarness): Promise<Learnin
     admin,
     teacher,
     otherTeacher,
+    derivedTeacher,
     student,
     stranger,
   };

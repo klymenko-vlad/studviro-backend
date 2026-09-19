@@ -95,8 +95,12 @@ describe('Teaching assignments (e2e)', () => {
     });
     expect(assigned.statusCode).toBe(201);
 
+    // Two roles, not one: teaching this offering, and being a teacher of the
+    // institution that owns it. The second is what makes the institution-scoped
+    // routes answer at all.
     await expect(derived.findFor(institutionId, person.user.id)).resolves.toEqual([
-      expect.objectContaining({ role: 'teacher' }),
+      { role: 'teacher', scope: { type: 'institution', id: institutionId } },
+      { role: 'teacher', scope: { type: 'course_offering', id: offeringId } },
     ]);
 
     const listed = await request(admin, 'GET');
