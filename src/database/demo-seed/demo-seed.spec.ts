@@ -9,6 +9,7 @@ import {
   planStudyGroups,
   planTimetableEvents,
 } from './derive';
+import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
 import { DEFAULT_DEMO_SEED_OPTIONS } from './options';
 import { allCourses, allPersons, allPrograms, allRooms } from './plan';
 
@@ -118,5 +119,71 @@ describe('what the plan derives', () => {
     expect(results.length).toBe(
       enrollments.filter((enrollment) => enrollment.offering.term.isPast).length,
     );
+  });
+});
+
+describe('the learning half it seeds', () => {
+  const plan = buildPlan(options);
+  const offerings = planOfferings(plan, options.anchor);
+  const enrollments = planEnrollments(offerings, options.anchor);
+  const spaces = planSpaces(offerings);
+  const assignments = planAssignments(spaces);
+
+  it('gives only the current year a learning space', () => {
+    expect(spaces.length).toBeGreaterThan(0);
+    expect(spaces.every((space) => space.offering.term.yearOffset === 0)).toBe(true);
+  });
+
+  it('gives every space materials and two assignments', () => {
+    expect(planMaterials(spaces)).toHaveLength(spaces.length * 3);
+    expect(assignments).toHaveLength(spaces.length * 2);
+  });
+
+  it('closes an assignment before the anchor and leaves one open, or the demo shows one state', () => {
+    const due = assignments.filter((a) => a.dueAt <= options.anchor);
+    const open = assignments.filter((a) => a.dueAt > options.anchor);
+
+    expect(due.length).toBeGreaterThan(0);
+    expect(open.length).toBeGreaterThan(0);
+  });
+
+  it('never opens an assignment after it is due, or closes it before', () => {
+    expect(assignments.every((a) => a.opensAt < a.dueAt && a.dueAt < a.closesAt)).toBe(true);
+  });
+
+  it('hands in only against assignments that are actually due', () => {
+    const submissions = planSubmissions(assignments, enrollments, options);
+    const dueKeys = new Set(
+      assignments.filter((a) => a.dueAt <= options.anchor).map((a) => a.key),
+    );
+
+    expect(submissions.length).toBeGreaterThan(0);
+    expect(submissions.every((s) => dueKeys.has(s.assignmentKey))).toBe(true);
+  });
+
+  it('leaves a marking screen every state it has to cope with', () => {
+    const submissions = planSubmissions(assignments, enrollments, options);
+    const states = new Set(submissions.map((s) => s.state));
+
+    expect(states).toContain('graded');
+    expect(states).toContain('draft');
+    expect(submissions.some((s) => s.isLate)).toBe(true);
+    // And somebody who handed in nothing at all.
+    expect(submissions.length).toBeLessThan(enrollments.length * 2);
+  });
+
+  it('marks only what was handed in, and never a draft', () => {
+    const submissions = planSubmissions(assignments, enrollments, options);
+
+    expect(
+      submissions.every((s) => (s.state === 'draft' ? s.points === null : s.points !== null)),
+    ).toBe(true);
+  });
+
+  it('is deterministic', () => {
+    const once = planSubmissions(assignments, enrollments, options);
+    const twice = planSubmissions(assignments, enrollments, options);
+
+    expect(JSON.stringify(once)).toBe(JSON.stringify(twice));
   });
 });

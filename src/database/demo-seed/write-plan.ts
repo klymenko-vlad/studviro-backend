@@ -3,12 +3,17 @@ import { eq, inArray, like } from 'drizzle-orm';
 import type { Database } from '../database.tokens';
 import {
   academicTerms,
+  assessmentResults,
+  assessments,
   courseOfferings,
   courses,
   enrollments,
   examTerms,
   institutions,
   institutionSettings,
+  learningActivities,
+  learningMaterials,
+  learningSpaces,
   officialCourseResults,
   orgUnits,
   programMemberships,
@@ -17,6 +22,7 @@ import {
   rooms,
   studyGroupMemberships,
   studyGroups,
+  submissions,
   teachingAssignments,
   timetableEvents,
   users,
@@ -30,6 +36,7 @@ import {
   planStudyGroups,
   planTimetableEvents,
 } from './derive';
+import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
@@ -473,6 +480,125 @@ export async function writePlan(
   });
   await insertChunked(results, (slice) => db.insert(officialCourseResults).values(slice));
 
+  // --- the learning half --------------------------------------------------
+  const plannedSpaces = planSpaces(plannedOfferings);
+  const spaceIds = new Map<string, string>();
+  for (let offset = 0; offset < plannedSpaces.length; offset += CHUNK) {
+    const slice = plannedSpaces.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningSpaces)
+      .values(
+        slice.map((space) => ({
+          institutionId,
+          courseOfferingId: required(offeringIds, space.offering.key, 'offering'),
+          name: space.name,
+          shortName: space.offering.course.code,
+          summary: space.summary,
+        })),
+      )
+      .returning({ id: learningSpaces.id, courseOfferingId: learningSpaces.courseOfferingId });
+    for (const space of slice) {
+      const offeringId = required(offeringIds, space.offering.key, 'offering');
+      const row = inserted.find((candidate) => candidate.courseOfferingId === offeringId);
+      if (row) spaceIds.set(space.key, row.id);
+    }
+  }
+
+  const materials = planMaterials(plannedSpaces).map((material) => ({
+    institutionId,
+    learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
+    kind: material.kind,
+    title: material.title,
+    body: material.body,
+    url: material.url,
+    position: material.position,
+  }));
+  await insertChunked(materials, (slice) => db.insert(learningMaterials).values(slice));
+
+  const plannedAssignments = planAssignments(plannedSpaces);
+  const assignmentIds = new Map<string, string>();
+  const assessmentIds = new Map<string, string>();
+  for (let offset = 0; offset < plannedAssignments.length; offset += CHUNK) {
+    const slice = plannedAssignments.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningActivities)
+      .values(
+        slice.map((assignment, index) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, assignment.spaceKey, 'learning space'),
+          type: 'assignment' as const,
+          name: assignment.name,
+          brief: assignment.brief,
+          position: index,
+          opensAt: assignment.opensAt,
+          dueAt: assignment.dueAt,
+          closesAt: assignment.closesAt,
+          maxAttempts: assignment.maxAttempts,
+          allowsLateSubmission: assignment.allowsLateSubmission,
+        })),
+      )
+      .returning({
+        id: learningActivities.id,
+        learningSpaceId: learningActivities.learningSpaceId,
+        name: learningActivities.name,
+      });
+
+    for (const assignment of slice) {
+      const spaceId = required(spaceIds, assignment.spaceKey, 'learning space');
+      const row = inserted.find(
+        (candidate) =>
+          candidate.learningSpaceId === spaceId && candidate.name === assignment.name,
+      );
+      if (row) assignmentIds.set(assignment.key, row.id);
+    }
+
+    // Every assignment carries its gradebook column, exactly as the API does
+    // when one is created by hand — otherwise marking has nowhere to land.
+    const columns = await db
+      .insert(assessments)
+      .values(
+        slice.map((assignment) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, assignment.spaceKey, 'learning space'),
+          learningActivityId: required(assignmentIds, assignment.key, 'assignment'),
+          name: assignment.name,
+          maxPoints: assignment.maxPoints.toFixed(4),
+        })),
+      )
+      .returning({ id: assessments.id, learningActivityId: assessments.learningActivityId });
+    for (const assignment of slice) {
+      const activityId = required(assignmentIds, assignment.key, 'assignment');
+      const row = columns.find((candidate) => candidate.learningActivityId === activityId);
+      if (row) assessmentIds.set(assignment.key, row.id);
+    }
+  }
+
+  const plannedSubmissions = planSubmissions(plannedAssignments, plannedEnrollments, options);
+  const submissionRows = plannedSubmissions.map((submission) => ({
+    institutionId,
+    learningActivityId: required(assignmentIds, submission.assignmentKey, 'assignment'),
+    userId: required(personIds, submission.studentKey, 'person'),
+    state: submission.state,
+    attempt: 1,
+    submittedAt: submission.submittedAt,
+    isLate: submission.isLate,
+    notes: submission.notes,
+    fileCount: 0,
+  }));
+  await insertChunked(submissionRows, (slice) => db.insert(submissions).values(slice));
+
+  const marks = plannedSubmissions
+    .filter((submission) => submission.points !== null)
+    .map((submission) => ({
+      institutionId,
+      assessmentId: required(assessmentIds, submission.assignmentKey, 'assessment'),
+      userId: required(personIds, submission.studentKey, 'person'),
+      points: (submission.points ?? 0).toFixed(4),
+      feedback: submission.feedback,
+      gradedAt: submission.submittedAt,
+    }));
+  await insertChunked(marks, (slice) => db.insert(assessmentResults).values(slice));
+
   return {
     institutionId,
     counts: {
@@ -491,6 +617,11 @@ export async function writePlan(
       timetableEvents: events.length,
       examTerms: exams.length,
       officialCourseResults: results.length,
+      learningSpaces: spaceIds.size,
+      learningMaterials: materials.length,
+      assignments: assignmentIds.size,
+      submissions: submissionRows.length,
+      marks: marks.length,
     },
   };
 }
