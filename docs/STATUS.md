@@ -62,7 +62,7 @@ a removed learning material's object is swept out of the bucket instead of being
 paid for for ever (**ADR 0032**); the `/learning` tab is an administrator's index
 behind `offering:manage` rather than a tab every student was offered; the four
 public forms carry a self-hosted proof-of-work captcha (**ADR 0033**); the Slovak
-catalogue is finished; the person directory is paginated and searchable; and the
+catalogue is finished; the person directory is paginated, searchable and has a load-more; and the
 enrolment comments no longer promise a registrar's system that ADR 0024 removed.
 
 ## What to do next
@@ -70,24 +70,24 @@ enrolment comments no longer promise a registrar's system that ADR 0024 removed.
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — give the person directory a load-more, and fix how the audit trail
-names people.** `GET /institutions/:id/people` is keyset-paginated now, but
-`person-directory-table` still asks for one page of 100 and renders it with no way
-to ask for the next — so an institution of more than 100 people silently shows the
-first 100. Worse, `audit-trail` resolves actor names by searching that same capped
-list, so beyond 100 people some rows read "unknown actor". The table needs a
-load-more over `personQueries.page`; the audit trail needs to stop downloading a
-directory to search in the browser and resolve the ids actually on screen instead.
-Both files were being refactored by another session when this landed, which is why
-they were left.
+**Next task — resolve audit-trail actor names without downloading the directory.**
+`audit-trail` names an actor by searching a list of every person in the
+institution. That list is now fetched correctly — `personQueries.listForInstitution`
+walks the cursor to the end — so no name is missing, but fetching 164 people to
+label a handful of rows is the wrong shape and gets worse with the institution. It
+wants an endpoint that resolves the ids actually on screen: a `POST` taking user
+ids and answering with names, or a `userIds` filter on the people route. The
+`listForInstitution` wrapper exists only for this one caller and should go with it.
 
 Then, in order:
 
-1. **The person pickers still filter in the browser.** `q` exists on the endpoint
-   and `personQueries.page` exposes it; `assign-teacher-form` and
-   `admit-student-form` have not been moved onto it.
-2. **Stale marketing copy is gone** — that pass was taken by another session on
-   2026-09-21, against `Feature Status.md`.
+1. **The person pickers still filter in the browser.** `q` is on the endpoint and
+   `personQueries.page` exposes it; `assign-teacher-form` and `admit-student-form`
+   have not been moved onto it. They are the typeaheads the `q` parameter was added
+   for.
+2. **`forInstitutions.roadmap.slovak` is now false.** It tells institutions the
+   Slovak catalogue is "still largely English". It is complete. The card wants
+   removing along with its entry in `for-institutions-view.tsx`.
 
 Noticed while walking these steps, not fixed:
 
