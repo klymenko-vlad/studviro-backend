@@ -23,9 +23,15 @@ export class MyEnrollmentsService {
   ) {}
 
   /**
-   * A request, not a place. It becomes `active` when the registrar's system
-   * acknowledges it, or immediately where no connector can be told — the
-   * status ladder finally used as the schema always described it.
+   * Asking for a place is getting one. The row is written `requested` and
+   * activated in the same call, because StudViro is the system of record and
+   * there is nobody upstream to approve it (ADR 0024).
+   *
+   * The two steps are kept apart rather than inserting `active` directly: the
+   * capacity check and the seat it claims happen inside one serializable
+   * transaction, and `requested` is the state that holds that seat while the
+   * transaction decides. The status ladder still has the rungs a registrar
+   * would need if a place ever had to be approved by hand.
    */
   async request(
     institutionId: string,

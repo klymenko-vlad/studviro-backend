@@ -64,7 +64,7 @@ export class MyEnrollmentsController {
     operationId: 'requestEnrollment',
     summary: 'Ask for a place on a course',
     description:
-      'A request, not a place: the row is `requested` until the registrar’s system acknowledges it, and `active` immediately where no connector can be told.',
+      'Asking for a place is getting one: the enrolment comes back `active`. StudViro is the system of record, so there is nobody upstream to approve it. Refused with `OFFERING_FULL` when the last seat goes.',
   })
   @ApiCreatedResponse({ type: EnrollmentResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
