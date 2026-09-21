@@ -74,6 +74,23 @@ Walked in a browser: marked a student's work as the administrator and moved Assi
 deadline on _Information Security_, then signed in as `ada@studviro.local` and found both
 in the inbox — the move reaching all eight enrolled students, the mark reaching one.
 
+Also on 2026-09-21: **the four forms open to the internet carry a captcha.** Sign-up,
+sign-in, the password-reset request and the demo request were metered by IP and nothing
+else. **ALTCHA's protocol, implemented rather than imported** (**ADR 0033**): the client
+hashes to find a number, so there is no third-party script, no site key, no account and
+nothing to pay — and nothing about the visitor leaves the origin, which Turnstile and
+hCaptcha cannot say. **Off by default**; `CAPTCHA_ENABLED` turns it on at deploy, and
+production refuses to boot with the shipped secret when it is. Walked with it on: the
+browser solved a 50,000-wide challenge and signed in in under two seconds, and the API
+refused both an absent and a forged one.
+
+Two bundle traps were found paying for it, both recorded in `.size-limit.mjs`: reading
+the captcha state with `useQuery` cost **13.6 kB** because the three auth routes had no
+client query at all, and importing the server-side read through `entities/captcha`'s
+public API cost **19 kB** because that barrel re-exports two `'use client'` modules. The
+read lives in `shared/auth` now and is passed as a prop. **Any server-only read added to
+a slice whose barrel exports client code will do the same thing.**
+
 Also on 2026-09-21: **the learning tab is an administrator's index, not a student's.** It
 was gated on `offering:read`, which every student holds, so every student was offered a
 screen naming every course in the institution with its workload and deadlines. The route
@@ -97,27 +114,18 @@ deleting live coursework — see `docs/Deployment.md`.
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — a captcha on the public forms.** Sign-up, sign-in, password reset and the demo
-request are open to the internet and rate-limited only by IP. **Use ALTCHA**, not
-Turnstile or hCaptcha: it is a self-hosted proof-of-work challenge with no account, no
-site key, no third-party request and nothing to pay, which is the only free option
-that fits the standing "local only, no credentials until deploy" rule _and_ does not
-send every visitor to a US processor — a question an EU institution has to answer.
-Shape: a `CaptchaModule` issuing and verifying challenges server-side with the
-HMAC secret already in `ConfigService`, a `@RequireCaptcha()` guard on the four
-routes, and `altcha` as a web component behind a `'use client'` boundary. Behind a
-feature flag so development and e2e stay unchallenged. Record the choice in an ADR;
-Turnstile stays the documented swap if the institution would rather.
+**Next task — the Slovak translation.** Both catalogues are fully keyed; roughly 1,320 of
+1,469 Slovak values are still the English string. The keys awaiting translation are
+exactly those whose `sk` value equals its `en` value, so the pass is mechanical to scope
+and can be taken in slices. Do not touch a value that already differs.
+
 Then, in order:
 
-1. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
-   values are still the English string. The keys awaiting translation are exactly those
-   whose `sk` value equals its `en` value, so the pass is mechanical to scope.
-2. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
+1. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
    unpaginated. The pickers in front of it are a typeahead now, so this is about the
    payload rather than the interface. The grant form on `/roles` still takes a raw user
    id and never got the picker.
-3. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
+2. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
    `my-enrollments.service.ts:27` still say a place stays `requested` "until the
    registrar's system acknowledges it", with the line below activating it unconditionally. The
    `institution-nav.tsx` one is gone.
@@ -169,7 +177,7 @@ Noticed while walking these steps, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **555 kB** against a measured 546.82 kB. `.size-limit.mjs` has the full reasoning.
+  now **555 kB** against a measured 552.05 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - **An abandoned upload is never reclaimed.** A removed material's object is now swept, but

@@ -74,6 +74,26 @@ deployment points the same client somewhere real by changing these:
 | `STORAGE_SIGNED_URL_TTL_S`   | `300`               | How long a read or write link lives. Capped at an hour     |
 | `STORAGE_RECLAIM_AFTER_DAYS` | `30`                | How long a removed file's object outlives its row          |
 
+## Captcha on the public forms
+
+Sign-up, sign-in, the password-reset request and the demo request can carry a
+proof-of-work captcha (ADR 0033). It is **off by default** and an institution turns it on
+at deploy.
+
+| Variable             | Default  | What it is                                                            |
+| -------------------- | -------- | --------------------------------------------------------------------- |
+| `CAPTCHA_ENABLED`    | `false`  | Turn it on. Everything below is ignored while it is off               |
+| `CAPTCHA_SECRET`     | dev      | Signs each challenge. **Must be changed, or the app refuses to boot** |
+| `CAPTCHA_MAX_NUMBER` | `100000` | The search space. Above ~500k the client wants a Web Worker           |
+| `CAPTCHA_TTL_S`      | `600`    | How long a challenge stays solvable                                   |
+
+Nothing to register, no account, no site key, no third party: the challenge is issued and
+checked by this API. **It needs Redis** — single use is a `SET NX`, and without it a solved
+challenge can be replayed for every submission.
+
+**It needs HTTPS.** The client solves with `crypto.subtle`, which browsers only expose in a
+secure context. Over plain HTTP the forms would fail with no way for a visitor to proceed.
+
 **Cloudflare R2**: `STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`,
 `STORAGE_REGION=auto`, `STORAGE_FORCE_PATH_STYLE=true`. The credentials are an R2 API token
 scoped to the one bucket — not an account-wide token.
