@@ -32,9 +32,13 @@ export class LearningSpaceDto {
 
 @Exclude()
 export class LearningSpaceListResponseDto {
-  @Expose() @ApiProperty() total!: number;
-  @Expose() @ApiProperty() linked!: number;
-  @Expose() @ApiProperty() unlinked!: number;
+  @Expose()
+  @ApiProperty({ description: 'Course pages written in this institution' })
+  total!: number;
+
+  @Expose()
+  @ApiProperty({ description: 'Offerings in this institution that have no course page yet' })
+  offeringsWithoutPage!: number;
 
   @Expose()
   @Type(() => LearningSpaceDto)
@@ -44,8 +48,7 @@ export class LearningSpaceListResponseDto {
   static fromSummary(summary: LearningSpaceSummary): LearningSpaceListResponseDto {
     return Object.assign(new LearningSpaceListResponseDto(), {
       total: summary.total,
-      linked: summary.linked,
-      unlinked: summary.unlinked,
+      offeringsWithoutPage: summary.offeringsWithoutPage,
       spaces: summary.spaces.map((row) => LearningSpaceDto.fromRow(row)),
     });
   }

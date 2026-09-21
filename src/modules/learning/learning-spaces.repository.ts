@@ -11,8 +11,8 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 
 export interface LearningSpaceCounts {
-  total: number;
-  linked: number;
+  spaces: number;
+  offerings: number;
 }
 
 export interface LearningSpaceRow {
@@ -69,7 +69,13 @@ export class LearningSpacesRepository {
         )`.mapWith(learningActivities.dueAt),
       })
       .from(learningSpaces)
-      .leftJoin(courseOfferings, eq(courseOfferings.id, learningSpaces.courseOfferingId))
+      .leftJoin(
+        courseOfferings,
+        and(
+          eq(courseOfferings.id, learningSpaces.courseOfferingId),
+          isNull(courseOfferings.deletedAt),
+        ),
+      )
       .leftJoin(courses, eq(courses.id, courseOfferings.courseId))
       .leftJoin(academicTerms, eq(academicTerms.id, courseOfferings.academicTermId))
       .where(sql.join(conditions, sql` and `))
@@ -77,17 +83,30 @@ export class LearningSpacesRepository {
       .limit(limit);
   }
 
+  /**
+   * How many course pages exist and how many offerings there are to write them
+   * for. The pair used to be total-versus-`linked`, which counted spaces with
+   * no offering — a space is authored against one now, so that number was
+   * always zero and told an administrator nothing.
+   */
   async countSpaces(institutionId: string): Promise<LearningSpaceCounts> {
-    const [row] = await this.txHost.db
-      .select({
-        total: count(),
-        linked: sql<number>`count(${learningSpaces.courseOfferingId})::int`,
-      })
+    const [spaces] = await this.txHost.db
+      .select({ total: count() })
       .from(learningSpaces)
       .where(
         and(eq(learningSpaces.institutionId, institutionId), isNull(learningSpaces.deletedAt)),
       );
 
-    return { total: row?.total ?? 0, linked: row?.linked ?? 0 };
+    const [offerings] = await this.txHost.db
+      .select({ total: count() })
+      .from(courseOfferings)
+      .where(
+        and(
+          eq(courseOfferings.institutionId, institutionId),
+          isNull(courseOfferings.deletedAt),
+        ),
+      );
+
+    return { spaces: spaces?.total ?? 0, offerings: offerings?.total ?? 0 };
   }
 }

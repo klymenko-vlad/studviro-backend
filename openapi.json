@@ -4021,6 +4021,7 @@
     },
     "/api/v1/institutions/{institutionId}/learning-spaces": {
       "get": {
+        "description": "With `offeringId`, the page on that offering — any reader of the offering may ask. Without it, the whole institution's index, which additionally requires `offering:manage`: the unfiltered list names courses the caller has nothing to do with.",
         "operationId": "listLearningSpaces",
         "parameters": [
           {
@@ -4088,7 +4089,7 @@
             "access-token": []
           }
         ],
-        "summary": "List the learning spaces of an institution, or the one on an offering",
+        "summary": "The course page on an offering, or every course page in the institution",
         "tags": [
           "learning"
         ]
@@ -13870,13 +13871,12 @@
         "type": "object",
         "properties": {
           "total": {
-            "type": "number"
+            "type": "number",
+            "description": "Course pages written in this institution"
           },
-          "linked": {
-            "type": "number"
-          },
-          "unlinked": {
-            "type": "number"
+          "offeringsWithoutPage": {
+            "type": "number",
+            "description": "Offerings in this institution that have no course page yet"
           },
           "spaces": {
             "type": "array",
@@ -13887,8 +13887,7 @@
         },
         "required": [
           "total",
-          "linked",
-          "unlinked",
+          "offeringsWithoutPage",
           "spaces"
         ]
       },
