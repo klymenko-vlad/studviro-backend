@@ -62,6 +62,14 @@ describe('Auth (e2e)', () => {
       expect(profile.statusCode).toBe(200);
     });
 
+    it('accepts a password at the eight-character floor', async () => {
+      expect((await register({ password: 'x'.repeat(8) })).statusCode).toBe(201);
+    });
+
+    it('rejects a password below it', async () => {
+      expect((await register({ password: 'x'.repeat(7) })).statusCode).toBe(400);
+    });
+
     it('rejects a duplicate email with a conflict, not a 500', async () => {
       await register();
 
