@@ -12,6 +12,7 @@ import {
   type TimetableEventType,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { TimetableNotificationsService } from '../notifications/timetable-notifications.service';
 
 export interface TimetableEventEntry {
   readonly id: string;
@@ -57,7 +58,10 @@ const MAX_REPEATS = 60;
 
 @Injectable()
 export class TimetableAdministrationService {
-  constructor(private readonly txHost: TransactionHost) {}
+  constructor(
+    private readonly txHost: TransactionHost,
+    private readonly notifications: TimetableNotificationsService,
+  ) {}
 
   async list(institutionId: string, offeringId: string): Promise<TimetableEventEntry[]> {
     await this.offering(institutionId, offeringId);
@@ -148,6 +152,7 @@ export class TimetableAdministrationService {
     offeringId: string,
     eventId: string,
     changes: TimetableEventChanges,
+    now = new Date(),
   ): Promise<TimetableEvent> {
     return this.txHost.run(async () => {
       const existing = await this.event(institutionId, offeringId, eventId);
@@ -191,6 +196,12 @@ export class TimetableAdministrationService {
 
       if (!updated) throw new EntityNotFoundError('timetable_event', eventId);
 
+      await this.notifications.applied(
+        institutionId,
+        { previous: existing, current: updated },
+        now,
+      );
+
       return updated;
     });
   }
@@ -217,6 +228,12 @@ export class TimetableAdministrationService {
 
       if (!updated) throw new EntityNotFoundError('timetable_event', eventId);
 
+      await this.notifications.applied(
+        institutionId,
+        { previous: existing, current: updated },
+        now,
+      );
+
       return updated;
     });
   }
@@ -242,13 +259,29 @@ export class TimetableAdministrationService {
   }
 
   /** Removing an event says it never happened; cancelling says it was called off. */
-  async remove(institutionId: string, offeringId: string, eventId: string): Promise<void> {
+  async remove(
+    institutionId: string,
+    offeringId: string,
+    eventId: string,
+    now = new Date(),
+  ): Promise<void> {
     await this.txHost.run(async () => {
-      await this.event(institutionId, offeringId, eventId);
+      const existing = await this.event(institutionId, offeringId, eventId);
+
+      // The audience is read from enrolments, which outlive the event, but the
+      // announcement is made while the row is still there to describe it. A
+      // class that was already called off has been announced once already.
+      if (existing.cancelledAt === null) {
+        await this.notifications.applied(
+          institutionId,
+          { previous: existing, current: existing, removed: true },
+          now,
+        );
+      }
 
       await this.client
         .update(timetableEvents)
-        .set({ deletedAt: new Date() })
+        .set({ deletedAt: now })
         .where(eq(timetableEvents.id, eventId));
     });
   }

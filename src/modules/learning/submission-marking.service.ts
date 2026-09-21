@@ -10,6 +10,7 @@ import {
   type Submission,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
 import { LearningAccessService } from './learning-access.service';
 import { SubmissionsService } from './submissions.service';
@@ -35,6 +36,7 @@ export class SubmissionMarkingService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly submissionsService: SubmissionsService,
+    private readonly notifications: LearningActivityNotificationsService,
   ) {}
 
   async mark(
@@ -86,6 +88,20 @@ export class SubmissionMarkingService {
         .returning();
 
       if (!marked) throw new EntityNotFoundError('submission', submissionId);
+
+      await this.notifications.marked(
+        institutionId,
+        {
+          submissionId,
+          learningActivityId: assignmentId,
+          learningSpaceId: assessment.learningSpaceId,
+          activityName: assessment.name,
+          recipientId: submission.userId,
+          points,
+          maxPoints,
+        },
+        now,
+      );
 
       return { submission: marked, result };
     });

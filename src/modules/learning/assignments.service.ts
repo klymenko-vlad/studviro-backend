@@ -9,6 +9,7 @@ import {
   type LearningActivity,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
 import { LearningAccessService, type LearningStance } from './learning-access.service';
@@ -44,6 +45,7 @@ export class AssignmentsService {
   constructor(
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
+    private readonly notifications: LearningActivityNotificationsService,
   ) {}
 
   async list(
@@ -96,6 +98,7 @@ export class AssignmentsService {
     spaceId: string,
     userId: string,
     input: NewAssignment,
+    now = new Date(),
   ): Promise<AssignmentEntry> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
@@ -141,6 +144,12 @@ export class AssignmentsService {
         throw new ConflictError('ASSIGNMENT_NOT_CREATED', 'The assignment was not created');
       }
 
+      await this.notifications.applied(
+        institutionId,
+        { previous: null, current: activity },
+        now,
+      );
+
       return { activity, assessment };
     });
   }
@@ -151,6 +160,7 @@ export class AssignmentsService {
     assignmentId: string,
     userId: string,
     changes: AssignmentChanges,
+    now = new Date(),
   ): Promise<AssignmentEntry> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
@@ -159,40 +169,57 @@ export class AssignmentsService {
     assertWindow({ ...existing.activity, ...changes });
     if (changes.maxAttempts !== undefined) assertAttemptPolicy(changes.maxAttempts);
 
+    // Drizzle refuses an `update` with no columns, so a change that touches
+    // only one of the pair — moving a deadline, or re-pricing the column —
+    // leaves the other row as it stands rather than writing nothing to it.
+    const activityChanges = {
+      ...(changes.name === undefined ? {} : { name: changes.name }),
+      ...(changes.brief === undefined ? {} : { brief: changes.brief }),
+      ...(changes.opensAt === undefined ? {} : { opensAt: changes.opensAt }),
+      ...(changes.dueAt === undefined ? {} : { dueAt: changes.dueAt }),
+      ...(changes.closesAt === undefined ? {} : { closesAt: changes.closesAt }),
+      ...(changes.maxAttempts === undefined ? {} : { maxAttempts: changes.maxAttempts }),
+      ...(changes.allowsLateSubmission === undefined
+        ? {}
+        : { allowsLateSubmission: changes.allowsLateSubmission }),
+      ...(changes.visible === undefined ? {} : { visible: changes.visible }),
+      ...(changes.position === undefined ? {} : { position: changes.position }),
+    };
+
+    const assessmentChanges = {
+      ...(changes.name === undefined ? {} : { name: changes.name }),
+      ...(changes.maxPoints === undefined ? {} : { maxPoints: numeric(changes.maxPoints) }),
+      ...(changes.countsTowardFinalGrade === undefined
+        ? {}
+        : { countsTowardFinalGrade: changes.countsTowardFinalGrade }),
+    };
+
     return this.txHost.run(async () => {
-      const [activity] = await this.client
-        .update(learningActivities)
-        .set({
-          ...(changes.name === undefined ? {} : { name: changes.name }),
-          ...(changes.brief === undefined ? {} : { brief: changes.brief }),
-          ...(changes.opensAt === undefined ? {} : { opensAt: changes.opensAt }),
-          ...(changes.dueAt === undefined ? {} : { dueAt: changes.dueAt }),
-          ...(changes.closesAt === undefined ? {} : { closesAt: changes.closesAt }),
-          ...(changes.maxAttempts === undefined ? {} : { maxAttempts: changes.maxAttempts }),
-          ...(changes.allowsLateSubmission === undefined
-            ? {}
-            : { allowsLateSubmission: changes.allowsLateSubmission }),
-          ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-          ...(changes.position === undefined ? {} : { position: changes.position }),
-        })
-        .where(eq(learningActivities.id, assignmentId))
-        .returning();
+      const [activity] = isEmpty(activityChanges)
+        ? [existing.activity]
+        : await this.client
+            .update(learningActivities)
+            .set(activityChanges)
+            .where(eq(learningActivities.id, assignmentId))
+            .returning();
 
       if (!activity) throw new EntityNotFoundError('assignment', assignmentId);
 
-      const [assessment] = await this.client
-        .update(assessments)
-        .set({
-          ...(changes.name === undefined ? {} : { name: changes.name }),
-          ...(changes.maxPoints === undefined ? {} : { maxPoints: numeric(changes.maxPoints) }),
-          ...(changes.countsTowardFinalGrade === undefined
-            ? {}
-            : { countsTowardFinalGrade: changes.countsTowardFinalGrade }),
-        })
-        .where(eq(assessments.id, existing.assessment.id))
-        .returning();
+      const [assessment] = isEmpty(assessmentChanges)
+        ? [existing.assessment]
+        : await this.client
+            .update(assessments)
+            .set(assessmentChanges)
+            .where(eq(assessments.id, existing.assessment.id))
+            .returning();
 
       if (!assessment) throw new EntityNotFoundError('assessment', existing.assessment.id);
+
+      await this.notifications.applied(
+        institutionId,
+        { previous: existing.activity, current: activity },
+        now,
+      );
 
       return { activity, assessment };
     });
@@ -273,6 +300,10 @@ export class AssignmentsService {
 
 function visibleTo(stance: LearningStance, rows: AssignmentEntry[]): AssignmentEntry[] {
   return stance === 'author' ? rows : rows.filter((row) => row.activity.visible);
+}
+
+function isEmpty(changes: Record<string, unknown>): boolean {
+  return Object.keys(changes).length === 0;
 }
 
 function numeric(value: number | null | undefined): string | null {

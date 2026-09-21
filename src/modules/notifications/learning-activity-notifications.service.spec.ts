@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LearningActivity } from '../../database/schema';
 
 import type { LearningActivityAudienceRepository } from './learning-activity-audience.repository';
-import { LearningActivityNotificationsService } from './learning-activity-notifications.service';
+import {
+  LearningActivityNotificationsService,
+  type SubmissionMark,
+} from './learning-activity-notifications.service';
 import type { NotificationEmitterService } from './notification-emitter.service';
 import type { NotificationChange } from './notification-emitter.types';
 
@@ -126,6 +129,65 @@ describe(LearningActivityNotificationsService.name, () => {
     await applied({ removed: true, previous: activity(), current: null });
 
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('announces a drafted assignment the moment the students can see it', async () => {
+    await applied({
+      previous: activity({ visible: false }),
+      current: activity({ visible: true }),
+    });
+
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'assignment_due_published' }),
+    );
+  });
+
+  describe('a mark', () => {
+    const mark: SubmissionMark = {
+      submissionId: 'submission-1',
+      learningActivityId: 'activity-1',
+      learningSpaceId: 'space-1',
+      activityName: 'Assignment 1',
+      recipientId: 'student-1',
+      points: 17.5,
+      maxPoints: 20,
+    };
+
+    const marked = (overrides: Partial<SubmissionMark> = {}) =>
+      service.marked(
+        INSTITUTION,
+        { ...mark, ...overrides },
+        new Date('2026-10-20T09:00:00.000Z'),
+      );
+
+    it('reaches the one person whose work it is, with the points out of the total', async () => {
+      await marked();
+
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'submission_marked',
+          subjectId: 'submission-1',
+          courseOfferingId: 'offering-1',
+          learningActivityId: 'activity-1',
+          recipients: ['student-1'],
+          payload: { activityName: 'Assignment 1', grade: '17.5 / 20' },
+        }),
+      );
+    });
+
+    it('gives the points alone when the assignment is worth no fixed total', async () => {
+      await marked({ maxPoints: null });
+
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({ payload: expect.objectContaining({ grade: '17.5' }) }),
+      );
+    });
+
+    it('says nothing when work is returned without a mark', async () => {
+      await marked({ points: null });
+
+      expect(emit).not.toHaveBeenCalled();
+    });
   });
 
   it('says nothing when the learning space is matched to no course offering', async () => {

@@ -13086,7 +13086,8 @@
               "timetable_event_cancelled",
               "exam_registration_confirmed",
               "exam_registration_cancelled",
-              "exam_registration_refused"
+              "exam_registration_refused",
+              "submission_marked"
             ],
             "type": "string"
           },
@@ -15785,7 +15786,8 @@
               "timetable_event_cancelled",
               "exam_registration_confirmed",
               "exam_registration_cancelled",
-              "exam_registration_refused"
+              "exam_registration_refused",
+              "submission_marked"
             ]
           },
           "occurredAt": {
