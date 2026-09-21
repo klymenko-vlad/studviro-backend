@@ -50,60 +50,60 @@ and 0028); one timeline, study progress, search, WCAG 2.2 AA, mobile and termino
 (Phase 3, ADR 0029); and the compliance, observability, backup, load, accessibility and
 guide work of Phase 4 (ADRs 0026 and 0030).
 
-The defect list this section used to carry has been worked through. What was found and
-fixed on 2026-09-19:
+The defect list this section used to carry has been worked through — 2026-09-19's eight
+fixes are recorded in `Task Tracker.md`'s defect table and in **ADR 0031**, which
+supersedes ADR 0028's guess at how a teacher derives a role.
 
-- **The enrolment rush no longer loses a quarter of its writes.**
-  `TransactionHost.runSerializable` replays a lost serialisation race three times with
-  jittered backoff, on enrolment and exam registration both. Re-measured with the same k6
-  profile: conflicts fell from 25.7% to **4.2%** and 21.9% to **2.5%**, capacity still
-  respected. The requests that stopped being conflicts became honest `OFFERING_FULL`
-  answers. `docs/Performance.md` has the numbers.
-- **A teacher can use the product at all.** Signing in as the seeded teacher showed one
-  dead navigation entry and "you hold a role here, but not one that lets you read courses
-  or grades" — because teaching derived only offering-scoped roles while one programme
-  membership derived an institution-scoped one for a student. Teaching now derives a role
-  at the institution too, an assistant deriving `teaching_assistant` rather than `teacher`
-  so the publish decision is still withheld. **ADR 0031**, which supersedes ADR 0028's
-  guess at this.
-- **A teacher authors their own course page.** The learning authoring routes moved from
-  `offering:manage` to `offering:read`, with `LearningAccessService` deciding whose course
-  it is — a check that already existed and already counted the offering's teacher as its
-  author. Walked in a browser: saved on their own course, 403 on somebody else's.
-- **Expired tokens are swept nightly.** `RefreshTokensRepository.purgeExpired` had no
-  caller, so every sign-in's IP address and user agent accumulated for ever;
-  `password_reset_tokens` had no sweep at all. Both now run daily.
-- **`DELETE /users/:id` is named `deactivateUser`** and says in its own description that it
-  is not the erasure it sits beside.
-- **The person pickers are a typeahead**, matching name and email in any order, keyboard
-  complete. The seed has two people called Dana Gajdoš, which is why the address is shown.
-- **A student can read the feedback written with their mark.** It was stored, returned and
-  never rendered.
+On 2026-09-21 the notifications feature stopped being half-built.
+`LearningActivityNotificationsService` and `TimetableNotificationsService` both existed,
+were both tested, and neither was injected anywhere — so the calendar carried a moved
+deadline and a cancelled class and the inbox did not. Both are now wired: assignment
+create and update, timetable update, cancel and remove. A mark is new —
+`submission_marked` names the one student whose work it is, because a classmate has no
+stake in it. Two defects surfaced underneath:
+
+- **`PATCH` on an assignment that changed only a date returned 500.** The paired
+  `assessments` update was handed no columns and Drizzle refuses that. Each half of the
+  pair is now left alone when nothing about it changed. This had always been broken;
+  nothing tested a date-only edit.
+- **An assignment drafted hidden and then published was never announced**, because the
+  deadline had not moved. Becoming visible is now the publication — which is the ordinary
+  authoring flow, so this was most of the feature.
+
+Walked in a browser: marked a student's work as the administrator and moved Assignment 1's
+deadline on _Information Security_, then signed in as `ada@studviro.local` and found both
+in the inbox — the move reaching all eight enrolled students, the mark reaching one.
 
 ## What to do next
 
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — wire the two notification services that have no callers.**
-`LearningActivityNotificationsService` and `TimetableNotificationsService` both exist, are
-both tested, and **neither is injected anywhere**: `grep` finds them only in their own
-definition and in `notifications.module.ts`. So nobody is told when an assignment is set,
-moved or marked, or when a class is moved or cancelled. The calendar carries those events
-and the notifications list does not, which reads as a broken notifications feature rather
-than a missing one. The call sites are `assignments.service.ts`,
-`submission-marking.service.ts` and the timetable services; the notification families and
-the aggregation rules already exist (ADR 0012).
+**Next task — stop orphaning objects in the store.** Deleting a learning material or a
+submission leaves its object behind: only erasure calls `StorageService.delete`, so every
+removed file is paid for for ever. The call sites are `learning-materials.service.ts` and
+`submissions.service.ts`. Decide deliberately whether the delete is immediate or a sweep
+of unreferenced keys — a soft-deleted row whose object is gone cannot be restored, and
+that is the whole question. Write the answer into an ADR.
 
 Then, in order:
 
-1. **Deleting a material or a submission orphans its object in the store.** Only erasure
-   calls `StorageService.delete`. Every removed file is paid for for ever.
-2. **`/institutions/:id/learning` is a leftover.** It lists every space institution-wide
+1. **`/institutions/:id/learning` is a leftover.** It lists every space institution-wide
    and reports how many are "matched to a course offering" — but a space is now authored
    against one, so the unmatched half cannot occur. Its nav entry is gated on
    `offering:read`, which every student holds, so students are offered the tab.
-3. **The Slovak translation.** Both catalogues are fully keyed; 1,316 of 1,457 Slovak
+2. **A captcha on the public forms.** Sign-up, sign-in, password reset and the demo
+   request are open to the internet and rate-limited only by IP. **Use ALTCHA**, not
+   Turnstile or hCaptcha: it is a self-hosted proof-of-work challenge with no account, no
+   site key, no third-party request and nothing to pay, which is the only free option
+   that fits the standing "local only, no credentials until deploy" rule _and_ does not
+   send every visitor to a US processor — a question an EU institution has to answer.
+   Shape: a `CaptchaModule` issuing and verifying challenges server-side with the
+   HMAC secret already in `ConfigService`, a `@RequireCaptcha()` guard on the four
+   routes, and `altcha` as a web component behind a `'use client'` boundary. Behind a
+   feature flag so development and e2e stay unchallenged. Record the choice in an ADR;
+   Turnstile stays the documented swap if the institution would rather.
+3. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
    values are still the English string. The keys awaiting translation are exactly those
    whose `sk` value equals its `en` value, so the pass is mechanical to scope.
 4. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
@@ -114,6 +114,11 @@ Then, in order:
    `my-enrollments.service.ts:27` still say a place stays `requested` "until the
    registrar's system acknowledges it", with the line below activating it unconditionally;
    `institution-nav.tsx` says the learning screen "reports import provenance".
+
+Noticed while walking this step, not fixed: the assignment editor's date fields are a
+segmented spinbutton whose hidden `input[name=dueAt]` mirror is the _first_ one in the
+DOM, shared with the add form above it — worth a look if a date edit ever writes to the
+wrong assignment.
 
 ## Standing decisions — do not re-ask these
 
@@ -154,13 +159,9 @@ Then, in order:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **555 kB** against a measured 546.74 kB. `.size-limit.mjs` has the full reasoning.
+  now **555 kB** against a measured 546.82 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
-- **Two notification services have no callers.** `LearningActivityNotificationsService` and
-  `TimetableNotificationsService` exist and nothing invokes them, so nobody is told when an
-  assignment is set or marked, or when a class moves or is cancelled. The calendar carries
-  those; the notifications list does not.
 - **Deleting a material or a submission leaves the object in the store.** Only erasure
   calls `StorageService.delete`.
 - The person pickers are a typeahead now, but the endpoint behind them still returns the
