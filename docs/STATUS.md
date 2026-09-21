@@ -74,25 +74,31 @@ Walked in a browser: marked a student's work as the administrator and moved Assi
 deadline on _Information Security_, then signed in as `ada@studviro.local` and found both
 in the inbox — the move reaching all eight enrolled students, the mark reaching one.
 
+Also on 2026-09-21: **a removed file no longer costs money for ever.** Only erasure called
+`StorageService.delete`, so every material a teacher removed stayed in the bucket.
+`StorageReclamationService` sweeps nightly at 04:00 and drops the objects of materials
+tombstoned longer ago than `STORAGE_RECLAIM_AFTER_DAYS` (30), then clears the key it
+reclaimed; a failed delete keeps its key and is retried. A sweep rather than a delete in
+the request, for the reasons in **ADR 0032**. Asserted against MinIO itself, not a spy.
+**Not covered, and now the known leak:** an upload ticket whose object was `PUT` but whose
+row was never written belongs to nothing, and no bucket lifecycle rule can find it without
+deleting live coursework — see `docs/Deployment.md`.
+
 ## What to do next
 
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — stop orphaning objects in the store.** Deleting a learning material or a
-submission leaves its object behind: only erasure calls `StorageService.delete`, so every
-removed file is paid for for ever. The call sites are `learning-materials.service.ts` and
-`submissions.service.ts`. Decide deliberately whether the delete is immediate or a sweep
-of unreferenced keys — a soft-deleted row whose object is gone cannot be restored, and
-that is the whole question. Write the answer into an ADR.
+**Next task — `/institutions/:id/learning` is a leftover.** It lists every space
+institution-wide and reports how many are "matched to a course offering" — but a space is
+now authored against one, so the unmatched half cannot occur. Its nav entry is gated on
+`offering:read`, which every student holds, so students are offered a tab that tells them
+nothing. Decide whether the screen becomes an administrator's index of course pages or is
+removed outright, and take its nav entry with it either way.
 
 Then, in order:
 
-1. **`/institutions/:id/learning` is a leftover.** It lists every space institution-wide
-   and reports how many are "matched to a course offering" — but a space is now authored
-   against one, so the unmatched half cannot occur. Its nav entry is gated on
-   `offering:read`, which every student holds, so students are offered the tab.
-2. **A captcha on the public forms.** Sign-up, sign-in, password reset and the demo
+1. **A captcha on the public forms.** Sign-up, sign-in, password reset and the demo
    request are open to the internet and rate-limited only by IP. **Use ALTCHA**, not
    Turnstile or hCaptcha: it is a self-hosted proof-of-work challenge with no account, no
    site key, no third-party request and nothing to pay, which is the only free option
@@ -103,14 +109,14 @@ Then, in order:
    routes, and `altcha` as a web component behind a `'use client'` boundary. Behind a
    feature flag so development and e2e stay unchallenged. Record the choice in an ADR;
    Turnstile stays the documented swap if the institution would rather.
-3. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
+2. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
    values are still the English string. The keys awaiting translation are exactly those
    whose `sk` value equals its `en` value, so the pass is mechanical to scope.
-4. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
+3. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
    unpaginated. The pickers in front of it are a typeahead now, so this is about the
    payload rather than the interface. The grant form on `/roles` still takes a raw user
    id and never got the picker.
-5. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
+4. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
    `my-enrollments.service.ts:27` still say a place stays `requested` "until the
    registrar's system acknowledges it", with the line below activating it unconditionally;
    `institution-nav.tsx` says the learning screen "reports import provenance".
@@ -162,8 +168,9 @@ wrong assignment.
   now **555 kB** against a measured 546.82 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
-- **Deleting a material or a submission leaves the object in the store.** Only erasure
-  calls `StorageService.delete`.
+- **An abandoned upload is never reclaimed.** A removed material's object is now swept, but
+  an object `PUT` against a ticket whose row was never written belongs to nothing and no
+  database-driven sweep can see it. ADR 0032 says why a lifecycle rule cannot do it either.
 - The person pickers are a typeahead now, but the endpoint behind them still returns the
   whole directory unpaginated. Fine at 170 people, not at 20,000.
 - A `requested` enrolment holds no place, so it is not on the roster and cannot join a study

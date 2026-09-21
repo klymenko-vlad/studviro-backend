@@ -77,6 +77,16 @@ export const envSchema = z.object({
   /** Short-lived by design: a read link that outlives the reader's session is a leak. */
   STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(3_600).default(300),
 
+  /**
+   * How long a removed file's object outlives the row that named it. Removing
+   * a material tombstones the row; the object behind it is dropped by the
+   * nightly sweep once this has passed. It is an operational grace period, not
+   * a retention policy — nothing in the product restores a removed material,
+   * so the window exists to make an accidental delete recoverable by hand, and
+   * to let a failed delete be retried rather than lost.
+   */
+  STORAGE_RECLAIM_AFTER_DAYS: z.coerce.number().int().positive().max(365).default(30),
+
   QUEUE_PREFIX: z.string().default('studviro'),
   QUEUE_DEFAULT_ATTEMPTS: z.coerce.number().int().positive().default(3),
   QUEUE_DEFAULT_BACKOFF_MS: z.coerce.number().int().positive().default(1_000),

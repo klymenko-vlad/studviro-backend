@@ -50,6 +50,7 @@ export interface StorageConfig {
   secretAccessKey: string;
   maxUploadBytes: number;
   signedUrlTtlSeconds: number;
+  reclaimAfterDays: number;
 }
 
 export interface ThrottleConfig {
@@ -183,6 +184,7 @@ export class AppConfigService {
       secretAccessKey: this.config.get<string>('STORAGE_SECRET_ACCESS_KEY'),
       maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
       signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
+      reclaimAfterDays: this.config.get<number>('STORAGE_RECLAIM_AFTER_DAYS'),
     };
   }
 

@@ -61,17 +61,18 @@ Learning materials and student submissions live in an S3-compatible bucket, neve
 application's disk (ADR 0027). `docker compose` runs MinIO for development and CI; a
 deployment points the same client somewhere real by changing these:
 
-| Variable                    | Default             | Meaning                                                    |
-| --------------------------- | ------------------- | ---------------------------------------------------------- |
-| `STORAGE_ENABLED`           | `true`              | Turn the whole file half off                               |
-| `STORAGE_BUCKET`            | `studviro`          | The bucket. It must already exist                          |
-| `STORAGE_REGION`            | `auto`              | `auto` for R2; a real region for AWS                       |
-| `STORAGE_ENDPOINT`          | unset               | **Unset for AWS.** Set for R2, MinIO or anything else      |
-| `STORAGE_FORCE_PATH_STYLE`  | `true`              | `false` only for AWS S3                                    |
-| `STORAGE_ACCESS_KEY_ID`     | `studviro`          | Must be changed in production or the app refuses to boot   |
-| `STORAGE_SECRET_ACCESS_KEY` | `studviro`          | Likewise                                                   |
-| `STORAGE_MAX_UPLOAD_BYTES`  | `67108864` (64 MiB) | Pinned into the presigned upload, so the store enforces it |
-| `STORAGE_SIGNED_URL_TTL_S`  | `300`               | How long a read or write link lives. Capped at an hour     |
+| Variable                     | Default             | Meaning                                                    |
+| ---------------------------- | ------------------- | ---------------------------------------------------------- |
+| `STORAGE_ENABLED`            | `true`              | Turn the whole file half off                               |
+| `STORAGE_BUCKET`             | `studviro`          | The bucket. It must already exist                          |
+| `STORAGE_REGION`             | `auto`              | `auto` for R2; a real region for AWS                       |
+| `STORAGE_ENDPOINT`           | unset               | **Unset for AWS.** Set for R2, MinIO or anything else      |
+| `STORAGE_FORCE_PATH_STYLE`   | `true`              | `false` only for AWS S3                                    |
+| `STORAGE_ACCESS_KEY_ID`      | `studviro`          | Must be changed in production or the app refuses to boot   |
+| `STORAGE_SECRET_ACCESS_KEY`  | `studviro`          | Likewise                                                   |
+| `STORAGE_MAX_UPLOAD_BYTES`   | `67108864` (64 MiB) | Pinned into the presigned upload, so the store enforces it |
+| `STORAGE_SIGNED_URL_TTL_S`   | `300`               | How long a read or write link lives. Capped at an hour     |
+| `STORAGE_RECLAIM_AFTER_DAYS` | `30`                | How long a removed file's object outlives its row          |
 
 **Cloudflare R2**: `STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`,
 `STORAGE_REGION=auto`, `STORAGE_FORCE_PATH_STYLE=true`. The credentials are an R2 API token
@@ -88,6 +89,20 @@ submission in the institution public, and the application cannot detect that for
 from the client's origin with the `content-type` header. Without it uploads fail in the
 browser while working perfectly from a server, which is a confusing afternoon.
 
-**`TODO(institution)`**: the bucket's lifecycle and retention rules, whether object
-versioning is on, and whether uploads must be virus-scanned before a marker can download
-them. ADR 0027 records that there is no scanner today and what the seam for one would be.
+**A removed file's object is dropped by the application, not by the bucket.** A nightly
+sweep at 04:00 deletes the objects of materials tombstoned longer ago than
+`STORAGE_RECLAIM_AFTER_DAYS`, then clears the key it reclaimed. A failed delete keeps its
+key and is retried the next night, so an unreachable store costs a day, not a leak.
+
+**Abandoned uploads are not yet reclaimed, and a lifecycle rule cannot do it.** An upload
+ticket whose object was `PUT` but whose row was never written belongs to nothing, and it
+sits under the same `institutions/<id>/materials/` or `.../submissions/` prefix as a live
+file — so a prefix-and-age rule at the bucket would delete real coursework. Finding them
+means listing the bucket and checking each key against the database. Until that exists,
+the leak is bounded by how often an upload is started and abandoned.
+
+**`TODO(institution)`**: whether object versioning is on — it would keep a reclaimed
+object alive as a noncurrent version, which defeats the sweep unless a noncurrent-version
+expiry rule is set beside it — and whether uploads must be virus-scanned before a marker
+can download them. ADR 0027 records that there is no scanner today and what the seam for
+one would be.

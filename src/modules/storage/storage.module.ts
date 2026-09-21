@@ -1,5 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
+import { StorageReclamationRepository } from './storage-reclamation.repository';
+import { StorageReclamationService } from './storage-reclamation.service';
 import { StorageService } from './storage.service';
 
 /**
@@ -9,7 +11,7 @@ import { StorageService } from './storage.service';
  */
 @Global()
 @Module({
-  providers: [StorageService],
-  exports: [StorageService],
+  providers: [StorageService, StorageReclamationRepository, StorageReclamationService],
+  exports: [StorageService, StorageReclamationService],
 })
 export class StorageModule {}
