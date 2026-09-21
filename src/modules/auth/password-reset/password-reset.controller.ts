@@ -1,8 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../../common/decorators/api-error-responses.decorator';
 import { PublicFormThrottle } from '../../../common/throttling';
+import { RequireCaptcha } from '../../captcha/decorators/require-captcha.decorator';
+import { CaptchaGuard } from '../../captcha/guards/captcha.guard';
 import { Public } from '../decorators/public.decorator';
 
 import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
@@ -19,6 +21,8 @@ export class PasswordResetController {
   @Post('request')
   @HttpCode(HttpStatus.OK)
   @PublicFormThrottle()
+  @UseGuards(CaptchaGuard)
+  @RequireCaptcha()
   @ApiOperation({
     operationId: 'requestPasswordReset',
     summary:

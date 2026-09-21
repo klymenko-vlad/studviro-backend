@@ -10692,6 +10692,110 @@
         ]
       }
     },
+    "/api/v1/captcha": {
+      "get": {
+        "operationId": "getCaptchaState",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaStateDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether this deployment asks the public forms for a captcha",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/captcha/challenge": {
+      "post": {
+        "operationId": "createCaptchaChallenge",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaChallengeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Take a proof-of-work challenge to solve before submitting a public form",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/me/enrollments/enrollable": {
       "get": {
         "operationId": "listEnrollableOfferings",
@@ -11021,6 +11125,10 @@
             "minLength": 12,
             "maxLength": 128,
             "writeOnly": true
+          },
+          "captcha": {
+            "type": "string",
+            "description": "A solved captcha challenge, base64. Required when `GET /captcha` reports the captcha enabled."
           }
         },
         "required": [
@@ -11165,6 +11273,10 @@
             "minLength": 1,
             "maxLength": 128,
             "writeOnly": true
+          },
+          "captcha": {
+            "type": "string",
+            "description": "A solved captcha challenge, base64. Required when `GET /captcha` reports the captcha enabled."
           }
         },
         "required": [
@@ -11193,6 +11305,10 @@
             "type": "string",
             "format": "email",
             "example": "ada@example.com"
+          },
+          "captcha": {
+            "type": "string",
+            "description": "A solved captcha challenge, base64. Required when `GET /captcha` reports the captcha enabled."
           }
         },
         "required": [
@@ -15007,6 +15123,10 @@
             "description": "Leave empty.",
             "maxLength": 200,
             "writeOnly": true
+          },
+          "captcha": {
+            "type": "string",
+            "description": "A solved captcha challenge, base64. Required when `GET /captcha` reports the captcha enabled."
           }
         },
         "required": [
@@ -18049,6 +18169,53 @@
           "hits",
           "searched",
           "truncated"
+        ]
+      },
+      "CaptchaStateDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this deployment asks for a captcha at all"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "CaptchaChallengeDto": {
+        "type": "object",
+        "properties": {
+          "algorithm": {
+            "type": "string",
+            "enum": [
+              "SHA-256"
+            ],
+            "example": "SHA-256"
+          },
+          "challenge": {
+            "type": "string",
+            "description": "The SHA-256 the client has to find the input of"
+          },
+          "salt": {
+            "type": "string",
+            "description": "Prefixed to the number being searched for. Carries its expiry"
+          },
+          "maxnumber": {
+            "type": "number",
+            "description": "The largest number the answer can be"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Proves this server issued the challenge"
+          }
+        },
+        "required": [
+          "algorithm",
+          "challenge",
+          "salt",
+          "maxnumber",
+          "signature"
         ]
       },
       "EnrollmentAvailabilityDto": {

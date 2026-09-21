@@ -1,4 +1,13 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Get, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -9,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
+import { RequireCaptcha } from '../captcha/decorators/require-captcha.decorator';
+import { CaptchaGuard } from '../captcha/guards/captcha.guard';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 
@@ -29,6 +40,8 @@ export class AuthController {
   @Public()
   @Post('register')
   @CredentialThrottle()
+  @UseGuards(CaptchaGuard)
+  @RequireCaptcha()
   @ApiOperation({ summary: 'Create an account and start a session' })
   @ApiCreatedResponse({ type: AuthTokensDto })
   @ApiErrorResponses({ conflict: true })
@@ -40,6 +53,8 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @CredentialThrottle()
+  @UseGuards(CaptchaGuard)
+  @RequireCaptcha()
   @ApiOperation({ summary: 'Exchange credentials for tokens' })
   @ApiOkResponse({ type: AuthTokensDto })
   @ApiErrorResponses()

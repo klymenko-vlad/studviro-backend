@@ -53,6 +53,13 @@ export interface StorageConfig {
   reclaimAfterDays: number;
 }
 
+export interface CaptchaConfig {
+  readonly enabled: boolean;
+  readonly secret: string;
+  readonly maxNumber: number;
+  readonly ttlSeconds: number;
+}
+
 export interface ThrottleConfig {
   readonly ttlMs: number;
   readonly limit: number;
@@ -185,6 +192,15 @@ export class AppConfigService {
       maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
       signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
       reclaimAfterDays: this.config.get<number>('STORAGE_RECLAIM_AFTER_DAYS'),
+    };
+  }
+
+  get captcha(): CaptchaConfig {
+    return {
+      enabled: this.config.get<boolean>('CAPTCHA_ENABLED'),
+      secret: this.config.get<string>('CAPTCHA_SECRET'),
+      maxNumber: this.config.get<number>('CAPTCHA_MAX_NUMBER'),
+      ttlSeconds: this.config.get<number>('CAPTCHA_TTL_S'),
     };
   }
 

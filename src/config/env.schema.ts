@@ -7,6 +7,7 @@ export const AppRole = z.enum(['api', 'worker', 'all']);
 export type AppRole = z.infer<typeof AppRole>;
 
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
+const DEV_CAPTCHA_SECRET = 'dev-only-insecure-captcha-secret-do-not-use-in-prod';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -86,6 +87,30 @@ export const envSchema = z.object({
    * to let a failed delete be retried rather than lost.
    */
   STORAGE_RECLAIM_AFTER_DAYS: z.coerce.number().int().positive().max(365).default(30),
+
+  /**
+   * A proof-of-work captcha on the four forms open to the internet: sign-up,
+   * sign-in, the password-reset request and the demo request. ALTCHA's protocol
+   * (ADR 0033) — the client hashes until it finds a number, so there is no
+   * third-party script, no site key and nothing to pay.
+   *
+   * Off by default, which is what keeps development and the e2e suite
+   * unchallenged. An institution turns it on at deploy.
+   */
+  CAPTCHA_ENABLED: bool('false'),
+
+  /** Signs a challenge so the server need not remember one it has not seen back. */
+  CAPTCHA_SECRET: z.string().min(32).default(DEV_CAPTCHA_SECRET),
+
+  /**
+   * The search space. A browser hashes roughly a million times a second, so
+   * 100k averages well under a second of work for one visitor and makes a
+   * thousand forged sign-ups genuinely expensive.
+   */
+  CAPTCHA_MAX_NUMBER: z.coerce.number().int().positive().max(10_000_000).default(100_000),
+
+  /** How long a challenge stays solvable. Long enough to fill a form in, not to stockpile. */
+  CAPTCHA_TTL_S: z.coerce.number().int().positive().max(3_600).default(600),
 
   QUEUE_PREFIX: z.string().default('studviro'),
   QUEUE_DEFAULT_ATTEMPTS: z.coerce.number().int().positive().default(3),
@@ -172,6 +197,15 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     if (env[key] === DEV_JWT_SECRET) {
       reject(key, 'must be set to a unique secret in production');
     }
+  }
+
+  // The shipped secret would let anyone sign their own challenge, which is the
+  // whole of the check — so it is only rejected where the captcha is actually on.
+  if (env.CAPTCHA_ENABLED && env.CAPTCHA_SECRET === DEV_CAPTCHA_SECRET) {
+    reject(
+      'CAPTCHA_SECRET',
+      'must be set to a unique secret when the captcha is enabled; with the shipped one a caller can sign their own solved challenge',
+    );
   }
 
   if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {

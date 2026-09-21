@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
+import { CaptchaField } from '../../captcha/dto/captcha-field.decorator';
+
 const trimmed = () =>
   Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -54,4 +56,7 @@ export class CreateDemoRequestDto {
   @IsString()
   @MaxLength(200)
   website?: string;
+
+  @CaptchaField()
+  captcha?: string;
 }

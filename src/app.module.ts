@@ -21,6 +21,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { CaptchaModule } from './modules/captcha/captcha.module';
 import { CatalogueModule } from './modules/catalogue/catalogue.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
@@ -156,6 +157,7 @@ function workerModules(): DynamicModule[] {
     SchedulingModule,
     SearchModule,
     StorageModule,
+    CaptchaModule,
     EnrollmentModule,
     CatalogueModule,
     UsersModule,

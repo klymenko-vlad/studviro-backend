@@ -1,9 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiAcceptedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { PublicFormThrottle } from '../../common/throttling';
 import { Public } from '../auth/decorators/public.decorator';
+import { RequireCaptcha } from '../captcha/decorators/require-captcha.decorator';
+import { CaptchaGuard } from '../captcha/guards/captcha.guard';
 
 import { DemoRequestsService, type DemoRequestContext } from './demo-requests.service';
 import { CreateDemoRequestDto } from './dto/create-demo-request.dto';
@@ -20,6 +22,8 @@ export class DemoRequestsController {
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @PublicFormThrottle()
+  @UseGuards(CaptchaGuard)
+  @RequireCaptcha()
   @ApiOperation({ summary: 'Ask for a demonstration of the platform' })
   @ApiAcceptedResponse({ type: DemoRequestAcceptedDto })
   @ApiErrorResponses()
