@@ -74,6 +74,14 @@ Walked in a browser: marked a student's work as the administrator and moved Assi
 deadline on _Information Security_, then signed in as `ada@studviro.local` and found both
 in the inbox — the move reaching all eight enrolled students, the mark reaching one.
 
+Also on 2026-09-21: **the learning tab is an administrator's index, not a student's.** It
+was gated on `offering:read`, which every student holds, so every student was offered a
+screen naming every course in the institution with its workload and deadlines. The route
+answers two questions — the page on _this_ offering, open to any reader of it, and the
+whole index, which now additionally needs `offering:manage`. Its summary counted spaces
+"matched to a course offering", which is every one of them; it now counts the offerings
+that have **no** page yet, which is a question an administrator has.
+
 Also on 2026-09-21: **a removed file no longer costs money for ever.** Only erasure called
 `StorageService.delete`, so every material a teacher removed stayed in the bucket.
 `StorageReclamationService` sweeps nightly at 04:00 and drops the objects of materials
@@ -89,42 +97,38 @@ deleting live coursework — see `docs/Deployment.md`.
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — `/institutions/:id/learning` is a leftover.** It lists every space
-institution-wide and reports how many are "matched to a course offering" — but a space is
-now authored against one, so the unmatched half cannot occur. Its nav entry is gated on
-`offering:read`, which every student holds, so students are offered a tab that tells them
-nothing. Decide whether the screen becomes an administrator's index of course pages or is
-removed outright, and take its nav entry with it either way.
-
+**Next task — a captcha on the public forms.** Sign-up, sign-in, password reset and the demo
+request are open to the internet and rate-limited only by IP. **Use ALTCHA**, not
+Turnstile or hCaptcha: it is a self-hosted proof-of-work challenge with no account, no
+site key, no third-party request and nothing to pay, which is the only free option
+that fits the standing "local only, no credentials until deploy" rule _and_ does not
+send every visitor to a US processor — a question an EU institution has to answer.
+Shape: a `CaptchaModule` issuing and verifying challenges server-side with the
+HMAC secret already in `ConfigService`, a `@RequireCaptcha()` guard on the four
+routes, and `altcha` as a web component behind a `'use client'` boundary. Behind a
+feature flag so development and e2e stay unchallenged. Record the choice in an ADR;
+Turnstile stays the documented swap if the institution would rather.
 Then, in order:
 
-1. **A captcha on the public forms.** Sign-up, sign-in, password reset and the demo
-   request are open to the internet and rate-limited only by IP. **Use ALTCHA**, not
-   Turnstile or hCaptcha: it is a self-hosted proof-of-work challenge with no account, no
-   site key, no third-party request and nothing to pay, which is the only free option
-   that fits the standing "local only, no credentials until deploy" rule _and_ does not
-   send every visitor to a US processor — a question an EU institution has to answer.
-   Shape: a `CaptchaModule` issuing and verifying challenges server-side with the
-   HMAC secret already in `ConfigService`, a `@RequireCaptcha()` guard on the four
-   routes, and `altcha` as a web component behind a `'use client'` boundary. Behind a
-   feature flag so development and e2e stay unchallenged. Record the choice in an ADR;
-   Turnstile stays the documented swap if the institution would rather.
-2. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
+1. **The Slovak translation.** Both catalogues are fully keyed; ~1,316 of 1,458 Slovak
    values are still the English string. The keys awaiting translation are exactly those
    whose `sk` value equals its `en` value, so the pass is mechanical to scope.
-3. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
+2. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
    unpaginated. The pickers in front of it are a typeahead now, so this is about the
    payload rather than the interface. The grant form on `/roles` still takes a raw user
    id and never got the picker.
-4. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
+3. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
    `my-enrollments.service.ts:27` still say a place stays `requested` "until the
-   registrar's system acknowledges it", with the line below activating it unconditionally;
-   `institution-nav.tsx` says the learning screen "reports import provenance".
+   registrar's system acknowledges it", with the line below activating it unconditionally. The
+   `institution-nav.tsx` one is gone.
 
-Noticed while walking this step, not fixed: the assignment editor's date fields are a
-segmented spinbutton whose hidden `input[name=dueAt]` mirror is the _first_ one in the
-DOM, shared with the add form above it — worth a look if a date edit ever writes to the
-wrong assignment.
+Noticed while walking these steps, not fixed:
+
+- The assignment editor's date fields are a segmented spinbutton whose hidden
+  `input[name=dueAt]` mirror is the **first** one in the DOM, shared with the add form
+  above it — worth a look if a date edit ever writes to the wrong assignment.
+- **A React duplicate-key error on signing in**, key `null`, logged the moment `/account`
+  renders. It predates all of this work and is on no screen touched here.
 
 ## Standing decisions — do not re-ask these
 
