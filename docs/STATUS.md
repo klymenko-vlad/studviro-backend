@@ -70,24 +70,22 @@ enrolment comments no longer promise a registrar's system that ADR 0024 removed.
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — resolve audit-trail actor names without downloading the directory.**
-`audit-trail` names an actor by searching a list of every person in the
-institution. That list is now fetched correctly — `personQueries.listForInstitution`
-walks the cursor to the end — so no name is missing, but fetching 164 people to
-label a handful of rows is the wrong shape and gets worse with the institution. It
-wants an endpoint that resolves the ids actually on screen: a `POST` taking user
-ids and answering with names, or a `userIds` filter on the people route. The
-`listForInstitution` wrapper exists only for this one caller and should go with it.
+**Next task — nothing is outstanding from the found-work list.** Every item it
+carried has shipped; what follows is worth doing but nobody has claimed it.
 
-Then, in order:
-
-1. **The person pickers still filter in the browser.** `q` is on the endpoint and
-   `personQueries.page` exposes it; `assign-teacher-form` and `admit-student-form`
-   have not been moved onto it. They are the typeaheads the `q` parameter was added
-   for.
-2. **`forInstitutions.roadmap.slovak` is now false.** It tells institutions the
-   Slovak catalogue is "still largely English". It is complete. The card wants
-   removing along with its entry in `for-institutions-view.tsx`.
+1. **`no_show` and `excused` are never set.** Publishing a grade marks a seat
+   `attended` and nothing records an absence, so the two statuses exist in the
+   schema and on no screen. The smallest honest version is a control on the exam
+   term's registrant list.
+2. **There is no request-to-join for a course that is full.** A student who finds
+   `OFFERING_FULL` has nowhere to put their name, so the registrar hears about it
+   by email instead.
+3. **`UsersRepository.findInvitedByEmail` is not scoped to the inviting
+   institution**, so two institutions inviting one address contend for a single
+   shadow row. ADR 0018 knows; nothing has been done.
+4. **The k6 rush leaves a `LOAD-RUSH-<n>` course behind by design.** Re-seeding is
+   the cleanup, which is fine until somebody runs it against something they care
+   about.
 
 Noticed while walking these steps, not fixed:
 
