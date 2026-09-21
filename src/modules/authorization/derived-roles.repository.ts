@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { programMemberships, teachingAssignments } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -61,25 +61,50 @@ export class DerivedRolesRepository {
         ),
     ]);
 
-    const derivedByUser = new Map<string, DerivedRole[]>();
-    const push = (userId: string, role: DerivedRole): void => {
-      const existing = derivedByUser.get(userId);
-      if (existing) existing.push(role);
-      else derivedByUser.set(userId, [role]);
-    };
+    return collectDerived(institutionId, students, teaching);
+  }
 
-    for (const { userId } of students) {
-      push(userId, { role: 'student', scope: { type: 'institution', id: institutionId } });
-    }
+  /**
+   * The same derivation as `findAllForInstitution`, narrowed to the people on
+   * one page of the directory. Without it, rendering twenty names still reads
+   * every programme membership and teaching assignment in the institution.
+   */
+  async findForUsers(
+    institutionId: string,
+    userIds: readonly string[],
+  ): Promise<Map<string, DerivedRole[]>> {
+    if (userIds.length === 0) return new Map();
 
-    for (const row of teaching) {
-      push(row.userId, {
-        role: row.role === 'assistant' ? 'teaching_assistant' : 'teacher',
-        scope: { type: 'course_offering', id: row.courseOfferingId },
-      });
-    }
+    const ids = [...userIds];
+    const [students, teaching] = await Promise.all([
+      this.reader
+        .selectDistinct({ userId: programMemberships.userId })
+        .from(programMemberships)
+        .where(
+          and(
+            eq(programMemberships.institutionId, institutionId),
+            inArray(programMemberships.userId, ids),
+            eq(programMemberships.status, 'active'),
+            isNull(programMemberships.deletedAt),
+          ),
+        ),
+      this.reader
+        .select({
+          userId: teachingAssignments.userId,
+          courseOfferingId: teachingAssignments.courseOfferingId,
+          role: teachingAssignments.role,
+        })
+        .from(teachingAssignments)
+        .where(
+          and(
+            eq(teachingAssignments.institutionId, institutionId),
+            inArray(teachingAssignments.userId, ids),
+            isNull(teachingAssignments.deletedAt),
+          ),
+        ),
+    ]);
 
-    return derivedByUser;
+    return collectDerived(institutionId, students, teaching);
   }
 
   async findFor(institutionId: string, userId: string): Promise<DerivedRole[]> {
@@ -164,4 +189,30 @@ export class DerivedRolesRepository {
   private get reader() {
     return this.txHost.reader();
   }
+}
+
+function collectDerived(
+  institutionId: string,
+  students: readonly { userId: string }[],
+  teaching: readonly { userId: string; courseOfferingId: string; role: string }[],
+): Map<string, DerivedRole[]> {
+  const derivedByUser = new Map<string, DerivedRole[]>();
+  const push = (userId: string, role: DerivedRole): void => {
+    const existing = derivedByUser.get(userId);
+    if (existing) existing.push(role);
+    else derivedByUser.set(userId, [role]);
+  };
+
+  for (const { userId } of students) {
+    push(userId, { role: 'student', scope: { type: 'institution', id: institutionId } });
+  }
+
+  for (const row of teaching) {
+    push(row.userId, {
+      role: row.role === 'assistant' ? 'teaching_assistant' : 'teacher',
+      scope: { type: 'course_offering', id: row.courseOfferingId },
+    });
+  }
+
+  return derivedByUser;
 }

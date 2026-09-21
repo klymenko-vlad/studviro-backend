@@ -14,6 +14,7 @@ import { OrgUnitsController } from './org-units.controller';
 import { OrgUnitsRepository } from './org-units.repository';
 import { OrgUnitsService } from './org-units.service';
 import { PeopleController } from './people.controller';
+import { PeopleRepository } from './people.repository';
 import { PeopleService } from './people.service';
 import { RoomsController } from './rooms.controller';
 import { RoomsRepository } from './rooms.repository';
@@ -36,6 +37,7 @@ import { RoomsService } from './rooms.service';
     FeatureFlagGuard,
     OrgUnitsService,
     OrgUnitsRepository,
+    PeopleRepository,
     PeopleService,
     RoomsService,
     RoomsRepository,

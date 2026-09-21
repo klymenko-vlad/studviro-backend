@@ -3440,6 +3440,7 @@
     },
     "/api/v1/institutions/{institutionId}/people": {
       "get": {
+        "description": "Keyset-paginated by name. `q` narrows to a name or an address, so a typeahead asks the server rather than filtering a directory the browser had to download first.",
         "operationId": "listPeople",
         "parameters": [
           {
@@ -3447,6 +3448,44 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to people whose name or email contains this",
+            "schema": {
+              "maxLength": 200,
               "type": "string"
             }
           }
@@ -3457,10 +3496,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PersonDirectoryEntryDto"
-                  }
+                  "$ref": "#/components/schemas/PersonDirectoryPageDto"
                 }
               }
             }
@@ -3501,7 +3537,7 @@
             "access-token": []
           }
         ],
-        "summary": "List the people of an institution with their granted and derived roles",
+        "summary": "A page of the people of an institution, with their granted and derived roles",
         "tags": [
           "people"
         ]
@@ -13694,6 +13730,24 @@
           "displayName",
           "status",
           "roles"
+        ]
+      },
+      "PersonDirectoryPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonDirectoryEntryDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CursorPageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
         ]
       },
       "RoomResponseDto": {
