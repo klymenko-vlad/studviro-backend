@@ -54,81 +54,40 @@ The defect list this section used to carry has been worked through — 2026-09-1
 fixes are recorded in `Task Tracker.md`'s defect table and in **ADR 0031**, which
 supersedes ADR 0028's guess at how a teacher derives a role.
 
-On 2026-09-21 the notifications feature stopped being half-built.
-`LearningActivityNotificationsService` and `TimetableNotificationsService` both existed,
-were both tested, and neither was injected anywhere — so the calendar carried a moved
-deadline and a cancelled class and the inbox did not. Both are now wired: assignment
-create and update, timetable update, cancel and remove. A mark is new —
-`submission_marked` names the one student whose work it is, because a classmate has no
-stake in it. Two defects surfaced underneath:
-
-- **`PATCH` on an assignment that changed only a date returned 500.** The paired
-  `assessments` update was handed no columns and Drizzle refuses that. Each half of the
-  pair is now left alone when nothing about it changed. This had always been broken;
-  nothing tested a date-only edit.
-- **An assignment drafted hidden and then published was never announced**, because the
-  deadline had not moved. Becoming visible is now the publication — which is the ordinary
-  authoring flow, so this was most of the feature.
-
-Walked in a browser: marked a student's work as the administrator and moved Assignment 1's
-deadline on _Information Security_, then signed in as `ada@studviro.local` and found both
-in the inbox — the move reaching all eight enrolled students, the mark reaching one.
-
-Also on 2026-09-21: **the four forms open to the internet carry a captcha.** Sign-up,
-sign-in, the password-reset request and the demo request were metered by IP and nothing
-else. **ALTCHA's protocol, implemented rather than imported** (**ADR 0033**): the client
-hashes to find a number, so there is no third-party script, no site key, no account and
-nothing to pay — and nothing about the visitor leaves the origin, which Turnstile and
-hCaptcha cannot say. **Off by default**; `CAPTCHA_ENABLED` turns it on at deploy, and
-production refuses to boot with the shipped secret when it is. Walked with it on: the
-browser solved a 50,000-wide challenge and signed in in under two seconds, and the API
-refused both an absent and a forged one.
-
-Two bundle traps were found paying for it, both recorded in `.size-limit.mjs`: reading
-the captcha state with `useQuery` cost **13.6 kB** because the three auth routes had no
-client query at all, and importing the server-side read through `entities/captcha`'s
-public API cost **19 kB** because that barrel re-exports two `'use client'` modules. The
-read lives in `shared/auth` now and is passed as a prop. **Any server-only read added to
-a slice whose barrel exports client code will do the same thing.**
-
-Also on 2026-09-21: **the learning tab is an administrator's index, not a student's.** It
-was gated on `offering:read`, which every student holds, so every student was offered a
-screen naming every course in the institution with its workload and deadlines. The route
-answers two questions — the page on _this_ offering, open to any reader of it, and the
-whole index, which now additionally needs `offering:manage`. Its summary counted spaces
-"matched to a course offering", which is every one of them; it now counts the offerings
-that have **no** page yet, which is a question an administrator has.
-
-Also on 2026-09-21: **a removed file no longer costs money for ever.** Only erasure called
-`StorageService.delete`, so every material a teacher removed stayed in the bucket.
-`StorageReclamationService` sweeps nightly at 04:00 and drops the objects of materials
-tombstoned longer ago than `STORAGE_RECLAIM_AFTER_DAYS` (30), then clears the key it
-reclaimed; a failed delete keeps its key and is retried. A sweep rather than a delete in
-the request, for the reasons in **ADR 0032**. Asserted against MinIO itself, not a spy.
-**Not covered, and now the known leak:** an upload ticket whose object was `PUT` but whose
-row was never written belongs to nothing, and no bucket lifecycle rule can find it without
-deleting live coursework — see `docs/Deployment.md`.
+**2026-09-21 shipped seven found-work items.** Each is a row in `Task Tracker.md`
+(B14–B19) with the full reasoning, and the ones that settled a decision have an ADR.
+In short: the two notification services that had no callers are wired, so an
+assignment set, moved or marked and a class moved or cancelled all reach the inbox;
+a removed learning material's object is swept out of the bucket instead of being
+paid for for ever (**ADR 0032**); the `/learning` tab is an administrator's index
+behind `offering:manage` rather than a tab every student was offered; the four
+public forms carry a self-hosted proof-of-work captcha (**ADR 0033**); the Slovak
+catalogue is finished; the person directory is paginated and searchable; and the
+enrolment comments no longer promise a registrar's system that ADR 0024 removed.
 
 ## What to do next
 
 The backlog is complete and so is the defect list it ended with. What follows is found
 work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
 
-**Next task — the Slovak translation.** Both catalogues are fully keyed; roughly 1,320 of
-1,469 Slovak values are still the English string. The keys awaiting translation are
-exactly those whose `sk` value equals its `en` value, so the pass is mechanical to scope
-and can be taken in slices. Do not touch a value that already differs.
+**Next task — give the person directory a load-more, and fix how the audit trail
+names people.** `GET /institutions/:id/people` is keyset-paginated now, but
+`person-directory-table` still asks for one page of 100 and renders it with no way
+to ask for the next — so an institution of more than 100 people silently shows the
+first 100. Worse, `audit-trail` resolves actor names by searching that same capped
+list, so beyond 100 people some rows read "unknown actor". The table needs a
+load-more over `personQueries.page`; the audit trail needs to stop downloading a
+directory to search in the browser and resolve the ids actually on screen instead.
+Both files were being refactored by another session when this landed, which is why
+they were left.
 
 Then, in order:
 
-1. **Paginate the person directory.** `GET /institutions/:id/people` returns everybody,
-   unpaginated. The pickers in front of it are a typeahead now, so this is about the
-   payload rather than the interface. The grant form on `/roles` still takes a raw user
-   id and never got the picker.
-2. **Stale comments that now mislead.** `my-enrollments.controller.ts:67` and
-   `my-enrollments.service.ts:27` still say a place stays `requested` "until the
-   registrar's system acknowledges it", with the line below activating it unconditionally. The
-   `institution-nav.tsx` one is gone.
+1. **The person pickers still filter in the browser.** `q` exists on the endpoint
+   and `personQueries.page` exposes it; `assign-teacher-form` and
+   `admit-student-form` have not been moved onto it.
+2. **Stale marketing copy is gone** — that pass was taken by another session on
+   2026-09-21, against `Feature Status.md`.
 
 Noticed while walking these steps, not fixed:
 
@@ -151,6 +110,18 @@ Noticed while walking these steps, not fixed:
 
 ## Traps that have cost time here
 
+- **A generic `CursorPageDto<T>` in an `@ApiOkResponse` breaks the generated client.**
+  Its `items` carries no type, so the client validates it as an array of arrays and
+  rejects every real response — "could not be loaded" on a 200, which reads as a
+  server fault. Write a concrete page DTO: `AuditEventPageDto`,
+  `PersonDirectoryPageDto`.
+- **A server-only read imported through a slice barrel that also re-exports
+  `'use client'` modules drags them into the client graph** — measured at 19 kB
+  gzipped. It is why `captchaEnabled` lives in `shared/auth` rather than
+  `entities/captcha`.
+- **The first `useQuery` on a route that had none pulls React Query's observer
+  machinery into its chunk** — 13.6 kB across the three auth routes. A value fixed
+  at deploy belongs in a Server Component and a prop.
 - **Regenerate both halves of the contract together.** A server returning a permission the
   client's generated Zod enum does not know makes every permissions response fail validation
   and every `can()` answer false — the app renders as if the caller had no rights. It looks
