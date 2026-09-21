@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import { decodeCursor } from '../../database/repository/cursor';
 import {
@@ -15,6 +15,7 @@ export interface PeoplePageQuery {
   readonly limit: number;
   readonly cursor?: string | undefined;
   readonly search?: string | undefined;
+  readonly userIds?: readonly string[] | undefined;
 }
 
 export interface PeoplePage {
@@ -114,6 +115,8 @@ export class PeopleRepository {
 
   private narrowings(query: PeoplePageQuery): SQL[] {
     const filters: SQL[] = [];
+
+    if (query.userIds) filters.push(inArray(users.id, [...query.userIds]));
 
     const search = query.search?.trim();
     if (search) {

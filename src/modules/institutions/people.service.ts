@@ -42,6 +42,7 @@ export class PeopleService {
       limit: query.limit,
       cursor: query.cursor,
       search: query.q,
+      userIds: query.userIds,
     });
 
     const items = await this.withRoles(institutionId, people);

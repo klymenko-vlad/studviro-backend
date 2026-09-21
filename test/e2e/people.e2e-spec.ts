@@ -256,4 +256,75 @@ describe('People directory (e2e)', () => {
       );
     });
   });
+
+  describe('resolving specific people', () => {
+    it('answers with only the people asked for', async () => {
+      const anna = await named('Anna Bartošová');
+      await named('Boris Cibuľa');
+
+      const found = await people(`?userIds=${anna.user.id}`);
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({ userId: anna.user.id });
+    });
+
+    it('takes several ids, comma-separated', async () => {
+      const anna = await named('Anna Bartošová');
+      const boris = await named('Boris Cibuľa');
+      await named('Cyril Dudáš');
+
+      const found = await people(`?userIds=${anna.user.id},${boris.user.id}`);
+
+      expect(found.map((entry) => entry.userId).toSorted()).toEqual(
+        [anna.user.id, boris.user.id].toSorted(),
+      );
+    });
+
+    it('takes them as a repeated parameter too', async () => {
+      const anna = await named('Anna Bartošová');
+      const boris = await named('Boris Cibuľa');
+
+      const found = await people(`?userIds=${anna.user.id}&userIds=${boris.user.id}`);
+
+      expect(found).toHaveLength(2);
+    });
+
+    it('still carries their roles, which is the point of asking here', async () => {
+      const anna = await named('Anna Bartošová');
+
+      const found = await people(`?userIds=${anna.user.id}`);
+
+      expect(found[0]?.roles).toMatchObject([{ role: 'registrar', source: 'granted' }]);
+    });
+
+    it('will not resolve somebody from another institution', async () => {
+      const other = await harness.actingAs();
+      await grantInDatabase(other.user.id, otherInstitutionId);
+
+      expect(await people(`?userIds=${other.user.id}`)).toEqual([]);
+    });
+
+    it('silently drops an id nobody here holds, rather than failing the page', async () => {
+      const anna = await named('Anna Bartošová');
+
+      const found = await people(
+        `?userIds=${anna.user.id},00000000-0000-4000-8000-000000000000`,
+      );
+
+      expect(found).toHaveLength(1);
+    });
+
+    it('refuses something that is not an id', async () => {
+      expect((await list('?userIds=not-a-uuid')).statusCode).toBe(400);
+    });
+
+    it('refuses more ids than a page of rows could name', async () => {
+      const tooMany = Array.from(
+        { length: 201 },
+        (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      ).join(',');
+
+      expect((await list(`?userIds=${tooMany}`)).statusCode).toBe(400);
+    });
+  });
 });
