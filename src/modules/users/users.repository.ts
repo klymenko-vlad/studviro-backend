@@ -45,13 +45,7 @@ export class UsersRepository extends BaseRepository<typeof users> {
     );
   }
 
-  /**
-   * The `invited` shadow an imported record left behind under this address, if
-   * any. Not scoped to a single institution: `users.email` uniqueness only
-   * excludes `invited` rows, so two institutions could in principle import the
-   * same address, in which case this returns whichever shadow sorts first —
-   * a known simplification, see `docs/adr/0018-invitations-and-account-merge.md`.
-   */
+  // Only a pre-ADR-0024 import wrote `invited` rows; see ADR 0018's 2026-09-23 update.
   findInvitedByEmail(email: string, tx?: Transaction): Promise<User | undefined> {
     return this.findOne(
       sql`${users.email} = ${email} and ${users.status} = 'invited'`,

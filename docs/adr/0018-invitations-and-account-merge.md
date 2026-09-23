@@ -69,6 +69,14 @@ contend for one shadow row. Given the current single-tenant seed and connector s
 happen yet; scoping it properly needs a join through `external_identities` that is worth doing
 once cross-institution overlap is a real scenario rather than a hypothetical one.
 
+_Update 2026-09-23._ This limitation no longer has a way to occur. The only writer of an `invited`
+shadow was the person importer, and ADR 0024 removed the import. An invitation now stores only an
+address, and accepting it either takes over the one active account under that address or creates
+one. Two institutions that invite the same address therefore grant two roles to one person, and
+that is correct, because it is the same person. `findInvitedByEmail` can match only a shadow left
+over from before the pivot, and each such row still belongs to a single address. Scoping the
+lookup would need a column that nothing writes, so it was not built.
+
 ### Password reset reuses the invitation token shape, not a new one
 
 `password_reset_tokens` is its own table — a reset proves nothing about institutional
