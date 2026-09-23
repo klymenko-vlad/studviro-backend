@@ -5,6 +5,7 @@ export const AUDIT_ACTIONS = [
   'role.revoked',
   'enrollment.corrected',
   'exam_term.cancelled',
+  'exam_registration.attendance_recorded',
   'personal_data.erased',
 ] as const;
 
@@ -15,6 +16,7 @@ export const AUDIT_SUBJECT_TYPES = [
   'role_assignment',
   'enrollment',
   'exam_term',
+  'exam_registration',
   'personal_data_erasure',
 ] as const;
 

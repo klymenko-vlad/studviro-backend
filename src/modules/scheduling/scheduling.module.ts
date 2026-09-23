@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { ExamAttendanceController } from './exam-attendance.controller';
+import { ExamAttendanceService } from './exam-attendance.service';
 import { ExamTermAdministrationController } from './exam-term-administration.controller';
 import { ExamTermAdministrationService } from './exam-term-administration.service';
 import { ExamTermCancellationService } from './exam-term-cancellation.service';
@@ -25,10 +27,12 @@ import { TimetableAdministrationService } from './timetable-administration.servi
     MyExamRegistrationsController,
     TimetableAdministrationController,
     ExamTermAdministrationController,
+    ExamAttendanceController,
   ],
   providers: [
     ExamTermCancellationService,
     ExamTermAdministrationService,
+    ExamAttendanceService,
     MyTimetableEventsService,
     MyTimetableEventsRepository,
     MyExamTermsService,
