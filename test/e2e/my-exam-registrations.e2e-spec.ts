@@ -317,6 +317,28 @@ describe('My exam registrations (e2e)', () => {
     expect(response.json().code).toBe('EXAM_ATTEMPT_NOT_EARNED');
   });
 
+  it.each([
+    ['no_show', 201],
+    ['excused', 400],
+  ] as const)(
+    'counts a %s on an earlier term toward the retake ladder accordingly',
+    async (status, expected) => {
+      const actor = await actingAs('student');
+      await enrol(actor.user.id, algorithmsOfferingId);
+      const regular = await examTerm({ capacity: null });
+      await harness.db.insert(examRegistrations).values({
+        institutionId,
+        examTermId: regular,
+        userId: actor.user.id,
+        status,
+        registeredAt: new Date('2026-05-20T00:00:00.000Z'),
+      });
+      const retake = await examTerm({ kind: 'first_retake' });
+
+      expect((await registerFor(actor, retake)).statusCode).toBe(expected);
+    },
+  );
+
   it('refuses a retake when the only failure on record was annulled', async () => {
     const actor = await actingAs('student');
     const enrollmentId = await enrol(actor.user.id, algorithmsOfferingId);

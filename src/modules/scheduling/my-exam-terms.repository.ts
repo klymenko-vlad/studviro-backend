@@ -9,16 +9,15 @@ import {
   enrollments,
   examRegistrations,
   examTerms,
-  FAILING_COURSE_GRADES,
-  officialCourseResults,
   rooms,
   teachingAssignments,
   users,
-  VOIDED_COURSE_RESULT_STATUSES,
   type ExamRegistrationStatus,
   type ExamTermKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+import { attemptsSpentOnOffering } from './attempts-spent.sql';
 
 export interface MyExamTermRow {
   examTermId: string;
@@ -97,7 +96,7 @@ export class MyExamTermsRepository {
         registeredCount: this.registeredCount(),
         otherLiveRegistrationForOffering:
           sql<boolean>`${this.registeredElsewhere(userId)}`.mapWith(Boolean),
-        attemptsSpent: this.attemptsSpent(userId),
+        attemptsSpent: attemptsSpentOnOffering(userId),
         roomId: rooms.id,
         roomCode: rooms.code,
         roomName: rooms.name,
@@ -130,20 +129,6 @@ export class MyExamTermsRepository {
       )
       .where(and(...conditions))
       .orderBy(asc(examTerms.startsAt), asc(courses.code));
-  }
-
-  /** The same count the write enforces the retake ladder on. */
-  private attemptsSpent(userId: string): SQL<number> {
-    return sql<number>`(
-      select count(*) from ${officialCourseResults}
-      inner join ${enrollments} on ${enrollments.id} = ${officialCourseResults.enrollmentId}
-      where ${enrollments.userId} = ${userId}
-        and ${enrollments.courseOfferingId} = ${courseOfferings.id}
-        and ${enrollments.deletedAt} is null
-        and ${officialCourseResults.deletedAt} is null
-        and ${officialCourseResults.status} not in ${VOIDED_COURSE_RESULT_STATUSES}
-        and ${officialCourseResults.officialGrade} in ${FAILING_COURSE_GRADES}
-    )`.mapWith(Number);
   }
 
   private latestRegistrationId(userId: string): SQL<string> {

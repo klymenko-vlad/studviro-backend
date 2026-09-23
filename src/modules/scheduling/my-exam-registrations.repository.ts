@@ -8,13 +8,12 @@ import {
   enrollments,
   examRegistrations,
   examTerms,
-  FAILING_COURSE_GRADES,
-  officialCourseResults,
-  VOIDED_COURSE_RESULT_STATUSES,
   type ExamRegistration,
   type ExamTermKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+import { attemptsSpentOnOffering } from './attempts-spent.sql';
 
 export interface RegistrableExamTermRow {
   examTermId: string;
@@ -59,7 +58,7 @@ export class MyExamRegistrationsRepository {
         registrationClosesAt: examTerms.registrationClosesAt,
         cancelledAt: examTerms.cancelledAt,
         enrolled: sql<boolean>`${this.enrolledIn(userId)}`.mapWith(Boolean),
-        attemptsSpent: this.attemptsSpent(userId),
+        attemptsSpent: attemptsSpentOnOffering(userId),
       })
       .from(examTerms)
       .innerJoin(courseOfferings, eq(courseOfferings.id, examTerms.courseOfferingId))
@@ -169,24 +168,6 @@ export class MyExamRegistrationsRepository {
       .limit(1);
 
     return row;
-  }
-
-  /**
-   * How far up the retake ladder the student already is on this offering. A
-   * failed standing result is one spent attempt; an annulled one is none,
-   * because it was struck.
-   */
-  private attemptsSpent(userId: string): SQL<number> {
-    return sql<number>`(
-      select count(*) from ${officialCourseResults}
-      inner join ${enrollments} on ${enrollments.id} = ${officialCourseResults.enrollmentId}
-      where ${enrollments.userId} = ${userId}
-        and ${enrollments.courseOfferingId} = ${courseOfferings.id}
-        and ${enrollments.deletedAt} is null
-        and ${officialCourseResults.deletedAt} is null
-        and ${officialCourseResults.status} not in ${VOIDED_COURSE_RESULT_STATUSES}
-        and ${officialCourseResults.officialGrade} in ${FAILING_COURSE_GRADES}
-    )`.mapWith(Number);
   }
 
   private registeredCount(): SQL<number> {
