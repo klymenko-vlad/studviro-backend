@@ -1417,7 +1417,8 @@
                 "active",
                 "completed",
                 "withdrawn",
-                "rejected"
+                "rejected",
+                "waitlisted"
               ]
             }
           }
@@ -11249,6 +11250,103 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/me/enrollments/waitlist": {
+      "post": {
+        "description": "Holds no seat. A place that comes free can be taken with `requestEnrollment`, and a registrar may admit from the queue. Refused with `OFFERING_NOT_FULL` while a place is free.",
+        "operationId": "joinCourseWaitlist",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEnrollmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Queue for a place on a course that is full",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/me/enrollments/{id}": {
       "delete": {
         "operationId": "withdrawFromCourse",
@@ -11337,7 +11435,95 @@
             "access-token": []
           }
         ],
-        "summary": "Withdraw from a course while the window is still open",
+        "summary": "Withdraw from a course while the window is still open, or leave its queue at any time",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/waitlist": {
+      "get": {
+        "description": "Admit or refuse one with `correctEnrollment`, which tells the student.",
+        "operationId": "listCourseWaitlist",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WaitingStudentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Who is queueing for a place on this offering, first come first served",
         "tags": [
           "courses"
         ]
@@ -12113,7 +12299,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           },
@@ -12443,7 +12630,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           },
@@ -12659,7 +12847,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           },
@@ -13280,7 +13469,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           },
@@ -15824,7 +16014,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ]
           },
           "requirementType": {
@@ -17094,7 +17285,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string",
             "description": "The correction verb: a registrar may put an enrolment into any state, including past a full course or back from a mistaken withdrawal."
@@ -17118,7 +17310,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           }
@@ -18575,11 +18768,16 @@
           "canWithdraw": {
             "type": "boolean"
           },
+          "canJoinWaitlist": {
+            "type": "boolean",
+            "description": "The course is full, and the caller may queue for a place."
+          },
           "reason": {
             "enum": [
               "open",
               "enrolled",
               "requested",
+              "waitlisted",
               "completed",
               "not_open",
               "closed",
@@ -18592,6 +18790,7 @@
         "required": [
           "canEnroll",
           "canWithdraw",
+          "canJoinWaitlist",
           "reason"
         ]
       },
@@ -18609,7 +18808,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           }
@@ -18767,7 +18967,8 @@
               "active",
               "completed",
               "withdrawn",
-              "rejected"
+              "rejected",
+              "waitlisted"
             ],
             "type": "string"
           },
@@ -18788,6 +18989,38 @@
           "status",
           "enrolledAt",
           "withdrawnAt"
+        ]
+      },
+      "WaitingStudentResponseDto": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "waitlistedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "userId",
+          "displayName",
+          "email",
+          "waitlistedAt"
         ]
       }
     }
