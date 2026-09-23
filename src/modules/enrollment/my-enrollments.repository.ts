@@ -140,6 +140,41 @@ export class MyEnrollmentsRepository {
     return reopened;
   }
 
+  async joinWaitlist(
+    institutionId: string,
+    userId: string,
+    offeringId: string,
+    now: Date,
+  ): Promise<Enrollment> {
+    const [created] = await this.writer
+      .insert(enrollments)
+      .values({
+        institutionId,
+        courseOfferingId: offeringId,
+        userId,
+        status: 'waitlisted',
+        requirementType: 'elective',
+        waitlistedAt: now,
+      })
+      .returning();
+
+    if (!created) throw new EntityNotFoundError('course offering', offeringId);
+
+    return created;
+  }
+
+  async rejoinWaitlist(enrollmentId: string, now: Date): Promise<Enrollment> {
+    const [queued] = await this.writer
+      .update(enrollments)
+      .set({ status: 'waitlisted', waitlistedAt: now, enrolledAt: null, withdrawnAt: null })
+      .where(eq(enrollments.id, enrollmentId))
+      .returning();
+
+    if (!queued) throw new EntityNotFoundError('enrollment', enrollmentId);
+
+    return queued;
+  }
+
   async withdraw(enrollmentId: string, now: Date): Promise<Enrollment> {
     const [withdrawn] = await this.writer
       .update(enrollments)

@@ -78,11 +78,32 @@ export class MyEnrollmentsController {
     );
   }
 
+  @Post('waitlist')
+  @RequirePermission('course:enroll', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'joinCourseWaitlist',
+    summary: 'Queue for a place on a course that is full',
+    description:
+      'Holds no seat. A place that comes free can be taken with `requestEnrollment`, and a registrar may admit from the queue. Refused with `OFFERING_NOT_FULL` while a place is free.',
+  })
+  @ApiCreatedResponse({ type: EnrollmentResponseDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async joinWaitlist(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: RequestEnrollmentDto,
+  ): Promise<EnrollmentResponseDto> {
+    return EnrollmentResponseDto.fromEntity(
+      await this.enrollments.joinWaitlist(institutionId, userId, dto.courseOfferingId),
+    );
+  }
+
   @Delete(':id')
   @RequirePermission('course:enroll', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'withdrawFromCourse',
-    summary: 'Withdraw from a course while the window is still open',
+    summary:
+      'Withdraw from a course while the window is still open, or leave its queue at any time',
   })
   @ApiOkResponse({ type: EnrollmentResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })

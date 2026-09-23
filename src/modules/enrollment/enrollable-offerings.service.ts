@@ -14,6 +14,7 @@ export const ENROLLMENT_REASONS = [
   'open',
   'enrolled',
   'requested',
+  'waitlisted',
   'completed',
   'not_open',
   'closed',
@@ -25,6 +26,7 @@ export type EnrollmentReason = (typeof ENROLLMENT_REASONS)[number];
 export interface EnrollmentAvailability {
   canEnroll: boolean;
   canWithdraw: boolean;
+  canJoinWaitlist: boolean;
   reason: EnrollmentReason;
 }
 
@@ -106,9 +108,10 @@ function availability(
   seatsRemaining: number | null,
   now: Date,
 ): EnrollmentAvailability {
-  const blocked = (reason: EnrollmentReason) => ({
+  const blocked = (reason: EnrollmentReason): EnrollmentAvailability => ({
     canEnroll: false,
     canWithdraw: false,
+    canJoinWaitlist: false,
     reason,
   });
 
@@ -116,17 +119,26 @@ function availability(
 
   if (row.myStatus === 'completed') return blocked('completed');
   if (row.myStatus === 'requested') {
-    return { canEnroll: false, canWithdraw: open, reason: 'requested' };
+    return { canEnroll: false, canWithdraw: open, canJoinWaitlist: false, reason: 'requested' };
   }
   if (row.myStatus === 'provisioning' || row.myStatus === 'active') {
-    return { canEnroll: false, canWithdraw: open, reason: 'enrolled' };
+    return { canEnroll: false, canWithdraw: open, canJoinWaitlist: false, reason: 'enrolled' };
+  }
+
+  if (row.myStatus === 'waitlisted') {
+    return {
+      canEnroll: open && seatsRemaining !== 0,
+      canWithdraw: true,
+      canJoinWaitlist: false,
+      reason: 'waitlisted',
+    };
   }
 
   if (!row.inMyProgram) return blocked('not_a_student');
 
   const state = windowState(row, now);
   if (state !== 'open') return blocked(state === 'not_open' ? 'not_open' : 'closed');
-  if (seatsRemaining === 0) return blocked('full');
+  if (seatsRemaining === 0) return { ...blocked('full'), canJoinWaitlist: true };
 
-  return { canEnroll: true, canWithdraw: false, reason: 'open' };
+  return { canEnroll: true, canWithdraw: false, canJoinWaitlist: false, reason: 'open' };
 }

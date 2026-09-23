@@ -49,6 +49,7 @@ describe('EnrollableOfferingsService', () => {
     expect((await first()).availability).toEqual({
       canEnroll: true,
       canWithdraw: false,
+      canJoinWaitlist: false,
       reason: 'open',
     });
   });
@@ -89,13 +90,23 @@ describe('EnrollableOfferingsService', () => {
   it('lets a student withdraw from the place they hold', async () => {
     expect(
       (await first({ myEnrollmentId: 'enrollment-1', myStatus: 'active' })).availability,
-    ).toEqual({ canEnroll: false, canWithdraw: true, reason: 'enrolled' });
+    ).toEqual({
+      canEnroll: false,
+      canWithdraw: true,
+      canJoinWaitlist: false,
+      reason: 'enrolled',
+    });
   });
 
   it('lets a student withdraw a request they have not had answered', async () => {
     expect(
       (await first({ myEnrollmentId: 'enrollment-1', myStatus: 'requested' })).availability,
-    ).toEqual({ canEnroll: false, canWithdraw: true, reason: 'requested' });
+    ).toEqual({
+      canEnroll: false,
+      canWithdraw: true,
+      canJoinWaitlist: false,
+      reason: 'requested',
+    });
   });
 
   it('will not let a student withdraw once the window has closed', async () => {
@@ -120,6 +131,30 @@ describe('EnrollableOfferingsService', () => {
       (await first({ myEnrollmentId: 'enrollment-1', myStatus: 'completed' })).availability
         .reason,
     ).toBe('completed');
+  });
+
+  it('offers the queue on a full course, and only there', async () => {
+    const full = await first({ capacity: 1, occupiedSeats: 1 });
+
+    expect(full.availability).toMatchObject({ reason: 'full', canJoinWaitlist: true });
+  });
+
+  it('lets a queueing student take a place that comes free, and leave after the window', async () => {
+    const waiting = { myEnrollmentId: 'enrollment-1', myStatus: 'waitlisted' as const };
+
+    expect((await first({ ...waiting, capacity: 1, occupiedSeats: 1 })).availability).toEqual({
+      canEnroll: false,
+      canWithdraw: true,
+      canJoinWaitlist: false,
+      reason: 'waitlisted',
+    });
+    expect(
+      (await first({ ...waiting, capacity: 2, occupiedSeats: 1 })).availability.canEnroll,
+    ).toBe(true);
+    expect(
+      (await first({ ...waiting, enrollmentClosesAt: new Date('2020-01-01T00:00:00.000Z') }))
+        .availability,
+    ).toMatchObject({ canEnroll: false, canWithdraw: true });
   });
 
   it('treats a term with no window at all as open', async () => {

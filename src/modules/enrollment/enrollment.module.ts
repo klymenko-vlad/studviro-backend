@@ -7,15 +7,18 @@ import { EnrollableOfferingsService } from './enrollable-offerings.service';
 import { MyEnrollmentsController } from './my-enrollments.controller';
 import { MyEnrollmentsRepository } from './my-enrollments.repository';
 import { MyEnrollmentsService } from './my-enrollments.service';
+import { OfferingWaitlistController } from './offering-waitlist.controller';
+import { OfferingWaitlistService } from './offering-waitlist.service';
 
 @Module({
   imports: [NotificationsModule],
-  controllers: [MyEnrollmentsController],
+  controllers: [MyEnrollmentsController, OfferingWaitlistController],
   providers: [
     EnrollableOfferingsService,
     EnrollableOfferingsRepository,
     MyEnrollmentsService,
     MyEnrollmentsRepository,
+    OfferingWaitlistService,
   ],
   exports: [EnrollableOfferingsService, MyEnrollmentsService],
 })

@@ -66,6 +66,28 @@ export class MyEnrollmentsService {
     return { ...enrollment, status: 'active' };
   }
 
+  async joinWaitlist(
+    institutionId: string,
+    userId: string,
+    offeringId: string,
+    now = new Date(),
+  ): Promise<Enrollment> {
+    return this.txHost.runSerializable(async () => {
+      const offering = await this.repository.findEnrollable(institutionId, userId, offeringId);
+      if (!offering) throw new EntityNotFoundError('course offering', offeringId);
+
+      this.assertOnOffer(offering);
+      this.assertOpen(offering, now);
+      this.assertNotAlreadyIn(offering, { waiting: 'refuse' });
+      await this.assertStudent(institutionId, userId);
+      this.assertFull(offering);
+
+      return offering.myEnrollmentId
+        ? this.repository.rejoinWaitlist(offering.myEnrollmentId, now)
+        : this.repository.joinWaitlist(institutionId, userId, offeringId, now);
+    });
+  }
+
   async withdraw(
     institutionId: string,
     userId: string,
@@ -89,7 +111,7 @@ export class MyEnrollmentsService {
         userId,
         existing.courseOfferingId,
       );
-      if (offering) this.assertOpen(offering, now);
+      if (offering && existing.status !== 'waitlisted') this.assertOpen(offering, now);
 
       return this.repository.withdraw(enrollmentId, now);
     });
@@ -121,15 +143,19 @@ export class MyEnrollmentsService {
     );
   }
 
-  private assertNotAlreadyIn(offering: EnrollableRow): void {
+  private assertNotAlreadyIn(
+    offering: EnrollableRow,
+    { waiting }: { waiting: 'allow' | 'refuse' } = { waiting: 'allow' },
+  ): void {
     const status = offering.myStatus;
     if (status === null || status === 'withdrawn' || status === 'rejected') return;
+    if (status === 'waitlisted' && waiting === 'allow') return;
 
     throw new ConflictError(
       status === 'completed' ? 'ENROLLMENT_COMPLETED' : 'ENROLLMENT_ALREADY_HELD',
       status === 'completed'
         ? 'You have already completed that course'
-        : 'You already hold a place, or a request, on that course',
+        : 'You already hold a place, a request or a place in the queue on that course',
       { status },
     );
   }
@@ -149,5 +175,15 @@ export class MyEnrollmentsService {
     throw new ConflictError('OFFERING_FULL', 'That course has no places left', {
       offeringId: offering.offeringId,
     });
+  }
+
+  private assertFull(offering: EnrollableRow): void {
+    if (offering.capacity !== null && offering.occupiedSeats >= offering.capacity) return;
+
+    throw new ConflictError(
+      'OFFERING_NOT_FULL',
+      'That course has a place free, so take the place instead of queueing for one',
+      { offeringId: offering.offeringId },
+    );
   }
 }

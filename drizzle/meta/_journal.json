@@ -183,6 +183,13 @@
       "when": 1790008416116,
       "tag": "0025_clever_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790183274100,
+      "tag": "0026_noisy_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

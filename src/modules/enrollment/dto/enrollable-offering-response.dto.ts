@@ -14,6 +14,10 @@ import {
 export class EnrollmentAvailabilityDto {
   @Expose() @ApiProperty() canEnroll!: boolean;
   @Expose() @ApiProperty() canWithdraw!: boolean;
+
+  @Expose()
+  @ApiProperty({ description: 'The course is full, and the caller may queue for a place.' })
+  canJoinWaitlist!: boolean;
   @Expose() @ApiProperty({ enum: ENROLLMENT_REASONS }) reason!: EnrollmentReason;
 }
 

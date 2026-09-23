@@ -51,6 +51,7 @@ export const ENROLLMENT_STATUSES = [
   'completed',
   'withdrawn',
   'rejected',
+  'waitlisted',
 ] as const;
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 export const enrollmentStatus = pgEnum('enrollment_status', ENROLLMENT_STATUSES);
@@ -88,6 +89,7 @@ export const ENROLLMENT_OCCUPYING_STATUSES: readonly EnrollmentStatus[] = [
 
 /** Statuses a student may withdraw from themselves. */
 export const ENROLLMENT_WITHDRAWABLE_STATUSES: readonly EnrollmentStatus[] = [
+  'waitlisted',
   'requested',
   'provisioning',
   'active',
@@ -119,6 +121,7 @@ export const enrollments = pgTable(
     attempt: integer('attempt').notNull().default(1),
     enrolledAt: timestampColumn('enrolled_at'),
     withdrawnAt: timestampColumn('withdrawn_at'),
+    waitlistedAt: timestampColumn('waitlisted_at'),
     lmsProvisionedAt: timestampColumn('lms_provisioned_at'),
     lmsProvisioningError: text('lms_provisioning_error'),
     deletedAt,

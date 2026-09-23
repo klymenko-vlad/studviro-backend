@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 import { AcademicTermsController } from './academic-terms.controller';
 import { AcademicTermsRepository } from './academic-terms.repository';
 import { AcademicTermsService } from './academic-terms.service';
@@ -23,6 +25,7 @@ import { TeachingAssignmentsController } from './teaching-assignments.controller
 import { TeachingAssignmentsService } from './teaching-assignments.service';
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [
     AcademicTermsController,
     BulkEntryController,

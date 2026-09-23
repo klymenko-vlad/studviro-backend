@@ -16,6 +16,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { AuditService } from '../audit/audit.service';
+import { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
 
 export interface NewOffering {
   readonly courseId: string;
@@ -55,6 +56,7 @@ export const CORRECTABLE_ENROLLMENT_STATUSES: readonly EnrollmentStatus[] = [
   'completed',
   'withdrawn',
   'rejected',
+  'waitlisted',
 ];
 
 @Injectable()
@@ -62,6 +64,7 @@ export class OfferingAdministrationService {
   constructor(
     private readonly txHost: TransactionHost,
     private readonly audit: AuditService,
+    private readonly enrollmentNotifications: EnrollmentNotificationsService,
   ) {}
 
   /**
@@ -311,6 +314,11 @@ export class OfferingAdministrationService {
           before: enrollmentSnapshot(existing),
           after: enrollmentSnapshot(corrected),
         },
+        now,
+      );
+      await this.enrollmentNotifications.applied(
+        institutionId,
+        { previous: existing, current: corrected },
         now,
       );
 
