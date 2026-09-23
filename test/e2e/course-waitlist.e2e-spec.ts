@@ -271,6 +271,25 @@ describe('Course waiting list (e2e)', () => {
     });
   });
 
+  it('lets a registrar open the course page and its roster, where the queue is answered', async () => {
+    const registrar = await actingAs('registrar');
+
+    const page = await harness.inject({
+      method: 'GET',
+      url: `${base()}/course-offerings/${fullId}`,
+      headers: registrar.headers,
+    });
+    const roster = await harness.inject({
+      method: 'GET',
+      url: `${base()}/course-offerings/${fullId}/roster`,
+      headers: registrar.headers,
+    });
+
+    expect(page.statusCode).toBe(200);
+    expect(page.json().viewerRole).toBe('administrator');
+    expect(roster.statusCode).toBe(200);
+  });
+
   it('keeps the list from a student', async () => {
     const actor = await student();
 

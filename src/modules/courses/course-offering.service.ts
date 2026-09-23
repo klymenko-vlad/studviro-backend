@@ -10,6 +10,7 @@ import type {
 } from '../../database/schema';
 import { AuthorizationService } from '../authorization/authorization.service';
 
+import { administersOfferings } from './administers-offering';
 import {
   CourseOfferingRepository,
   type OfferingDetailRow,
@@ -118,11 +119,7 @@ export class CourseOfferingService {
     if (teaches) return 'teacher';
     if (enrollment) return 'student';
 
-    const administers = await this.authorization.can({
-      userId,
-      permission: 'offering:manage',
-      scope: { type: 'institution', id: institutionId },
-    });
+    const administers = await administersOfferings(this.authorization, userId, institutionId);
     if (!administers) throw new PermissionDeniedError();
 
     return 'administrator';

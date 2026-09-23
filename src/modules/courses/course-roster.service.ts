@@ -8,6 +8,7 @@ import type {
 } from '../../database/schema';
 import { AuthorizationService } from '../authorization/authorization.service';
 
+import { administersOfferings } from './administers-offering';
 import { CourseOfferingRepository } from './course-offering.repository';
 import {
   CourseRosterRepository,
@@ -82,11 +83,7 @@ export class CourseRosterService {
   ): Promise<RosterViewerRole> {
     if (await this.roster.teaches(offeringId, userId)) return 'teacher';
 
-    const administers = await this.authorization.can({
-      userId,
-      permission: 'offering:manage',
-      scope: { type: 'institution', id: institutionId },
-    });
+    const administers = await administersOfferings(this.authorization, userId, institutionId);
     if (!administers) throw new PermissionDeniedError();
 
     return 'administrator';
