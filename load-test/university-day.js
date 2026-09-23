@@ -200,7 +200,8 @@ export function teardown(data) {
     `rush exam term: ${examTerm ? examTerm.seatsTaken : '?'}/${examTerm ? examTerm.capacity : '?'} seats held`,
   );
 
-  if (!clearFixture(data)) console.warn('the rush fixture could not be cleared; re-seed to remove it');
+  if (!clearFixture(data))
+    console.warn('the rush fixture could not be cleared; re-seed to remove it');
 }
 
 /** The week calendar asks for a window, so a realistic read has to carry one. */

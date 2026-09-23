@@ -144,7 +144,8 @@ function studentEmails(adminToken, institutionId) {
   let cursor = null;
 
   do {
-    const query = cursor === null ? 'limit=100' : `limit=100&cursor=${encodeURIComponent(cursor)}`;
+    const query =
+      cursor === null ? 'limit=100' : `limit=100&cursor=${encodeURIComponent(cursor)}`;
     const page = get(`${API}/institutions/${institutionId}/people?${query}`, adminToken).json();
 
     for (const person of page.items) {
