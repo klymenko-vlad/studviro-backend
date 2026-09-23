@@ -11,7 +11,7 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
  * 500 or an unlisted status is not.
  */
 export function call(method, url, { token, body, expect } = {}) {
-  const headers = { ...JSON_HEADERS };
+  const headers = body === undefined ? {} : { ...JSON_HEADERS };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = http.request(method, url, body === undefined ? null : JSON.stringify(body), {

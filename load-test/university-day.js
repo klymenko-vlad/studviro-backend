@@ -11,7 +11,7 @@ import {
   STUDENTS,
   STUDENT_PASSWORD,
 } from './lib/config.js';
-import { buildFixture } from './lib/fixtures.js';
+import { buildFixture, clearFixture } from './lib/fixtures.js';
 import {
   capacityRespected,
   enrollmentDuration,
@@ -199,6 +199,8 @@ export function teardown(data) {
   console.log(
     `rush exam term: ${examTerm ? examTerm.seatsTaken : '?'}/${examTerm ? examTerm.capacity : '?'} seats held`,
   );
+
+  if (!clearFixture(data)) console.warn('the rush fixture could not be cleared; re-seed to remove it');
 }
 
 /** The week calendar asks for a window, so a realistic read has to carry one. */

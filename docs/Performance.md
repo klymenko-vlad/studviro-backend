@@ -74,8 +74,13 @@ What `setup()` builds, as the institution administrator:
    opened an hour ago;
 5. signs in every student and keeps the access tokens.
 
-The course is left behind deliberately. `pnpm db:seed` deletes and rewrites the
-institution it owns, so **re-seeding is the cleanup**.
+`teardown()` takes the rush back off the timetable using the same administrator API.
+It removes the exam term, which releases every seat, and cancels the offering. An
+offering that students held places on can be cancelled but never erased, so
+`LOAD-RUSH-<n>` stays in the catalogue as a cancelled course that no student is offered.
+Only `pnpm db:seed` removes it completely, because it rewrites the institution it owns.
+Students who held a seat on the rush exam get the ordinary notice that it was removed.
+Point the profile at an institution whose students can take that.
 
 ## Running it
 

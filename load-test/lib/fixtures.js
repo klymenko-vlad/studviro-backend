@@ -1,7 +1,7 @@
 import { fail } from 'k6';
 
 import { signIn } from './auth.js';
-import { get, post } from './client.js';
+import { call, get, post } from './client.js';
 import {
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
@@ -24,8 +24,7 @@ const DAY_MS = 86_400_000;
  * the same API an administrator uses, which is also the only way to be sure
  * the seat count is exactly the one the assertions expect.
  *
- * It is left behind on purpose — `pnpm db:seed` rewrites the institution it
- * owns, so re-seeding is the cleanup.
+ * `clearFixture` takes it back off the timetable when the run ends.
  */
 export function buildFixture() {
   const adminToken = signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
@@ -125,12 +124,7 @@ function createRushExamTerm(token, institutionId, offeringId) {
 }
 
 function signInStudents(adminToken, institutionId) {
-  const people = get(`${API}/institutions/${institutionId}/people`, adminToken).json();
-  const emails = people
-    .filter((person) => person.status === 'active')
-    .filter((person) => person.roles.some((role) => role.role === 'student'))
-    .map((person) => person.email)
-    .slice(0, STUDENTS);
+  const emails = studentEmails(adminToken, institutionId);
 
   if (!emails.length) fail('no students in the institution — run pnpm db:seed');
 
@@ -143,4 +137,46 @@ function signInStudents(adminToken, institutionId) {
   if (!students.length) fail('no student could sign in — check STUDENT_PASSWORD');
 
   return students;
+}
+
+function studentEmails(adminToken, institutionId) {
+  const emails = [];
+  let cursor = null;
+
+  do {
+    const query = cursor === null ? 'limit=100' : `limit=100&cursor=${encodeURIComponent(cursor)}`;
+    const page = get(`${API}/institutions/${institutionId}/people?${query}`, adminToken).json();
+
+    for (const person of page.items) {
+      if (person.status !== 'active') continue;
+      if (!person.roles.some((role) => role.role === 'student')) continue;
+      emails.push(person.email);
+    }
+
+    cursor = page.meta.hasNextPage ? page.meta.nextCursor : null;
+  } while (cursor !== null && emails.length < STUDENTS);
+
+  return emails.slice(0, STUDENTS);
+}
+
+/**
+ * Takes the rush back off the timetable through the verbs an administrator
+ * has. An offering students held places on can only be cancelled, never
+ * erased, so the course stays in the catalogue as a cancelled offering; the
+ * exam term is removed outright, which releases every seat it held.
+ */
+export function clearFixture(data) {
+  const base = `${API}/institutions/${data.institutionId}/course-offerings/${data.offeringId}`;
+
+  const examTerm = call('DELETE', `${base}/exam-terms/${data.examTermId}`, {
+    token: data.adminToken,
+    expect: [204],
+  });
+  const offering = call('PATCH', base, {
+    token: data.adminToken,
+    body: { status: 'cancelled' },
+    expect: [200],
+  });
+
+  return examTerm.status === 204 && offering.status === 200;
 }
