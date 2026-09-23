@@ -916,6 +916,7 @@
                 "role.revoked",
                 "enrollment.corrected",
                 "exam_term.cancelled",
+                "exam_registration.attendance_recorded",
                 "personal_data.erased"
               ]
             }
@@ -931,6 +932,7 @@
                 "role_assignment",
                 "enrollment",
                 "exam_term",
+                "exam_registration",
                 "personal_data_erasure"
               ]
             }
@@ -10654,6 +10656,223 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}/registrations": {
+      "get": {
+        "description": "A seat the student gave up, or that a called-off term released, is left out.",
+        "operationId": "listExamTermRegistrants",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examTermId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExamRegistrantResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Who holds, or held, a seat on this exam term",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/exam-terms/{examTermId}/registrations/{registrationId}/attendance": {
+      "put": {
+        "description": "Only once the exam has started, and never on a term that was called off or a seat that was given up.",
+        "operationId": "recordExamAttendance",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examTermId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "registrationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordExamAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamRegistrantResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record whether a student sat the exam",
+        "tags": [
+          "scheduling"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/search": {
       "get": {
         "description": "Permission decides what is searched rather than what is filtered afterwards, so a kind the caller cannot read is never queried and an empty result cannot be read as proof that something does not exist.",
@@ -11480,6 +11699,7 @@
               "role.revoked",
               "enrollment.corrected",
               "exam_term.cancelled",
+              "exam_registration.attendance_recorded",
               "personal_data.erased"
             ]
           },
@@ -11490,6 +11710,7 @@
               "role_assignment",
               "enrollment",
               "exam_term",
+              "exam_registration",
               "personal_data_erasure"
             ]
           },
@@ -18150,6 +18371,66 @@
             "description": "Somebody who teaches this offering."
           }
         }
+      },
+      "ExamRegistrantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "enum": [
+              "registered",
+              "cancelled",
+              "attended",
+              "no_show",
+              "excused"
+            ],
+            "type": "string"
+          },
+          "registeredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "displayName",
+          "email",
+          "status",
+          "registeredAt"
+        ]
+      },
+      "RecordExamAttendanceDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "attended",
+              "no_show",
+              "excused"
+            ],
+            "type": "string",
+            "description": "A no-show spends the attempt; an excused absence does not. Either may be corrected later."
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "SearchHitDto": {
         "type": "object",
