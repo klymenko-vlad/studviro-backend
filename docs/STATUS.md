@@ -61,13 +61,10 @@ fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
 ## What to do next
 
-**Next task: nothing is claimed, and the found-work list is empty.** B25, the
-assignment editor's deadline, was a selector ambiguity and not a defect. A test pins
-it. The one open candidate is a product decision:
-
-- **Joining an institution (tracker B2).** An account can only reach an institution
-  through an invitation. Whether a stranger should be able to _ask_ is a product
-  decision. Ask before building it.
+**Next task: nothing is claimed.** The found-work list is empty, and B2 is closed by
+decision: an institution is joined only by invitation, for now (**ADR 0035**). Do not
+build a request-to-join or a self-join without asking. Pick the next item from what
+turns up while walking the app.
 
 Noticed while walking, not fixed:
 
@@ -90,6 +87,7 @@ Noticed while walking, not fixed:
 - **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
   in a table at the top of each document. Do not invent them.
 - **No quizzes** (ADR 0028).
+- **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
 
 ## Traps that have cost time here
 
