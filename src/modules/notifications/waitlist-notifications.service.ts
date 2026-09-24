@@ -47,4 +47,17 @@ export class WaitlistNotificationsService {
       occurredAt: now,
     });
   }
+
+  /**
+   * A student who has left the queue — by taking the place, leaving, or being
+   * admitted or refused — has no use for "a place came free" any more.
+   */
+  async leftQueue(
+    institutionId: string,
+    userId: string,
+    offeringId: string,
+    now = new Date(),
+  ): Promise<void> {
+    await this.repository.markPlaceFreeRead(institutionId, userId, offeringId, now);
+  }
 }

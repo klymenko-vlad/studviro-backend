@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -396,6 +396,30 @@ describe('Course waiting list (e2e)', () => {
 
       expect(response.statusCode).toBe(200);
       expect(await noticesOf(actor)).toContain('waitlist_place_free');
+    });
+
+    it('marks the notice read once the student takes the place', async () => {
+      const actor = await student();
+      await queue(actor, fullId);
+      await drop(seatHolder, await seatOf(seatHolder));
+
+      expect((await ask(actor, fullId)).statusCode).toBe(201);
+
+      const unread = await harness.db
+        .select({ type: notificationEvents.type })
+        .from(notificationDeliveries)
+        .innerJoin(
+          notificationEvents,
+          eq(notificationEvents.id, notificationDeliveries.notificationEventId),
+        )
+        .where(
+          and(
+            eq(notificationDeliveries.userId, actor.user.id),
+            isNull(notificationDeliveries.readAt),
+          ),
+        );
+      expect(unread.map((row) => row.type)).not.toContain('waitlist_place_free');
+      expect(unread.map((row) => row.type)).toContain('enrollment_confirmed');
     });
 
     it('says nothing when the place is taken straight from the queue', async () => {

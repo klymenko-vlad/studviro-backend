@@ -6,6 +6,8 @@ import {
   courseOfferings,
   ENROLLMENT_OCCUPYING_STATUSES,
   enrollments,
+  notificationDeliveries,
+  notificationEvents,
   type CourseOfferingStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -68,6 +70,36 @@ export class WaitlistNotificationsRepository {
       .orderBy(asc(enrollments.waitlistedAt));
 
     return rows.map((row) => row.userId);
+  }
+
+  async markPlaceFreeRead(
+    institutionId: string,
+    userId: string,
+    offeringId: string,
+    now: Date,
+  ): Promise<void> {
+    const events = this.client
+      .select({ id: notificationEvents.id })
+      .from(notificationEvents)
+      .where(
+        and(
+          eq(notificationEvents.institutionId, institutionId),
+          eq(notificationEvents.type, 'waitlist_place_free'),
+          eq(notificationEvents.courseOfferingId, offeringId),
+        ),
+      );
+
+    await this.client
+      .update(notificationDeliveries)
+      .set({ readAt: now })
+      .where(
+        and(
+          eq(notificationDeliveries.institutionId, institutionId),
+          eq(notificationDeliveries.userId, userId),
+          isNull(notificationDeliveries.readAt),
+          inArray(notificationDeliveries.notificationEventId, events),
+        ),
+      );
   }
 
   private get client() {

@@ -45,7 +45,7 @@ export class MyEnrollmentsService {
     offeringId: string,
     now = new Date(),
   ): Promise<Enrollment> {
-    const enrollment = await this.txHost.runSerializable(async () => {
+    const { enrollment, wasWaiting } = await this.txHost.runSerializable(async () => {
       const offering = await this.repository.findEnrollable(institutionId, userId, offeringId);
       if (!offering) throw new EntityNotFoundError('course offering', offeringId);
 
@@ -55,9 +55,12 @@ export class MyEnrollmentsService {
       await this.assertStudent(institutionId, userId);
       this.assertSeatFree(offering);
 
-      return offering.myEnrollmentId
-        ? this.repository.reopen(offering.myEnrollmentId, now)
-        : this.repository.request(institutionId, userId, offeringId, now);
+      return {
+        enrollment: offering.myEnrollmentId
+          ? await this.repository.reopen(offering.myEnrollmentId, now)
+          : await this.repository.request(institutionId, userId, offeringId, now),
+        wasWaiting: offering.myStatus === 'waitlisted',
+      };
     });
 
     // StudViro is the system of record, so a place asked for is a place given:
@@ -68,6 +71,9 @@ export class MyEnrollmentsService {
       { previous: enrollment, current: { ...enrollment, status: 'active' } },
       now,
     );
+    if (wasWaiting) {
+      await this.waitlistNotifications.leftQueue(institutionId, userId, offeringId, now);
+    }
 
     return { ...enrollment, status: 'active' };
   }
@@ -122,6 +128,14 @@ export class MyEnrollmentsService {
       return { existing, withdrawn: await this.repository.withdraw(enrollmentId, now) };
     });
 
+    if (existing.status === 'waitlisted') {
+      await this.waitlistNotifications.leftQueue(
+        institutionId,
+        userId,
+        existing.courseOfferingId,
+        now,
+      );
+    }
     if (ENROLLMENT_OCCUPYING_STATUSES.includes(existing.status)) {
       await this.waitlistNotifications.placeMayHaveFreed(
         institutionId,

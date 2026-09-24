@@ -335,6 +335,14 @@ export class OfferingAdministrationService {
       return { existing, corrected };
     });
 
+    if (existing.status === 'waitlisted' && corrected.status !== 'waitlisted') {
+      await this.waitlistNotifications.leftQueue(
+        institutionId,
+        existing.userId,
+        offeringId,
+        now,
+      );
+    }
     if (
       ENROLLMENT_OCCUPYING_STATUSES.includes(existing.status) &&
       !ENROLLMENT_OCCUPYING_STATUSES.includes(corrected.status)

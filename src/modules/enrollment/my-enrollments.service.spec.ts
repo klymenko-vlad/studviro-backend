@@ -38,6 +38,7 @@ describe('MyEnrollmentsService', () => {
 
   const applied = vi.fn();
   const placeMayHaveFreed = vi.fn();
+  const leftQueue = vi.fn();
 
   const txHost = {
     run: (fn: () => Promise<unknown>) => fn(),
@@ -69,7 +70,7 @@ describe('MyEnrollmentsService', () => {
       } as unknown as MyEnrollmentsRepository,
       txHost,
       { applied } as unknown as EnrollmentNotificationsService,
-      { placeMayHaveFreed } as unknown as WaitlistNotificationsService,
+      { placeMayHaveFreed, leftQueue } as unknown as WaitlistNotificationsService,
     );
   });
 
@@ -204,6 +205,7 @@ describe('MyEnrollmentsService', () => {
       await drop();
 
       expect(placeMayHaveFreed).not.toHaveBeenCalled();
+      expect(leftQueue).toHaveBeenCalledWith('institution-1', 'student-1', 'offering-1', NOW);
     });
 
     it('rejects an enrolment that is not the caller’s', async () => {

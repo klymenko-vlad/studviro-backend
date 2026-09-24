@@ -22,6 +22,7 @@ describe('WaitlistNotificationsService', () => {
   const emit = vi.fn();
   const findOffering = vi.fn();
   const findWaiting = vi.fn();
+  const markPlaceFreeRead = vi.fn();
   let service: WaitlistNotificationsService;
 
   const freed = () => service.placeMayHaveFreed('institution-1', 'offering-1', NOW);
@@ -32,7 +33,11 @@ describe('WaitlistNotificationsService', () => {
     findWaiting.mockResolvedValue(['student-1', 'student-2']);
     emit.mockResolvedValue(2);
     service = new WaitlistNotificationsService(
-      { findOffering, findWaiting } as unknown as WaitlistNotificationsRepository,
+      {
+        findOffering,
+        findWaiting,
+        markPlaceFreeRead,
+      } as unknown as WaitlistNotificationsRepository,
       { emit } as unknown as NotificationEmitterService,
     );
   });
@@ -95,5 +100,16 @@ describe('WaitlistNotificationsService', () => {
     await freed();
 
     expect(findWaiting).not.toHaveBeenCalled();
+  });
+
+  it('marks the notice read for a student who has left the queue', async () => {
+    await service.leftQueue('institution-1', 'student-1', 'offering-1', NOW);
+
+    expect(markPlaceFreeRead).toHaveBeenCalledWith(
+      'institution-1',
+      'student-1',
+      'offering-1',
+      NOW,
+    );
   });
 });
