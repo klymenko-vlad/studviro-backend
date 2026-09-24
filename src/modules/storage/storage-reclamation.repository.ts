@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNotNull, lt } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 
-import { learningMaterials } from '../../database/schema';
+import { learningMaterials, submissionFiles } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 import type { StorageKey } from './storage.types';
@@ -51,5 +51,30 @@ export class StorageReclamationRepository {
       .update(learningMaterials)
       .set({ storageKey: null, sizeBytes: null })
       .where(eq(learningMaterials.id, materialId));
+  }
+
+  /**
+   * Which of these keys a row still points at, tombstoned or not. A tombstoned
+   * material keeps its key until `findReclaimable` sweeps it, so it is never
+   * mistaken for an orphan while it can still be restored.
+   */
+  async findReferenced(keys: readonly string[]): Promise<Set<string>> {
+    if (keys.length === 0) return new Set();
+
+    const client = this.txHost.client();
+    const [materials, submissions] = await Promise.all([
+      client
+        .select({ key: learningMaterials.storageKey })
+        .from(learningMaterials)
+        .where(inArray(learningMaterials.storageKey, [...keys])),
+      client
+        .select({ key: submissionFiles.storageKey })
+        .from(submissionFiles)
+        .where(inArray(submissionFiles.storageKey, [...keys])),
+    ]);
+
+    return new Set(
+      [...materials, ...submissions].flatMap((row) => (row.key === null ? [] : [row.key])),
+    );
   }
 }

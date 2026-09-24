@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -12,7 +13,13 @@ import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.e
 import { AppConfigService } from '../../config/app-config.service';
 
 import { StorageKeys } from './storage.keys';
-import type { StoredObject, StorageKey, UploadRequest, UploadTicket } from './storage.types';
+import type {
+  ListedObject,
+  StoredObject,
+  StorageKey,
+  UploadRequest,
+  UploadTicket,
+} from './storage.types';
 
 /**
  * Content types a course may hold. An allow-list rather than a deny-list:
@@ -176,6 +183,29 @@ export class StorageService implements OnModuleDestroy {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.config.storage.bucket, Key: key }),
     );
+  }
+
+  /** One page of the objects under a prefix, oldest-first order not promised. */
+  async list(
+    prefix: string,
+    continuationToken?: string,
+  ): Promise<{ objects: ListedObject[]; next: string | undefined }> {
+    const response = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.config.storage.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    return {
+      objects: (response.Contents ?? []).flatMap((object) =>
+        object.Key === undefined || object.LastModified === undefined
+          ? []
+          : [{ key: object.Key, lastModified: object.LastModified }],
+      ),
+      next: response.IsTruncated ? response.NextContinuationToken : undefined,
+    };
   }
 
   async head(key: StorageKey): Promise<StoredObject | undefined> {

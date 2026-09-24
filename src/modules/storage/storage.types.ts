@@ -28,3 +28,8 @@ export interface UploadRequest {
   readonly filename: string;
   readonly contentType: string;
 }
+
+export interface ListedObject {
+  readonly key: StorageKey;
+  readonly lastModified: Date;
+}

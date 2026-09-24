@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { learningMaterials } from '../../src/database/schema';
+import { OrphanedObjectSweepService } from '../../src/modules/storage/orphaned-object-sweep.service';
 import { StorageReclamationService } from '../../src/modules/storage/storage-reclamation.service';
 import { StorageService } from '../../src/modules/storage/storage.service';
 import type { StorageKey } from '../../src/modules/storage/storage.types';
@@ -25,6 +26,7 @@ describe('Storage reclamation (e2e)', () => {
   let fixture: LearningFixture;
   let storage: StorageService;
   let reclamation: StorageReclamationService;
+  let orphans: OrphanedObjectSweepService;
   let spaceId: string;
 
   const materialsUrl = () =>
@@ -54,6 +56,20 @@ describe('Storage reclamation (e2e)', () => {
     return { id: created.json().id as string, key: ticket.json().key as StorageKey };
   };
 
+  const uploadWithoutClaiming = async () => {
+    const ticket = await harness.inject({
+      method: 'POST',
+      url: `${materialsUrl()}/upload-tickets`,
+      headers: fixture.admin.headers,
+      payload: { filename: 'abandoned.pdf', contentType: 'application/pdf' },
+    });
+    expect(await putToStore(ticket.json(), 'never claimed')).toBe(200);
+
+    return ticket.json().key as StorageKey;
+  };
+
+  const tomorrowButOne = () => new Date(Date.now() + 2 * DAY);
+
   const remove = (materialId: string) =>
     harness.inject({
       method: 'DELETE',
@@ -80,6 +96,7 @@ describe('Storage reclamation (e2e)', () => {
     harness = await createTestHarness();
     storage = harness.app.get(StorageService);
     reclamation = harness.app.get(StorageReclamationService);
+    orphans = harness.app.get(OrphanedObjectSweepService);
   });
 
   afterAll(async () => {
@@ -158,5 +175,36 @@ describe('Storage reclamation (e2e)', () => {
     });
 
     expect(listed.json()).toEqual([]);
+  });
+
+  describe('an abandoned upload', () => {
+    it('is dropped once nobody has claimed it for a day', async () => {
+      const key = await uploadWithoutClaiming();
+
+      const result = await orphans.sweep(tomorrowButOne());
+
+      expect(result.failed).toBe(0);
+      expect(result.removed).toBeGreaterThanOrEqual(1);
+      expect(await storage.head(key)).toBeUndefined();
+    });
+
+    it('is left alone while its uploader may still be claiming it', async () => {
+      const key = await uploadWithoutClaiming();
+
+      await orphans.sweep();
+
+      expect(await storage.head(key)).toBeDefined();
+    });
+
+    it('never takes a file a material points at, removed or not', async () => {
+      const live = await addFile();
+      const removed = await addFile();
+      await remove(removed.id);
+
+      await orphans.sweep(tomorrowButOne());
+
+      expect(await storage.head(live.key)).toBeDefined();
+      expect(await storage.head(removed.key)).toBeDefined();
+    });
   });
 });
