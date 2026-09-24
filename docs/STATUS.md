@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-09-19
+Last updated: 2026-09-24
 
 ## What this is
 
@@ -54,46 +54,43 @@ The defect list this section used to carry has been worked through — 2026-09-1
 fixes are recorded in `Task Tracker.md`'s defect table and in **ADR 0031**, which
 supersedes ADR 0028's guess at how a teacher derives a role.
 
-**2026-09-21 shipped seven found-work items.** Each is a row in `Task Tracker.md`
-(B14–B19) with the full reasoning, and the ones that settled a decision have an ADR.
-In short: the two notification services that had no callers are wired, so an
-assignment set, moved or marked and a class moved or cancelled all reach the inbox;
-a removed learning material's object is swept out of the bucket instead of being
-paid for for ever (**ADR 0032**); the `/learning` tab is an administrator's index
-behind `offering:manage` rather than a tab every student was offered; the four
-public forms carry a self-hosted proof-of-work captcha (**ADR 0033**); the Slovak
-catalogue is finished; the person directory is paginated, searchable and has a load-more; and the
-enrolment comments no longer promise a registrar's system that ADR 0024 removed.
+**2026-09-21 shipped seven found-work items** (tracker B14–B19, ADRs 0032 and 0033).
+
+**2026-09-23/24 emptied the found-work list** (tracker B4, B20–B23):
+
+- **Exam attendance.** An exam term's registrant list, behind `grade:publish`, records
+  _sat_, _did not come_ or _excused_ once the exam has started. A no-show now spends an
+  attempt on the retake ladder.
+- **Waiting list for a full course.** This adds the `waitlisted` status, which holds no seat.
+  A registrar admits or refuses from the course page's People tab, and the student is told
+  either way. A registrar can now open the course page and roster at all (**ADR 0034**).
+- **Invitation scoping.** `findInvitedByEmail` was closed without code: nothing writes an
+  `invited` shadow since ADR 0024 (ADR 0018 update).
+- **k6 load test.** It pages `/people` again, which it had been unable to do since B19,
+  and its teardown cancels the rush course and removes the rush exam term.
+- **Duplicate-key error on sign-in.** Fixed: derived roles have no id.
 
 ## What to do next
 
-The backlog is complete and so is the defect list it ended with. What follows is found
-work, in the order it is worth doing. Each is a real gap with evidence, not a wish.
+**Next task: nothing is claimed.** The found-work list is empty. These are candidates,
+in the order worth doing:
 
-**Next task — nothing is outstanding from the found-work list.** Every item it
-carried has shipped; what follows is worth doing but nobody has claimed it.
+1. **Joining an institution (tracker B2).** An account can only reach an institution
+   through an invitation. Whether a stranger should be able to _ask_ is a product
+   decision. Ask before building it.
+2. **Nothing tells a waiting student that a place came free.** They find out only by
+   looking at the enrolment screen (ADR 0034, consequences).
+3. **The assignment editor's date fields.** The hidden `input[name=dueAt]` mirror is the
+   first in the DOM and shared with the add form above it. Check this if a date edit ever
+   writes to the wrong assignment.
 
-1. **`no_show` and `excused` are never set.** Publishing a grade marks a seat
-   `attended` and nothing records an absence, so the two statuses exist in the
-   schema and on no screen. The smallest honest version is a control on the exam
-   term's registrant list.
-2. **There is no request-to-join for a course that is full.** A student who finds
-   `OFFERING_FULL` has nowhere to put their name, so the registrar hears about it
-   by email instead.
-3. **`UsersRepository.findInvitedByEmail` is not scoped to the inviting
-   institution**, so two institutions inviting one address contend for a single
-   shadow row. ADR 0018 knows; nothing has been done.
-4. **The k6 rush leaves a `LOAD-RUSH-<n>` course behind by design.** Re-seeding is
-   the cleanup, which is fine until somebody runs it against something they care
-   about.
+Noticed while walking, not fixed:
 
-Noticed while walking these steps, not fixed:
-
-- The assignment editor's date fields are a segmented spinbutton whose hidden
-  `input[name=dueAt]` mirror is the **first** one in the DOM, shared with the add form
-  above it — worth a look if a date edit ever writes to the wrong assignment.
-- **A React duplicate-key error on signing in**, key `null`, logged the moment `/account`
-  renders. It predates all of this work and is on no screen touched here.
+- On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
+  was created by hand and has almost no data, so walk the seeded one.
+- `agent-browser click` by ref can land under the sticky header once a button is
+  scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
+  not an app bug.
 
 ## Standing decisions — do not re-ask these
 
@@ -146,7 +143,7 @@ Noticed while walking these steps, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **555 kB** against a measured 552.05 kB. `.size-limit.mjs` has the full reasoning.
+  now **555 kB** against a measured 550.62 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - **An abandoned upload is never reclaimed.** A removed material's object is now swept, but
@@ -154,15 +151,10 @@ Noticed while walking these steps, not fixed:
   database-driven sweep can see it. ADR 0032 says why a lifecycle rule cannot do it either.
 - The person pickers are a typeahead now, but the endpoint behind them still returns the
   whole directory unpaginated. Fine at 170 people, not at 20,000.
-- A `requested` enrolment holds no place, so it is not on the roster and cannot join a study
-  group. On a term that has not started every enrolment is `requested`.
+- A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
+  holds a place while it is answered, but is not on the roster either.
 - The seed's anchor is fixed at 2026-10-15 to stay deterministic; the seeded year is
   2026/2027. **Move the anchor once real time leaves it.** It deletes only the institution it
   owns, and never resets an existing user's password.
 - `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `w-full` on the
   control does nothing. Every select in the app is natural width.
-- `UsersRepository.findInvitedByEmail` is not scoped to the inviting institution — two
-  institutions inviting one address contend for a single shadow row. See ADR 0018.
-- What is left of **B4**: `no_show` and `excused` are never set — publishing a grade marks a
-  seat `attended`, but nobody can record an absence. **B2**: still no request-to-join.
-- The k6 run leaves a `LOAD-RUSH-<n>` course behind by design. Re-seeding is the cleanup.
