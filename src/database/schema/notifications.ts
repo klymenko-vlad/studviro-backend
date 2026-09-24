@@ -33,6 +33,7 @@ export const NOTIFICATION_TYPES = [
   'exam_registration_cancelled',
   'exam_registration_refused',
   'submission_marked',
+  'waitlist_place_free',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationType = pgEnum('notification_type', NOTIFICATION_TYPES);

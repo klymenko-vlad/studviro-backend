@@ -8,6 +8,7 @@ import {
 import { retryOnSerializationFailure } from '../../database/serializable-retry';
 import type { TransactionHost } from '../../database/transaction.host';
 import type { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
+import type { WaitlistNotificationsService } from '../notifications/waitlist-notifications.service';
 
 import type { EnrollableRow, MyEnrollmentsRepository } from './my-enrollments.repository';
 import { MyEnrollmentsService } from './my-enrollments.service';
@@ -36,6 +37,7 @@ describe('MyEnrollmentsService', () => {
   const activate = vi.fn();
 
   const applied = vi.fn();
+  const placeMayHaveFreed = vi.fn();
 
   const txHost = {
     run: (fn: () => Promise<unknown>) => fn(),
@@ -67,6 +69,7 @@ describe('MyEnrollmentsService', () => {
       } as unknown as MyEnrollmentsRepository,
       txHost,
       { applied } as unknown as EnrollmentNotificationsService,
+      { placeMayHaveFreed } as unknown as WaitlistNotificationsService,
     );
   });
 
@@ -183,6 +186,24 @@ describe('MyEnrollmentsService', () => {
     it('withdraws a place and tells the registrar', async () => {
       await expect(drop()).resolves.toMatchObject({ status: 'withdrawn' });
       expect(withdraw).toHaveBeenCalledWith('enrollment-1', NOW);
+    });
+
+    it('tells the queue a place may have come free', async () => {
+      await drop();
+
+      expect(placeMayHaveFreed).toHaveBeenCalledWith('institution-1', 'offering-1', NOW);
+    });
+
+    it('says nothing to the queue when the student leaves the queue itself', async () => {
+      findMine.mockResolvedValue({
+        id: 'enrollment-1',
+        status: 'waitlisted',
+        courseOfferingId: 'offering-1',
+      });
+
+      await drop();
+
+      expect(placeMayHaveFreed).not.toHaveBeenCalled();
     });
 
     it('rejects an enrolment that is not the caller’s', async () => {

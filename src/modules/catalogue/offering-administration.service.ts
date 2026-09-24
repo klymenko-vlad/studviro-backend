@@ -17,6 +17,7 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { AuditService } from '../audit/audit.service';
 import { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
+import { WaitlistNotificationsService } from '../notifications/waitlist-notifications.service';
 
 export interface NewOffering {
   readonly courseId: string;
@@ -65,6 +66,7 @@ export class OfferingAdministrationService {
     private readonly txHost: TransactionHost,
     private readonly audit: AuditService,
     private readonly enrollmentNotifications: EnrollmentNotificationsService,
+    private readonly waitlistNotifications: WaitlistNotificationsService,
   ) {}
 
   /**
@@ -237,8 +239,9 @@ export class OfferingAdministrationService {
     institutionId: string,
     offeringId: string,
     changes: OfferingChanges,
+    now = new Date(),
   ): Promise<CourseOffering> {
-    return this.txHost.run(async () => {
+    const updated = await this.txHost.run(async () => {
       await this.offering(institutionId, offeringId);
 
       if (changes.capacity !== undefined && changes.capacity !== null) {
@@ -259,6 +262,13 @@ export class OfferingAdministrationService {
 
       return updated;
     });
+
+    // More places, or a course put back on offer, may have room for the queue.
+    if (changes.capacity !== undefined || changes.status !== undefined) {
+      await this.waitlistNotifications.placeMayHaveFreed(institutionId, offeringId, now);
+    }
+
+    return updated;
   }
 
   /**
@@ -274,7 +284,7 @@ export class OfferingAdministrationService {
     actorUserId: string | null = null,
     now = new Date(),
   ): Promise<Enrollment> {
-    return this.txHost.run(async () => {
+    const { existing, corrected } = await this.txHost.run(async () => {
       const [existing] = await this.client
         .select()
         .from(enrollments)
@@ -322,8 +332,17 @@ export class OfferingAdministrationService {
         now,
       );
 
-      return corrected;
+      return { existing, corrected };
     });
+
+    if (
+      ENROLLMENT_OCCUPYING_STATUSES.includes(existing.status) &&
+      !ENROLLMENT_OCCUPYING_STATUSES.includes(corrected.status)
+    ) {
+      await this.waitlistNotifications.placeMayHaveFreed(institutionId, offeringId, now);
+    }
+
+    return corrected;
   }
 
   private async offering(institutionId: string, offeringId: string): Promise<CourseOffering> {

@@ -12,6 +12,8 @@ import { MyNotificationsService } from './my-notifications.service';
 import { NotificationEmitterRepository } from './notification-emitter.repository';
 import { NotificationEmitterService } from './notification-emitter.service';
 import { TimetableNotificationsService } from './timetable-notifications.service';
+import { WaitlistNotificationsRepository } from './waitlist-notifications.repository';
+import { WaitlistNotificationsService } from './waitlist-notifications.service';
 
 @Module({
   controllers: [MyNotificationsController],
@@ -27,6 +29,8 @@ import { TimetableNotificationsService } from './timetable-notifications.service
     LearningActivityNotificationsService,
     MyNotificationsRepository,
     MyNotificationsService,
+    WaitlistNotificationsRepository,
+    WaitlistNotificationsService,
   ],
   exports: [
     ExamTermNotificationsService,
@@ -37,6 +41,7 @@ import { TimetableNotificationsService } from './timetable-notifications.service
     LearningActivityNotificationsService,
     NotificationEmitterService,
     MyNotificationsService,
+    WaitlistNotificationsService,
   ],
 })
 export class NotificationsModule {}

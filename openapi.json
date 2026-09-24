@@ -13664,7 +13664,8 @@
               "exam_registration_confirmed",
               "exam_registration_cancelled",
               "exam_registration_refused",
-              "submission_marked"
+              "submission_marked",
+              "waitlist_place_free"
             ],
             "type": "string"
           },
@@ -16385,7 +16386,8 @@
               "exam_registration_confirmed",
               "exam_registration_cancelled",
               "exam_registration_refused",
-              "submission_marked"
+              "submission_marked",
+              "waitlist_place_free"
             ]
           },
           "occurredAt": {

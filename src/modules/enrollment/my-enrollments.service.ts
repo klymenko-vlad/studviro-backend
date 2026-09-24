@@ -5,9 +5,14 @@ import {
   EntityNotFoundError,
   InvalidInputError,
 } from '../../common/errors/domain.error';
-import { ENROLLMENT_WITHDRAWABLE_STATUSES, type Enrollment } from '../../database/schema';
+import {
+  ENROLLMENT_OCCUPYING_STATUSES,
+  ENROLLMENT_WITHDRAWABLE_STATUSES,
+  type Enrollment,
+} from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { EnrollmentNotificationsService } from '../notifications/enrollment-notifications.service';
+import { WaitlistNotificationsService } from '../notifications/waitlist-notifications.service';
 
 import { windowState } from './enrollable-offerings.service';
 import { MyEnrollmentsRepository, type EnrollableRow } from './my-enrollments.repository';
@@ -20,6 +25,7 @@ export class MyEnrollmentsService {
     private readonly repository: MyEnrollmentsRepository,
     private readonly txHost: TransactionHost,
     private readonly notifications: EnrollmentNotificationsService,
+    private readonly waitlistNotifications: WaitlistNotificationsService,
   ) {}
 
   /**
@@ -94,7 +100,7 @@ export class MyEnrollmentsService {
     enrollmentId: string,
     now = new Date(),
   ): Promise<Enrollment> {
-    return this.txHost.run(async () => {
+    const { existing, withdrawn } = await this.txHost.run(async () => {
       const existing = await this.repository.findMine(institutionId, userId, enrollmentId);
       if (!existing) throw new EntityNotFoundError('enrollment', enrollmentId);
 
@@ -113,8 +119,18 @@ export class MyEnrollmentsService {
       );
       if (offering && existing.status !== 'waitlisted') this.assertOpen(offering, now);
 
-      return this.repository.withdraw(enrollmentId, now);
+      return { existing, withdrawn: await this.repository.withdraw(enrollmentId, now) };
     });
+
+    if (ENROLLMENT_OCCUPYING_STATUSES.includes(existing.status)) {
+      await this.waitlistNotifications.placeMayHaveFreed(
+        institutionId,
+        existing.courseOfferingId,
+        now,
+      );
+    }
+
+    return withdrawn;
   }
 
   private assertOnOffer(offering: EnrollableRow): void {

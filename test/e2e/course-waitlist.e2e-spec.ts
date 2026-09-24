@@ -122,6 +122,28 @@ describe('Course waiting list (e2e)', () => {
       payload: { status },
     });
 
+  const noticesOf = async (actor: Actor) => {
+    const rows = await harness.db
+      .select({ type: notificationEvents.type })
+      .from(notificationDeliveries)
+      .innerJoin(
+        notificationEvents,
+        eq(notificationEvents.id, notificationDeliveries.notificationEventId),
+      )
+      .where(eq(notificationDeliveries.userId, actor.user.id));
+
+    return rows.map((row) => row.type);
+  };
+
+  const seatOf = async (actor: Actor) => {
+    const [row] = await harness.db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, actor.user.id));
+
+    return row!.id;
+  };
+
   beforeAll(async () => {
     harness = await createTestHarness();
   });
@@ -334,5 +356,72 @@ describe('Course waiting list (e2e)', () => {
       )
       .where(eq(notificationDeliveries.userId, actor.user.id));
     expect(told.map((row) => row.type)).toContain('enrollment_rejected');
+  });
+
+  describe('when a place comes free', () => {
+    it('tells everyone waiting once the student holding it withdraws', async () => {
+      const first = await student();
+      const second = await student();
+      await queue(first, fullId);
+      await queue(second, fullId);
+
+      expect((await drop(seatHolder, await seatOf(seatHolder))).statusCode).toBe(200);
+
+      expect(await noticesOf(first)).toContain('waitlist_place_free');
+      expect(await noticesOf(second)).toContain('waitlist_place_free');
+      expect(await noticesOf(seatHolder)).not.toContain('waitlist_place_free');
+    });
+
+    it('tells them when a registrar takes a student off the course', async () => {
+      const registrar = await actingAs('registrar');
+      const actor = await student();
+      await queue(actor, fullId);
+
+      await correct(registrar, await seatOf(seatHolder), 'withdrawn');
+
+      expect(await noticesOf(actor)).toContain('waitlist_place_free');
+    });
+
+    it('tells them when the course is given more places', async () => {
+      const coordinator = await actingAs('course_coordinator');
+      const actor = await student();
+      await queue(actor, fullId);
+
+      const response = await harness.inject({
+        method: 'PATCH',
+        url: `${base()}/course-offerings/${fullId}`,
+        headers: coordinator.headers,
+        payload: { capacity: 2 },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(await noticesOf(actor)).toContain('waitlist_place_free');
+    });
+
+    it('says nothing when the place is taken straight from the queue', async () => {
+      const registrar = await actingAs('registrar');
+      const admitted = await student();
+      const other = await student();
+      const waiting = (await queue(admitted, fullId)).json();
+      await queue(other, fullId);
+
+      await correct(registrar, waiting.id, 'active');
+
+      expect(await noticesOf(other)).not.toContain('waitlist_place_free');
+    });
+
+    it('says nothing once the window has closed, because nobody could take it', async () => {
+      const registrar = await actingAs('registrar');
+      const actor = await student();
+      await queue(actor, fullId);
+      await harness.db
+        .update(academicTerms)
+        .set({ enrollmentClosesAt: new Date('2021-01-01T00:00:00.000Z') })
+        .where(eq(academicTerms.id, termId));
+
+      await correct(registrar, await seatOf(seatHolder), 'withdrawn');
+
+      expect(await noticesOf(actor)).not.toContain('waitlist_place_free');
+    });
   });
 });
