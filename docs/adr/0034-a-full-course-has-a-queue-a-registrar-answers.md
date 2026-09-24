@@ -42,8 +42,11 @@ closes, because it holds nothing. `enrollments.waitlisted_at` fixes the order.
 
 ## Consequences
 
-- Nothing tells a queueing student that a place has freed up. They find out by
-  looking at the enrolment screen. A notification for that is a small addition if
-  anyone asks for it.
+- ~~Nothing tells a queueing student that a place has freed up.~~ Since
+  2026-09-24, `waitlist_place_free` reaches everyone on the queue when a
+  withdrawal, a registrar's correction or a larger capacity leaves a seat free
+  while the window is open. Everyone hears at once rather than the head of the
+  queue first. The order is the registrar's, and a student-by-student offer
+  would need an expiry this ADR chose not to have.
 - The queue has no cap and nothing expires it. At the end of term it stays as it
   was, and a registrar can refuse whatever is left.

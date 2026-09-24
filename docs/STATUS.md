@@ -70,21 +70,25 @@ supersedes ADR 0028's guess at how a teacher derives a role.
   and its teardown cancels the rush course and removes the rush exam term.
 - **Duplicate-key error on sign-in.** Fixed: derived roles have no id.
 
+**2026-09-24, B24.** A queueing student is now told when a place comes free, and the
+notification sends them to the enrolment screen. That screen now refetches on every
+visit. Before, it showed the list cached before the place freed.
+
 ## What to do next
 
-**Next task: nothing is claimed.** The found-work list is empty. These are candidates,
-in the order worth doing:
+**Next task: nothing is claimed.** These are candidates, in the order worth doing:
 
-1. **Joining an institution (tracker B2).** An account can only reach an institution
-   through an invitation. Whether a stranger should be able to _ask_ is a product
-   decision. Ask before building it.
-2. **Nothing tells a waiting student that a place came free.** They find out only by
-   looking at the enrolment screen (ADR 0034, consequences).
-3. **The assignment editor's date fields.** The hidden `input[name=dueAt]` mirror is the
+1. **The assignment editor's date fields.** The hidden `input[name=dueAt]` mirror is the
    first in the DOM and shared with the add form above it. Check this if a date edit ever
    writes to the wrong assignment.
+2. **Joining an institution (tracker B2).** An account can only reach an institution
+   through an invitation. Whether a stranger should be able to _ask_ is a product
+   decision. Ask before building it.
 
 Noticed while walking, not fixed:
+
+- Once a queueing student takes the place, "a place came free" stays unread beside
+  "place confirmed". Nothing marks it read for them.
 
 - On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
   was created by hand and has almost no data, so walk the seeded one.
