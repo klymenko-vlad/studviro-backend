@@ -54,36 +54,20 @@ The defect list this section used to carry has been worked through — 2026-09-1
 fixes are recorded in `Task Tracker.md`'s defect table and in **ADR 0031**, which
 supersedes ADR 0028's guess at how a teacher derives a role.
 
-**2026-09-21 shipped seven found-work items** (tracker B14–B19, ADRs 0032 and 0033).
-
-**2026-09-23/24 emptied the found-work list** (tracker B4, B20–B23):
-
-- **Exam attendance.** An exam term's registrant list, behind `grade:publish`, records
-  _sat_, _did not come_ or _excused_ once the exam has started. A no-show now spends an
-  attempt on the retake ladder.
-- **Waiting list for a full course.** This adds the `waitlisted` status, which holds no seat.
-  A registrar admits or refuses from the course page's People tab, and the student is told
-  either way. A registrar can now open the course page and roster at all (**ADR 0034**).
-- **Invitation scoping.** `findInvitedByEmail` was closed without code: nothing writes an
-  `invited` shadow since ADR 0024 (ADR 0018 update).
-- **k6 load test.** It pages `/people` again, which it had been unable to do since B19,
-  and its teardown cancels the rush course and removes the rush exam term.
-- **Duplicate-key error on sign-in.** Fixed: derived roles have no id.
-
-**2026-09-24, B24.** A queueing student is now told when a place comes free, and the
-notification sends them to the enrolment screen. That screen now refetches on every
-visit. Before, it showed the list cached before the place freed.
+Found work since has been shipped or closed as it turned up — tracker B4 and B14–B25,
+ADRs 0032–0034: exam attendance, the waiting list for a full course and the notice when
+a place on it comes free, captcha, storage reclamation, the paginated directory, the k6
+fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
 ## What to do next
 
-**Next task: nothing is claimed.** These are candidates, in the order worth doing:
+**Next task: nothing is claimed, and the found-work list is empty.** B25, the
+assignment editor's deadline, was a selector ambiguity and not a defect. A test pins
+it. The one open candidate is a product decision:
 
-1. **The assignment editor's date fields.** The hidden `input[name=dueAt]` mirror is the
-   first in the DOM and shared with the add form above it. Check this if a date edit ever
-   writes to the wrong assignment.
-2. **Joining an institution (tracker B2).** An account can only reach an institution
-   through an invitation. Whether a stranger should be able to _ask_ is a product
-   decision. Ask before building it.
+- **Joining an institution (tracker B2).** An account can only reach an institution
+  through an invitation. Whether a stranger should be able to _ask_ is a product
+  decision. Ask before building it.
 
 Noticed while walking, not fixed:
 
