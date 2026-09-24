@@ -51,7 +51,8 @@ the object belongs to nothing, so a sweep driven by the database cannot find it.
 bucket lifecycle rule: an abandoned object sits under the same
 `institutions/<id>/materials/` prefix as a live one, so a prefix-and-age rule would delete
 real coursework. Reclaiming those means listing the bucket and checking each key against
-the database. It is recorded in `docs/Deployment.md` and left undone.
+the database. **Done 2026-09-24:** `OrphanedObjectSweepService` walks the bucket at
+05:00 and drops any object more than a day old that no material or submission row points at.
 
 **Submission files.** Nothing soft-deletes `submission_files` today — erasure hard-deletes
 the rows and already drops their objects — so there is no orphan to reclaim on that side.

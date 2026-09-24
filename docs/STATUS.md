@@ -68,9 +68,6 @@ turns up while walking the app.
 
 Noticed while walking, not fixed:
 
-- Once a queueing student takes the place, "a place came free" stays unread beside
-  "place confirmed". Nothing marks it read for them.
-
 - On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
   was created by hand and has almost no data, so walk the seeded one.
 - `agent-browser click` by ref can land under the sticky header once a button is
@@ -132,11 +129,6 @@ Noticed while walking, not fixed:
   now **555 kB** against a measured 550.62 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
-- **An abandoned upload is never reclaimed.** A removed material's object is now swept, but
-  an object `PUT` against a ticket whose row was never written belongs to nothing and no
-  database-driven sweep can see it. ADR 0032 says why a lifecycle rule cannot do it either.
-- The person pickers are a typeahead now, but the endpoint behind them still returns the
-  whole directory unpaginated. Fine at 170 people, not at 20,000.
 - A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
   holds a place while it is answered, but is not on the roster either.
 - The seed's anchor is fixed at 2026-10-15 to stay deterministic; the seeded year is

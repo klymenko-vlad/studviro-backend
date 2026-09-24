@@ -114,12 +114,14 @@ sweep at 04:00 deletes the objects of materials tombstoned longer ago than
 `STORAGE_RECLAIM_AFTER_DAYS`, then clears the key it reclaimed. A failed delete keeps its
 key and is retried the next night, so an unreachable store costs a day, not a leak.
 
-**Abandoned uploads are not yet reclaimed, and a lifecycle rule cannot do it.** An upload
-ticket whose object was `PUT` but whose row was never written belongs to nothing, and it
-sits under the same `institutions/<id>/materials/` or `.../submissions/` prefix as a live
-file — so a prefix-and-age rule at the bucket would delete real coursework. Finding them
-means listing the bucket and checking each key against the database. Until that exists,
-the leak is bounded by how often an upload is started and abandoned.
+**An abandoned upload is dropped by a second sweep, at 05:00.** An upload ticket whose
+object was `PUT` but whose row was never written belongs to nothing, and it sits under the
+same prefix as a live file, so a bucket lifecycle rule cannot tell them apart. The sweep
+lists the bucket under `institutions/`. It deletes any object more than a day old that
+neither a material nor a submission file points at. A tombstoned material keeps its key
+until the 04:00 sweep takes it, so the 05:00 sweep never takes a file that can still be
+restored. The credentials need `s3:ListBucket` on the bucket as well as object read,
+write and delete.
 
 **`TODO(institution)`**: whether object versioning is on — it would keep a reclaimed
 object alive as a noncurrent version, which defeats the sweep unless a noncurrent-version
