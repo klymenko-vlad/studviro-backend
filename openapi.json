@@ -15480,7 +15480,8 @@
               "incomplete",
               "complete",
               "complete_pass",
-              "complete_fail"
+              "complete_fail",
+              null
             ],
             "type": "string"
           },
@@ -16126,7 +16127,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ]
           },
           "proposedGrade": {
@@ -16140,7 +16142,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ]
           },
           "proposedAt": {
@@ -16159,7 +16162,8 @@
               "E",
               "FX",
               "passed",
-              "failed"
+              "failed",
+              null
             ]
           },
           "officialRecordedAt": {

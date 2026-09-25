@@ -32,7 +32,7 @@ export class AssessmentActivityDto {
   dueAt!: Date | null;
 
   @Expose()
-  @ApiProperty({ enum: ACTIVITY_COMPLETION_STATES, nullable: true })
+  @ApiProperty({ enum: [...ACTIVITY_COMPLETION_STATES, null], nullable: true })
   completionState!: ActivityCompletionState | null;
 
   @Expose()

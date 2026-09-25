@@ -51,7 +51,16 @@ function normalise(schema: unknown): unknown {
     Object.entries(rest).map(([key, value]) => [key, normalise(value)]),
   );
 
-  return nullable === true ? { anyOf: [{ type: 'null' }, walked] } : walked;
+  if (nullable !== true) return walked;
+
+  // OpenAPI 3.0.3: `nullable` does not add null to an `enum`. The client's generator
+  // reads it that way, so a nullable enum admits null only when it lists it.
+  if (Array.isArray(walked.enum)) {
+    const { type: _type, ...enumOnly } = walked;
+    return enumOnly;
+  }
+
+  return { anyOf: [{ type: 'null' }, walked] };
 }
 
 const ajv = new Ajv({ strict: false, allErrors: true });

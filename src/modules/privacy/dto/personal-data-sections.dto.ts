@@ -140,12 +140,14 @@ export class ExportedCourseResultDto {
   @Expose() @ApiProperty() attempt!: number;
   @Expose() @ApiProperty(nullableNumber) calculatedPoints!: number | null;
   @Expose()
-  @ApiProperty({ enum: COURSE_GRADES, nullable: true })
+  @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true })
   calculatedGrade!: string | null;
 
-  @Expose() @ApiProperty({ enum: COURSE_GRADES, nullable: true }) proposedGrade!: string | null;
+  @Expose() @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true }) proposedGrade!:
+    string | null;
   @Expose() @ApiProperty(nullableDateTime) proposedAt!: Date | null;
-  @Expose() @ApiProperty({ enum: COURSE_GRADES, nullable: true }) officialGrade!: string | null;
+  @Expose() @ApiProperty({ enum: [...COURSE_GRADES, null], nullable: true }) officialGrade!:
+    string | null;
   @Expose() @ApiProperty(nullableDateTime) officialRecordedAt!: Date | null;
   @Expose() @ApiProperty(nullableText) conflictNote!: string | null;
 }
