@@ -9,7 +9,7 @@ import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersRepository } from '../users/users.repository';
 import { UsersService } from '../users/users.service';
 
-import { AuthService } from './auth.service';
+import { AuthService, REFRESH_REUSE_GRACE_MS } from './auth.service';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
 import { TokenService } from './token.service';
 
@@ -217,7 +217,10 @@ describe('AuthService', () => {
       // Revoked *and* replaced: the signature is genuine and the token has
       // already been spent, so a second holder exists.
       refreshTokens.findByHashForUpdate.mockResolvedValue(
-        storedToken({ revokedAt: new Date(), replacedByTokenHash: 'hash:successor' }),
+        storedToken({
+          revokedAt: new Date(Date.now() - REFRESH_REUSE_GRACE_MS - 1_000),
+          replacedByTokenHash: 'hash:successor',
+        }),
       );
 
       await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
@@ -226,6 +229,19 @@ describe('AuthService', () => {
       // Access tokens already in flight have to die too, or the attacker keeps
       // their current one until its TTL lapses.
       expect(usersRepository.incrementTokenVersion).toHaveBeenCalledWith(USER.id, undefined);
+      expect(refreshTokens.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses a token rotated moments ago without ending every session', async () => {
+      // A request that raced the rotation with the same cookie, not a thief.
+      refreshTokens.findByHashForUpdate.mockResolvedValue(
+        storedToken({ revokedAt: new Date(), replacedByTokenHash: 'hash:successor' }),
+      );
+
+      await expect(service.refresh('refresh-token', {})).rejects.toThrow(UnauthenticatedError);
+
+      expect(refreshTokens.revokeAllForUser).not.toHaveBeenCalled();
+      expect(usersRepository.incrementTokenVersion).not.toHaveBeenCalled();
       expect(refreshTokens.create).not.toHaveBeenCalled();
     });
 

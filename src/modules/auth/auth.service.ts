@@ -34,6 +34,13 @@ const ABSENT_USER_DIGEST =
 /** Every refusal path returns this so the transaction still commits. */
 const REJECTED = Symbol('refresh.rejected');
 
+/**
+ * How long after its rotation a spent refresh token is refused without being read
+ * as a leak. Long enough to cover requests that raced the rotation, short enough
+ * that a thief replaying a copy later still trips the family revocation.
+ */
+export const REFRESH_REUSE_GRACE_MS = 15_000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -105,6 +112,17 @@ export class AuthService {
       // a plain rejection — cascading from it would let any user end all of
       // their own sessions by accident.
       if (stored.revokedAt && !stored.replacedByTokenHash) return REJECTED;
+
+      // Rotated a moment ago: the likeliest holder is a request that raced the
+      // rotation with the same cookie — a page fanning out, a second tab, another
+      // instance of the client's server. Refused, but not read as a leak; ending
+      // every session over it would sign the user out for loading a page.
+      if (
+        stored.revokedAt &&
+        Date.now() - stored.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS
+      ) {
+        return REJECTED;
+      }
 
       if (stored.revokedAt) {
         /**

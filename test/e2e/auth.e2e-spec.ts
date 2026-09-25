@@ -1,6 +1,8 @@
+import { isNotNull } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { users } from '../../src/database/schema';
+import { refreshTokens, users } from '../../src/database/schema';
+import { REFRESH_REUSE_GRACE_MS } from '../../src/modules/auth/auth.service';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
 describe('Auth (e2e)', () => {
@@ -158,9 +160,23 @@ describe('Auth (e2e)', () => {
       expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 401]);
     });
 
+    it('keeps the session when a rotated token comes back moments later', async () => {
+      const { refreshToken } = (await register()).json();
+      const rotated = (await refresh(refreshToken)).json();
+
+      // A page load whose requests raced the rotation with the same cookie.
+      expect((await refresh(refreshToken)).statusCode).toBe(401);
+      expect((await refresh(rotated.refreshToken)).statusCode).toBe(200);
+    });
+
     it('revokes the whole family when a rotated token is replayed', async () => {
       const { refreshToken } = (await register()).json();
       const rotated = (await refresh(refreshToken)).json();
+      // Past the grace window a race no longer explains it.
+      await harness.db
+        .update(refreshTokens)
+        .set({ revokedAt: new Date(Date.now() - REFRESH_REUSE_GRACE_MS - 1_000) })
+        .where(isNotNull(refreshTokens.replacedByTokenHash));
 
       // Replaying the old token proves it leaked. Which holder is the attacker
       // is unknowable, so every session for the user has to end — including the
