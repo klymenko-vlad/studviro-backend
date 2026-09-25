@@ -7,6 +7,8 @@ import { DRIZZLE, type Database } from '../../src/database/database.tokens';
 import { users, type User, type UserRole } from '../../src/database/schema';
 import { TokenService } from '../../src/modules/auth/token.service';
 
+import { assertMatchesContract } from './openapi-contract';
+
 export interface ActingUser {
   user: User;
   accessToken: string;
@@ -71,10 +73,17 @@ export async function createTestHarness(): Promise<TestHarness> {
     };
   };
 
+  const inject = (async (options: { method?: string; url: string }) => {
+    const response = await app.inject(options as never);
+    assertMatchesContract(options.method ?? 'GET', options.url, response);
+
+    return response;
+  }) as unknown as TestHarness['inject'];
+
   return {
     app,
     db,
-    inject: app.inject.bind(app),
+    inject,
     truncateAll,
     actingAs,
     close: () => app.close(),

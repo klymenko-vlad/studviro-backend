@@ -17,7 +17,6 @@ import {
 export class DeadlineLearningSpaceDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty({ type: String, nullable: true }) brief!: string | null;
 }
 
 @Exclude()

@@ -8448,7 +8448,7 @@
             "access-token": []
           }
         ],
-        "summary": "The seminar and lab groups on this offering, with their members",
+        "summary": "The seminar and lab groups on this offering, with their members, for whoever teaches or administers it",
         "tags": [
           "catalogue"
         ]
@@ -15046,6 +15046,34 @@
           "sizeBytes"
         ]
       },
+      "SubmissionMarkDto": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxPoints": {
+            "type": "number",
+            "nullable": true
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "markedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "points",
+          "maxPoints",
+          "feedback",
+          "markedAt"
+        ]
+      },
       "SubmissionResponseDto": {
         "type": "object",
         "properties": {
@@ -15089,6 +15117,16 @@
             "items": {
               "$ref": "#/components/schemas/SubmissionFileResponseDto"
             }
+          },
+          "mark": {
+            "nullable": true,
+            "description": "The mark on this assignment for the author, once one has been given.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionMarkDto"
+              }
+            ]
           }
         },
         "required": [
@@ -15100,7 +15138,8 @@
           "isLate",
           "notes",
           "student",
-          "files"
+          "files",
+          "mark"
         ]
       },
       "SubmissionFileInputDto": {
@@ -15242,16 +15281,11 @@
           },
           "name": {
             "type": "string"
-          },
-          "brief": {
-            "type": "string",
-            "nullable": true
           }
         },
         "required": [
           "id",
-          "name",
-          "brief"
+          "name"
         ]
       },
       "DeadlineOfferingDto": {

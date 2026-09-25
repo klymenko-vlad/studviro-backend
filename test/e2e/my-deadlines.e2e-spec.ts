@@ -177,6 +177,19 @@ describe('My deadlines (e2e)', () => {
     expect(body[0]!.dueAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
   });
 
+  it('names the learning space with exactly the fields the contract promises', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, programmingOfferingId);
+    await activity();
+
+    const { body } = await deadlinesFor(actor);
+
+    expect(body[0]!.learningSpace).toStrictEqual({
+      id: programmingSpaceId,
+      name: 'Programming 2',
+    });
+  });
+
   it('omits an activity that carries no deadline at all', async () => {
     const actor = await actingAs('student');
     await enrol(actor.user.id, programmingOfferingId);
