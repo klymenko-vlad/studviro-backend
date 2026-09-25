@@ -21,6 +21,7 @@ export interface RegistrableExamTermRow {
   offeringId: string;
   capacity: number | null;
   registeredCount: number;
+  startsAt: Date;
   registrationOpensAt: Date | null;
   registrationClosesAt: Date | null;
   cancelledAt: Date | null;
@@ -33,6 +34,7 @@ export interface LiveRegistrationRow {
   registration: ExamRegistration;
   examTermId: string;
   offeringId: string;
+  startsAt: Date;
   registrationOpensAt: Date | null;
   registrationClosesAt: Date | null;
   termCancelledAt: Date | null;
@@ -54,6 +56,7 @@ export class MyExamRegistrationsRepository {
         offeringId: courseOfferings.id,
         capacity: examTerms.capacity,
         registeredCount: this.registeredCount(),
+        startsAt: examTerms.startsAt,
         registrationOpensAt: examTerms.registrationOpensAt,
         registrationClosesAt: examTerms.registrationClosesAt,
         cancelledAt: examTerms.cancelledAt,
@@ -148,6 +151,7 @@ export class MyExamRegistrationsRepository {
         registration: examRegistrations,
         examTermId: examTerms.id,
         offeringId: courseOfferings.id,
+        startsAt: examTerms.startsAt,
         registrationOpensAt: examTerms.registrationOpensAt,
         registrationClosesAt: examTerms.registrationClosesAt,
         termCancelledAt: examTerms.cancelledAt,

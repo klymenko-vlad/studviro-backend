@@ -10,6 +10,7 @@ import { TransactionHost } from '../../database/transaction.host';
 import { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
 
 import { attemptsRequiredFor, laddersTo } from './exam-attempt-ladder';
+import { registrationClosesAt } from './exam-registration-window';
 import {
   MyExamRegistrationsRepository,
   type LiveRegistrationRow,
@@ -114,11 +115,11 @@ export class MyExamRegistrationsService {
       );
     }
 
-    if (term.registrationClosesAt !== null && now >= term.registrationClosesAt) {
+    if (now >= registrationClosesAt(term)) {
       throw new InvalidInputError(
         'EXAM_REGISTRATION_CLOSED',
         'Registration for that exam term has closed',
-        { registrationClosesAt: term.registrationClosesAt },
+        { registrationClosesAt: registrationClosesAt(term) },
       );
     }
   }
@@ -162,14 +163,11 @@ export class MyExamRegistrationsService {
   private assertCancellable(registration: LiveRegistrationRow, now: Date): void {
     if (registration.termCancelledAt !== null) return;
 
-    if (
-      registration.registrationClosesAt !== null &&
-      now >= registration.registrationClosesAt
-    ) {
+    if (now >= registrationClosesAt(registration)) {
       throw new InvalidInputError(
         'EXAM_REGISTRATION_CLOSED',
         'Registration for that exam term has closed and can no longer be cancelled',
-        { registrationClosesAt: registration.registrationClosesAt },
+        { registrationClosesAt: registrationClosesAt(registration) },
       );
     }
   }

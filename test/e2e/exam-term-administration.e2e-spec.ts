@@ -203,6 +203,20 @@ describe('Exam term administration (e2e)', () => {
     expect(response.json().code).toBe('EXAM_REGISTRATION_CLOSES_AFTER_EXAM_STARTS');
   });
 
+  it('refuses a registration window that opens only once the exam has started', async () => {
+    const admin = await actingAs('institution_admin');
+
+    const response = await request(
+      admin,
+      'POST',
+      '',
+      term({ registrationOpensAt: '2026-12-16T00:00:00.000Z', registrationClosesAt: null }),
+    );
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().code).toBe('EXAM_REGISTRATION_OPENS_AFTER_EXAM_STARTS');
+  });
+
   it('refuses an examiner who does not teach the offering, and accepts one who does', async () => {
     const admin = await actingAs('institution_admin');
 

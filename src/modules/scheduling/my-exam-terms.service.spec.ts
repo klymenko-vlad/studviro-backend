@@ -148,7 +148,7 @@ describe(MyExamTermsService.name, () => {
     expect(term!.registrationState).toBe('not_open');
   });
 
-  it('treats an unbounded window as open', async () => {
+  it('treats a window with no dates as open until the exam', async () => {
     findMyExamTerms.mockResolvedValue([
       row({ registrationOpensAt: null, registrationClosesAt: null }),
     ]);
@@ -156,6 +156,38 @@ describe(MyExamTermsService.name, () => {
     const [term] = await listMine();
 
     expect(term!.registrationState).toBe('open');
+  });
+
+  it('closes a window with no close date once the exam starts', async () => {
+    findMyExamTerms.mockResolvedValue([
+      row({ registrationOpensAt: null, registrationClosesAt: null }),
+    ]);
+
+    const [term] = await listMine({}, new Date('2026-06-02T09:00:00.000Z'));
+
+    expect(term!.registrationState).toBe('closed');
+    expect(term!.registrationAvailability).toMatchObject({
+      canRegister: false,
+      reason: 'closed',
+    });
+  });
+
+  it('withdraws the cancellation of a seat on an exam with no close date once it starts', async () => {
+    findMyExamTerms.mockResolvedValue([
+      row({
+        registrationClosesAt: null,
+        registrationId: 'registration-1',
+        registrationStatus: 'registered',
+        registeredAt: new Date('2026-05-13T09:00:00.000Z'),
+      }),
+    ]);
+
+    const [term] = await listMine({}, new Date('2026-06-02T10:00:00.000Z'));
+
+    expect(term!.registrationAvailability).toMatchObject({
+      canCancel: false,
+      reason: 'registered',
+    });
   });
 
   it('refuses to call a cancelled exam’s registration open', async () => {

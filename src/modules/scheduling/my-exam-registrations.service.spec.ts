@@ -26,6 +26,7 @@ const term = (overrides: Partial<RegistrableExamTermRow> = {}): RegistrableExamT
   offeringId: 'offering-1',
   capacity: 30,
   registeredCount: 12,
+  startsAt: new Date('2026-06-02T09:00:00.000Z'),
   registrationOpensAt: new Date('2026-05-12T09:00:00.000Z'),
   registrationClosesAt: new Date('2026-05-31T09:00:00.000Z'),
   cancelledAt: null,
@@ -37,6 +38,7 @@ const live = (overrides: Partial<LiveRegistrationRow> = {}): LiveRegistrationRow
   registration: { id: 'registration-1' } as ExamRegistration,
   examTermId: 'exam-1',
   offeringId: 'offering-1',
+  startsAt: new Date('2026-06-02T09:00:00.000Z'),
   registrationOpensAt: new Date('2026-05-12T09:00:00.000Z'),
   registrationClosesAt: new Date('2026-05-31T09:00:00.000Z'),
   termCancelledAt: null,
@@ -130,6 +132,22 @@ describe(MyExamRegistrationsService.name, () => {
     await expect(registerMine()).rejects.toBeInstanceOf(InvalidInputError);
   });
 
+  it('rejects registration for an exam with no close date once it has started', async () => {
+    findRegistrableTerm.mockResolvedValue(
+      term({ registrationClosesAt: null, startsAt: new Date('2026-05-19T09:00:00.000Z') }),
+    );
+
+    await expect(registerMine()).rejects.toMatchObject({
+      code: 'EXAM_REGISTRATION_CLOSED',
+    });
+  });
+
+  it('registers for an exam with no close date before it starts', async () => {
+    findRegistrableTerm.mockResolvedValue(term({ registrationClosesAt: null }));
+
+    await expect(registerMine()).resolves.toBeDefined();
+  });
+
   it('rejects a second registration for the same term', async () => {
     findRegistrableTerm.mockResolvedValue(term());
     findLiveRegistrationForOffering.mockResolvedValue(live());
@@ -174,6 +192,16 @@ describe(MyExamRegistrationsService.name, () => {
       ...live(),
       registrationClosesAt: new Date('2026-05-19T09:00:00.000Z'),
     });
+
+    await expect(
+      service.cancel('institution-1', 'student-1', 'registration-1', NOW),
+    ).rejects.toMatchObject({ code: 'EXAM_REGISTRATION_CLOSED' });
+  });
+
+  it('rejects cancelling a seat on an exam with no close date once it has started', async () => {
+    findLiveRegistrationById.mockResolvedValue(
+      live({ registrationClosesAt: null, startsAt: new Date('2026-05-19T09:00:00.000Z') }),
+    );
 
     await expect(
       service.cancel('institution-1', 'student-1', 'registration-1', NOW),

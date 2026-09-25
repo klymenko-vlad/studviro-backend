@@ -4,6 +4,7 @@ import { InvalidInputError } from '../../common/errors/domain.error';
 import type { ExamRegistrationStatus, ExamTermKind } from '../../database/schema';
 
 import { laddersTo } from './exam-attempt-ladder';
+import { registrationClosesAt } from './exam-registration-window';
 import {
   MyExamTermsRepository,
   type MyExamTermFilter,
@@ -133,7 +134,7 @@ export class MyExamTermsService {
 function registrationState(row: MyExamTermRow, now: Date): ExamRegistrationState {
   if (row.cancelledAt !== null) return 'closed';
   if (row.registrationOpensAt !== null && now < row.registrationOpensAt) return 'not_open';
-  if (row.registrationClosesAt !== null && now >= row.registrationClosesAt) return 'closed';
+  if (now >= registrationClosesAt(row)) return 'closed';
 
   return 'open';
 }
@@ -180,7 +181,7 @@ function registrationAvailability(
 function isCancellable(row: MyExamTermRow, now: Date): boolean {
   if (row.cancelledAt !== null) return true;
 
-  return row.registrationClosesAt === null || now < row.registrationClosesAt;
+  return now < registrationClosesAt(row);
 }
 
 function assertRange({ from, to }: MyExamTermFilter): void {

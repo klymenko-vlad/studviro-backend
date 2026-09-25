@@ -311,6 +311,13 @@ export class ExamTermAdministrationService {
       );
     }
 
+    if (opens !== null && opens >= window.startsAt) {
+      throw new ConflictError(
+        'EXAM_REGISTRATION_OPENS_AFTER_EXAM_STARTS',
+        'Registration must open before the exam starts',
+      );
+    }
+
     if (closes !== null && closes > window.startsAt) {
       throw new ConflictError(
         'EXAM_REGISTRATION_CLOSES_AFTER_EXAM_STARTS',
