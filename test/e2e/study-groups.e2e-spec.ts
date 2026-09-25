@@ -7,6 +7,7 @@ import {
   enrollments,
   institutions,
   roleAssignments,
+  teachingAssignments,
   type CanonicalRole,
 } from '../../src/database/schema';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
@@ -197,6 +198,43 @@ describe('Study groups (e2e)', () => {
 
     const reopened = await request(admin, 'POST', '', { code: 'S1' });
     expect(reopened.statusCode).toBe(201);
+  });
+
+  it('keeps the members of a group from a student, even one on the offering', async () => {
+    const admin = await actingAs('institution_admin');
+    await request(admin, 'POST', '', { code: 'S1' });
+
+    const classmate = await actingAs('student', 'classmate@example.com');
+    await harness.db.insert(enrollments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: classmate.user.id,
+      status: 'active',
+    });
+
+    const response = await request(classmate, 'GET');
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('shows the groups and their members to whoever teaches the offering', async () => {
+    const admin = await actingAs('institution_admin');
+    const created = await request(admin, 'POST', '', { code: 'S1' });
+    await request(admin, 'POST', `/${created.json().id}/members`, { userId: studentId });
+
+    const teacher = await harness.actingAs({ email: 'lecturer@example.com' });
+    await harness.db.insert(teachingAssignments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: teacher.user.id,
+    });
+
+    const response = await request(teacher, 'GET');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()[0].members).toEqual([
+      expect.objectContaining({ userId: studentId, email: 'grouped@example.com' }),
+    ]);
   });
 
   it('lets a registrar see the groups but not change them', async () => {

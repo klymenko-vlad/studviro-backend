@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 
 import {
@@ -45,15 +46,17 @@ export class StudyGroupsController {
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'listStudyGroups',
-    summary: 'The seminar and lab groups on this offering, with their members',
+    summary:
+      'The seminar and lab groups on this offering, with their members, for whoever teaches or administers it',
   })
   @ApiOkResponse({ type: StudyGroupResponseDto, isArray: true })
   @ApiErrorResponses({ notFound: true })
   async list(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @CurrentUser('id') userId: string,
   ): Promise<StudyGroupResponseDto[]> {
-    const entries = await this.groups.list(institutionId, offeringId);
+    const entries = await this.groups.list(institutionId, offeringId, userId);
 
     return entries.map((entry) => StudyGroupResponseDto.from(entry));
   }

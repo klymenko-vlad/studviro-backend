@@ -1,18 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 
-import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
+import {
+  ConflictError,
+  EntityNotFoundError,
+  PermissionDeniedError,
+} from '../../common/errors/domain.error';
 import {
   courseOfferings,
   ENROLLMENT_PARTICIPATING_STATUSES,
   enrollments,
   studyGroupMemberships,
   studyGroups,
+  teachingAssignments,
   users,
   type StudyGroup,
   type StudyGroupKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { AuthorizationService } from '../authorization/authorization.service';
+import { administersOfferings } from '../courses/administers-offering';
 
 export interface StudyGroupMember {
   readonly userId: string;
@@ -45,10 +52,23 @@ export type StudyGroupChanges = Partial<NewStudyGroup>;
  */
 @Injectable()
 export class StudyGroupsService {
-  constructor(private readonly txHost: TransactionHost) {}
+  constructor(
+    private readonly txHost: TransactionHost,
+    private readonly authorization: AuthorizationService,
+  ) {}
 
-  async list(institutionId: string, offeringId: string): Promise<StudyGroupEntry[]> {
+  /**
+   * The members carry names and addresses, so the list is the roster's to show:
+   * only to whoever teaches the offering or administers offerings. A student
+   * sees their own groups on the offering itself.
+   */
+  async list(
+    institutionId: string,
+    offeringId: string,
+    viewerId: string,
+  ): Promise<StudyGroupEntry[]> {
     await this.offering(institutionId, offeringId);
+    await this.assertMaySeeMembers(institutionId, offeringId, viewerId);
 
     const groups = await this.reader
       .select({
@@ -348,6 +368,29 @@ export class StudyGroupsService {
     if (!row) throw new EntityNotFoundError('study_group', groupId);
 
     return row;
+  }
+
+  private async assertMaySeeMembers(
+    institutionId: string,
+    offeringId: string,
+    viewerId: string,
+  ): Promise<void> {
+    const [teaching] = await this.reader
+      .select({ id: teachingAssignments.id })
+      .from(teachingAssignments)
+      .where(
+        and(
+          eq(teachingAssignments.courseOfferingId, offeringId),
+          eq(teachingAssignments.userId, viewerId),
+          isNull(teachingAssignments.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (teaching) return;
+    if (await administersOfferings(this.authorization, viewerId, institutionId)) return;
+
+    throw new PermissionDeniedError();
   }
 
   private async offering(institutionId: string, offeringId: string): Promise<void> {
