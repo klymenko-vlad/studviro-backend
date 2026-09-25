@@ -7,6 +7,8 @@ import {
   InvalidInputError,
 } from '../../common/errors/domain.error';
 import {
+  assessmentResults,
+  assessments,
   learningActivities,
   submissionFiles,
   submissions,
@@ -35,10 +37,19 @@ export interface NewSubmission {
   readonly notes?: string | null;
 }
 
+export interface RecordedMark {
+  readonly points: number | null;
+  readonly maxPoints: number | null;
+  readonly feedback: string | null;
+  readonly markedAt: Date | null;
+}
+
 export interface SubmissionEntry {
   readonly submission: Submission;
   readonly files: SubmissionFile[];
   readonly student: { id: string; displayName: string; email: string };
+  /** The mark on this assignment for the submission's author, if one was given. */
+  readonly mark: RecordedMark | null;
 }
 
 /**
@@ -290,9 +301,29 @@ export class SubmissionsService {
         submission: submissions,
         displayName: users.displayName,
         email: users.email,
+        resultId: assessmentResults.id,
+        points: assessmentResults.points,
+        maxPoints: assessments.maxPoints,
+        feedback: assessmentResults.feedback,
+        markedAt: assessmentResults.gradedAt,
       })
       .from(submissions)
       .innerJoin(users, eq(users.id, submissions.userId))
+      .leftJoin(
+        assessments,
+        and(
+          eq(assessments.learningActivityId, submissions.learningActivityId),
+          isNull(assessments.deletedAt),
+        ),
+      )
+      .leftJoin(
+        assessmentResults,
+        and(
+          eq(assessmentResults.assessmentId, assessments.id),
+          eq(assessmentResults.userId, submissions.userId),
+          isNull(assessmentResults.deletedAt),
+        ),
+      )
       .where(
         and(
           scope,
@@ -331,6 +362,15 @@ export class SubmissionsService {
         displayName: row.displayName,
         email: row.email,
       },
+      mark:
+        row.resultId === null
+          ? null
+          : {
+              points: row.points === null ? null : Number(row.points),
+              maxPoints: row.maxPoints === null ? null : Number(row.maxPoints),
+              feedback: row.feedback,
+              markedAt: row.markedAt,
+            },
     }));
   }
 

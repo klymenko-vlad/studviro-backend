@@ -64,6 +64,17 @@ export class SubmissionStudentDto {
 }
 
 @Exclude()
+export class SubmissionMarkDto {
+  @Expose() @ApiProperty({ type: Number, nullable: true }) points!: number | null;
+  @Expose() @ApiProperty({ type: Number, nullable: true }) maxPoints!: number | null;
+  @Expose() @ApiProperty({ type: String, nullable: true }) feedback!: string | null;
+
+  @Expose()
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  markedAt!: Date | null;
+}
+
+@Exclude()
 export class SubmissionResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) assignmentId!: string;
@@ -87,6 +98,15 @@ export class SubmissionResponseDto {
   @ApiProperty({ type: SubmissionFileResponseDto, isArray: true })
   files!: SubmissionFileResponseDto[];
 
+  @Expose()
+  @Type(() => SubmissionMarkDto)
+  @ApiProperty({
+    type: SubmissionMarkDto,
+    nullable: true,
+    description: 'The mark on this assignment for the author, once one has been given.',
+  })
+  mark!: SubmissionMarkDto | null;
+
   static from(entry: SubmissionEntry): SubmissionResponseDto {
     return Object.assign(new SubmissionResponseDto(), {
       id: entry.submission.id,
@@ -105,6 +125,7 @@ export class SubmissionResponseDto {
           sizeBytes: file.sizeBytes,
         }),
       ),
+      mark: entry.mark === null ? null : Object.assign(new SubmissionMarkDto(), entry.mark),
     });
   }
 }

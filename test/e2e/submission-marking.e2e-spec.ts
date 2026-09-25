@@ -118,6 +118,30 @@ describe('Submission marking (e2e)', () => {
     ]);
   });
 
+  it('shows the teacher the mark already given when they come back to the list', async () => {
+    const before = await harness.inject({
+      method: 'GET',
+      url: `${institutionUrl()}/assignments/${assignmentId}/submissions`,
+      headers: fixture.teacher.headers,
+    });
+    expect(before.json()[0].mark).toBeNull();
+
+    await mark(fixture.teacher, { points: 17.5, feedback: 'Good, but slow.' });
+
+    const after = await harness.inject({
+      method: 'GET',
+      url: `${institutionUrl()}/assignments/${assignmentId}/submissions`,
+      headers: fixture.teacher.headers,
+    });
+
+    expect(after.json()[0].mark).toEqual({
+      points: 17.5,
+      maxPoints: 20,
+      feedback: 'Good, but slow.',
+      markedAt: expect.any(String),
+    });
+  });
+
   it('re-marks the same submission in place rather than opening a second result', async () => {
     await mark(fixture.teacher, { points: 10 });
     const again = await mark(fixture.teacher, { points: 18, feedback: 'Better.' });
