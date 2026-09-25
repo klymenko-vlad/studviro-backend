@@ -61,11 +61,15 @@ fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
 ## What to do next
 
-**Next task: B31 — times in the institution's own time zone.** The client pins
-`Europe/Kyiv` (`shared/config/i18n/request.ts`), so a Bratislava institution sees every
-lecture, exam and deadline an hour late, and the exam-term and assignment forms store what is
-typed as UTC. Read and enter every time in the institution's `timezone`; the calendar's day
-grouping and the forms' day/time split both move with it.
+**Next task: B47 — sessions end fifteen minutes after sign-in.** The refresh cookie is
+scoped to `/api/auth`, so nothing on a page or in the API proxy can refresh, and every user
+is sent to sign-in when the access token lapses. Refresh in the middleware; mind the API's
+reuse detection, which revokes every session if two requests rotate the same token. The
+tracker row has the detail. Write an ADR.
+
+**Then B31 — times in the institution's own time zone.** The client pins `Europe/Kyiv`
+(`shared/config/i18n/request.ts`), so a Bratislava institution sees every time an hour
+late, and the exam-term and assignment forms store what is typed as UTC.
 
 After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
 2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
@@ -102,7 +106,9 @@ Noticed while walking, not fixed:
 - **A response that drifts from its own OpenAPI schema is refused by the client**, and reads
   as "could not be loaded" on a 200. The e2e harness now validates every 2xx body against
   `openapi.json` (`test/setup/openapi-contract.ts`), so the drift fails the server's suite.
-  MSW fixtures in the client are hand-written and do not catch it.
+  MSW fixtures in the client are hand-written and do not catch it. A nullable enum must
+  list `null` in its values (`enum: [...VALUES, null]`) or the client refuses null;
+  `src/openapi-document.spec.ts` enforces it.
 
 - **A generic `CursorPageDto<T>` in an `@ApiOkResponse` breaks the generated client.**
   Its `items` carries no type, so the client validates it as an array of arrays and
