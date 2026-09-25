@@ -128,3 +128,13 @@ object alive as a noncurrent version, which defeats the sweep unless a noncurren
 expiry rule is set beside it — and whether uploads must be virus-scanned before a marker
 can download them. ADR 0027 records that there is no scanner today and what the seam for
 one would be.
+
+## Sessions across more than one instance of the client
+
+The client renews a lapsed session in `src/proxy.ts` and shares one rotation per refresh
+token across the process (ADR 0036). Run the Next.js server as **one instance, or with
+sticky sessions**. Across several instances without either, two requests of one page can
+rotate the same token. The API's fifteen-second grace window stops that from revoking the
+user's sessions, but the request that loses is refused and its page sends the user to sign
+in. A rotation lock in Redis would lift the constraint. Nothing needs configuring for one
+instance.

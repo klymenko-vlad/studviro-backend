@@ -61,13 +61,7 @@ fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
 ## What to do next
 
-**Next task: B47 — sessions end fifteen minutes after sign-in.** The refresh cookie is
-scoped to `/api/auth`, so nothing on a page or in the API proxy can refresh, and every user
-is sent to sign-in when the access token lapses. Refresh in the middleware; mind the API's
-reuse detection, which revokes every session if two requests rotate the same token. The
-tracker row has the detail. Write an ADR.
-
-**Then B31 — times in the institution's own time zone.** The client pins `Europe/Kyiv`
+**Next task: B31 — times in the institution's own time zone.** The client pins `Europe/Kyiv`
 (`shared/config/i18n/request.ts`), so a Bratislava institution sees every time an hour
 late, and the exam-term and assignment forms store what is typed as UTC.
 
