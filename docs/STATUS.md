@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
 ## What this is
 
@@ -61,15 +61,26 @@ fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
 ## What to do next
 
-**Next task: nothing is claimed.** The found-work list is empty, and B2 is closed by
-decision: an institution is joined only by invitation, for now (**ADR 0035**). Do not
-build a request-to-join or a self-join without asking. Pick the next item from what
-turns up while walking the app.
+**Next task: B31 — times in the institution's own time zone.** The client pins
+`Europe/Kyiv` (`shared/config/i18n/request.ts`), so a Bratislava institution sees every
+lecture, exam and deadline an hour late, and the exam-term and assignment forms store what is
+typed as UTC. Read and enter every time in the institution's `timezone`; the calendar's day
+grouping and the forms' day/time split both move with it.
+
+After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
+2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
+B32 and B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
+the product feel like separate screens rather than one tool. **B35 needs a product answer
+first** — ask what a registrar should be able to do before building it.
 
 Noticed while walking, not fixed:
 
 - On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
-  was created by hand and has almost no data, so walk the seeded one.
+  was created by hand and has almost no data, so walk the seeded one. The walk left behind a
+  course _AUDX-01_, a pending invitation to `audit.walkthrough.registrar@example.com` and a
+  few marks on Algorithms; `pnpm db:seed` puts it back.
+- `backend/.env` here had no `STORAGE_*` block, so every upload was signed for AWS and
+  failed. The MinIO defaults from `.env.example` were added on 2026-09-25.
 - `agent-browser click` by ref can land under the sticky header once a button is
   scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
   not an app bug.
@@ -87,6 +98,11 @@ Noticed while walking, not fixed:
 - **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
 
 ## Traps that have cost time here
+
+- **A response that drifts from its own OpenAPI schema is refused by the client**, and reads
+  as "could not be loaded" on a 200. The e2e harness now validates every 2xx body against
+  `openapi.json` (`test/setup/openapi-contract.ts`), so the drift fails the server's suite.
+  MSW fixtures in the client are hand-written and do not catch it.
 
 - **A generic `CursorPageDto<T>` in an `@ApiOkResponse` breaks the generated client.**
   Its `items` carries no type, so the client validates it as an array of arrays and
