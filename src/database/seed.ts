@@ -60,6 +60,11 @@ async function main(): Promise<void> {
     console.log(`  registrar      ${DEFAULT_NAMED_ACCOUNTS.registrarEmail}`);
     console.log(`  teacher        ${DEFAULT_NAMED_ACCOUNTS.teacherEmail}`);
     console.log(`  student        ${DEFAULT_NAMED_ACCOUNTS.studentEmail}`);
+    console.log(`  assistant      ${DEFAULT_NAMED_ACCOUNTS.assistantEmail}`);
+    console.log(`  programme      ${DEFAULT_NAMED_ACCOUNTS.programCoordinatorEmail}`);
+    console.log(`  course         ${DEFAULT_NAMED_ACCOUNTS.courseCoordinatorEmail}`);
+    console.log(`  faculty        ${DEFAULT_NAMED_ACCOUNTS.orgUnitManagerEmail}`);
+    console.log(`  no institution ${DEFAULT_NAMED_ACCOUNTS.newcomerEmail}`);
     console.log('(an account that already existed keeps the password it had)');
   } finally {
     await client.end();

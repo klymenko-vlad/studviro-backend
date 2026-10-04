@@ -36,6 +36,7 @@ import {
   planStudyGroups,
   planTimetableEvents,
 } from './derive';
+import type { PlannedOffering } from './derive';
 import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
@@ -54,6 +55,11 @@ export interface NamedAccounts {
   readonly registrarEmail: string;
   readonly teacherEmail: string;
   readonly studentEmail: string;
+  readonly assistantEmail: string;
+  readonly programCoordinatorEmail: string;
+  readonly courseCoordinatorEmail: string;
+  readonly orgUnitManagerEmail: string;
+  readonly newcomerEmail: string;
 }
 
 export const DEFAULT_NAMED_ACCOUNTS: NamedAccounts = {
@@ -61,6 +67,11 @@ export const DEFAULT_NAMED_ACCOUNTS: NamedAccounts = {
   registrarEmail: 'registrar@studviro.local',
   teacherEmail: 'teacher@studviro.local',
   studentEmail: 'ada@studviro.local',
+  assistantEmail: 'assistant@studviro.local',
+  programCoordinatorEmail: 'program.coordinator@studviro.local',
+  courseCoordinatorEmail: 'course.coordinator@studviro.local',
+  orgUnitManagerEmail: 'faculty.manager@studviro.local',
+  newcomerEmail: 'newcomer@studviro.local',
 };
 
 export interface SeedSummary {
@@ -363,6 +374,17 @@ export async function writePlan(
   );
   await insertChunked(teaching, (slice) => db.insert(teachingAssignments).values(slice));
 
+  await writeScopedAccounts(db, {
+    institutionId,
+    accounts,
+    passwordHash,
+    firstTeacherKey: allDepartments(plan)[0]?.teachers[0]?.key,
+    plannedOfferings,
+    offeringIds,
+    programId: programIds.get(allPrograms(plan)[0]?.key ?? ''),
+    facultyId: orgUnitIds.get(plan.faculties[0]?.key ?? ''),
+  });
+
   // --- enrolments -----------------------------------------------------------
   const plannedEnrollments = planEnrollments(plannedOfferings, options.anchor);
   const enrollmentIds = new Map<string, string>();
@@ -658,6 +680,85 @@ function namedAliases(plan: DemoPlan, accounts: NamedAccounts): Map<string, stri
   if (firstStudent) aliases.set(firstStudent.person.key, accounts.studentEmail);
 
   return aliases;
+}
+
+interface ScopedAccountsContext {
+  readonly institutionId: string;
+  readonly accounts: NamedAccounts;
+  readonly passwordHash: string;
+  readonly firstTeacherKey: string | undefined;
+  readonly plannedOfferings: readonly PlannedOffering[];
+  readonly offeringIds: ReadonlyMap<string, string>;
+  readonly programId: string | undefined;
+  readonly facultyId: string | undefined;
+}
+
+/**
+ * The roles no generated person holds: an assistant on the named teacher's
+ * offerings, a coordinator of the first programme and of one current offering,
+ * a manager of the first faculty, and a newcomer who belongs to no institution.
+ */
+async function writeScopedAccounts(db: SeedDatabase, context: ScopedAccountsContext) {
+  const { institutionId, accounts, passwordHash } = context;
+
+  const assistantId = await upsertUser(
+    db,
+    accounts.assistantEmail,
+    'Demo Teaching Assistant',
+    passwordHash,
+  );
+  const assisted = context.plannedOfferings.filter(
+    (offering) => offering.course.teachers[0]?.key === context.firstTeacherKey,
+  );
+  await insertChunked(
+    assisted.map((offering) => ({
+      institutionId,
+      courseOfferingId: required(context.offeringIds, offering.key, 'offering'),
+      userId: assistantId,
+      role: 'assistant' as const,
+      isPrimary: false,
+    })),
+    (slice) => db.insert(teachingAssignments).values(slice),
+  );
+
+  const currentOffering = assisted.find((offering) => !offering.term.isPast) ?? assisted[0];
+  const grants = [
+    {
+      email: accounts.programCoordinatorEmail,
+      name: 'Demo Programme Coordinator',
+      role: 'program_coordinator' as const,
+      scopeType: 'program' as const,
+      scopeId: context.programId,
+    },
+    {
+      email: accounts.courseCoordinatorEmail,
+      name: 'Demo Course Coordinator',
+      role: 'course_coordinator' as const,
+      scopeType: 'course_offering' as const,
+      scopeId: currentOffering && context.offeringIds.get(currentOffering.key),
+    },
+    {
+      email: accounts.orgUnitManagerEmail,
+      name: 'Demo Faculty Manager',
+      role: 'org_unit_manager' as const,
+      scopeType: 'org_unit' as const,
+      scopeId: context.facultyId,
+    },
+  ];
+
+  for (const grant of grants) {
+    if (!grant.scopeId) throw new Error(`the demo seed has nothing to scope ${grant.role} to`);
+    const userId = await upsertUser(db, grant.email, grant.name, passwordHash);
+    await db.insert(roleAssignments).values({
+      institutionId,
+      userId,
+      role: grant.role,
+      scopeType: grant.scopeType,
+      scopeId: grant.scopeId,
+    });
+  }
+
+  await upsertUser(db, accounts.newcomerEmail, 'Demo Newcomer', passwordHash);
 }
 
 function displayNameFor(plan: DemoPlan, personKey: string): string {

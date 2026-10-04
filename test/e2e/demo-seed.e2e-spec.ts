@@ -151,4 +151,61 @@ describe('the demo seed (e2e)', () => {
       expect.arrayContaining([expect.objectContaining({ role: 'student' })]),
     );
   });
+
+  it('gives every scoped role a named account, scoped to a real row', async () => {
+    const { institutionId } = await seed();
+    const derived = harness.app.get(DerivedRolesRepository);
+
+    const idOf = async (email: string) => {
+      const [row] = await harness.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email));
+
+      return row?.id ?? '';
+    };
+
+    const grantsOf = async (email: string) =>
+      harness.db
+        .select({ role: roleAssignments.role, scopeType: roleAssignments.scopeType })
+        .from(roleAssignments)
+        .where(eq(roleAssignments.userId, await idOf(email)));
+
+    await expect(grantsOf(DEFAULT_NAMED_ACCOUNTS.programCoordinatorEmail)).resolves.toEqual([
+      { role: 'program_coordinator', scopeType: 'program' },
+    ]);
+    await expect(grantsOf(DEFAULT_NAMED_ACCOUNTS.courseCoordinatorEmail)).resolves.toEqual([
+      { role: 'course_coordinator', scopeType: 'course_offering' },
+    ]);
+    await expect(grantsOf(DEFAULT_NAMED_ACCOUNTS.orgUnitManagerEmail)).resolves.toEqual([
+      { role: 'org_unit_manager', scopeType: 'org_unit' },
+    ]);
+
+    const assistantRoles = await derived.findFor(
+      institutionId,
+      await idOf(DEFAULT_NAMED_ACCOUNTS.assistantEmail),
+    );
+    expect(assistantRoles).toEqual(
+      expect.arrayContaining([expect.objectContaining({ role: 'teaching_assistant' })]),
+    );
+    expect(assistantRoles.some((entry) => entry.role === 'teacher')).toBe(false);
+  });
+
+  it('leaves the newcomer belonging to no institution', async () => {
+    const { institutionId } = await seed();
+    const derived = harness.app.get(DerivedRolesRepository);
+    const [newcomer] = await harness.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, DEFAULT_NAMED_ACCOUNTS.newcomerEmail));
+
+    expect(newcomer).toBeDefined();
+    await expect(
+      harness.db
+        .select()
+        .from(roleAssignments)
+        .where(eq(roleAssignments.userId, newcomer?.id ?? '')),
+    ).resolves.toHaveLength(0);
+    await expect(derived.findFor(institutionId, newcomer?.id ?? '')).resolves.toEqual([]);
+  });
 });
