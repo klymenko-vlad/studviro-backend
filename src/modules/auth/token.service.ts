@@ -28,6 +28,7 @@ export class TokenService {
 
   async issueAccessToken(
     user: Pick<User, 'id' | 'email' | 'locale' | 'role' | 'tokenVersion'>,
+    sessionId?: string,
   ): Promise<IssuedToken> {
     const payload: AccessTokenPayload = {
       sub: user.id,
@@ -35,6 +36,7 @@ export class TokenService {
       locale: user.locale,
       role: user.role,
       tv: user.tokenVersion,
+      ...(sessionId ? { sid: sessionId } : {}),
     };
 
     const token = await this.jwt.signAsync(payload, {

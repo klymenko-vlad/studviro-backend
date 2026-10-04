@@ -74,6 +74,19 @@ deployment points the same client somewhere real by changing these:
 | `STORAGE_SIGNED_URL_TTL_S`   | `300`               | How long a read or write link lives. Capped at an hour     |
 | `STORAGE_RECLAIM_AFTER_DAYS` | `30`                | How long a removed file's object outlives its row          |
 
+## Two-step verification
+
+Authenticator secrets are encrypted at rest (ADR 0037).
+
+| Variable                | Default    | What it is                                                                          |
+| ----------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| `TWO_FACTOR_SECRET_KEY` | dev        | Encrypts each authenticator secret. **Must be changed, or the app refuses to boot** |
+| `TWO_FACTOR_ISSUER`     | `StudViro` | The name an authenticator app shows beside the code                                 |
+
+Generate the key once (`openssl rand -base64 48`) and keep it. Changing it later leaves every
+enrolled person with only their recovery codes. The second sign-in step keeps its challenge in
+Redis, like the captcha.
+
 ## Captcha on the public forms
 
 Sign-up, sign-in, the password-reset request and the demo request can carry a

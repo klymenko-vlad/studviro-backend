@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm';
 
 import type { Transaction } from '../../database/database.tokens';
 import { BaseRepository } from '../../database/repository/base.repository';
@@ -39,6 +39,59 @@ export class RefreshTokensRepository extends BaseRepository<typeof refreshTokens
     tx?: Transaction,
   ): Promise<void> {
     await this.update(id, { revokedAt: new Date(), replacedByTokenHash }, tx);
+  }
+
+  isSessionLive(userId: string, sessionId: string): Promise<boolean> {
+    return this.exists(this.liveSession(userId, sessionId), { consistent: true });
+  }
+
+  findLive(userId: string): Promise<RefreshToken[]> {
+    return this.findMany({
+      where: this.live(userId),
+      orderBy: refreshTokens.createdAt,
+      order: 'desc',
+      consistent: true,
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string, tx?: Transaction): Promise<number> {
+    const revoked = await this.updateMany(
+      this.liveSession(userId, sessionId),
+      { revokedAt: new Date() },
+      {},
+      tx,
+    );
+
+    return revoked.length;
+  }
+
+  async revokeAllSessionsExcept(
+    userId: string,
+    keptSessionId: string,
+    tx?: Transaction,
+  ): Promise<number> {
+    const revoked = await this.updateMany(
+      and(this.live(userId), ne(refreshTokens.sessionId, keptSessionId)) ?? sql`false`,
+      { revokedAt: new Date() },
+      {},
+      tx,
+    );
+
+    return revoked.length;
+  }
+
+  private live(userId: string) {
+    return (
+      and(
+        eq(refreshTokens.userId, userId),
+        isNull(refreshTokens.revokedAt),
+        gt(refreshTokens.expiresAt, new Date()),
+      ) ?? sql`false`
+    );
+  }
+
+  private liveSession(userId: string, sessionId: string) {
+    return and(this.live(userId), eq(refreshTokens.sessionId, sessionId)) ?? sql`false`;
   }
 
   /**

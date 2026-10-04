@@ -11,6 +11,8 @@ import {
   refreshTokens,
   submissionFiles,
   submissions,
+  twoFactorCredentials,
+  twoFactorRecoveryCodes,
   userEmails,
   users,
 } from '../../database/schema';
@@ -18,6 +20,8 @@ import { TransactionHost } from '../../database/transaction.host';
 import { AuditService } from '../audit/audit.service';
 import { PasswordResetTokensRepository } from '../auth/password-reset/password-reset-tokens.repository';
 import { RefreshTokensRepository } from '../auth/refresh-tokens.repository';
+import { RecoveryCodesRepository } from '../auth/two-factor/recovery-codes.repository';
+import { TwoFactorCredentialsRepository } from '../auth/two-factor/two-factor-credentials.repository';
 import { InstitutionMembershipService } from '../catalogue/institution-membership.service';
 import { ExternalIdentitiesRepository } from '../identity/external-identities.repository';
 import { UserEmailsRepository } from '../identity/user-emails.repository';
@@ -54,6 +58,8 @@ export class PersonalDataErasureService {
     private readonly relatedInstitutions: RelatedInstitutionsRepository,
     private readonly refreshTokensRepository: RefreshTokensRepository,
     private readonly passwordResetTokensRepository: PasswordResetTokensRepository,
+    private readonly twoFactorCredentialsRepository: TwoFactorCredentialsRepository,
+    private readonly recoveryCodesRepository: RecoveryCodesRepository,
     private readonly userEmailsRepository: UserEmailsRepository,
     private readonly externalIdentitiesRepository: ExternalIdentitiesRepository,
     private readonly invitationsRepository: InvitationsRepository,
@@ -115,6 +121,8 @@ export class PersonalDataErasureService {
       ErasureTally,
       | 'refreshTokens'
       | 'passwordResetTokens'
+      | 'twoFactorCredentials'
+      | 'recoveryCodes'
       | 'userEmails'
       | 'externalIdentities'
       | 'invitations'
@@ -126,6 +134,12 @@ export class PersonalDataErasureService {
       ),
       passwordResetTokens: await this.passwordResetTokensRepository.hardDeleteMany(
         eq(passwordResetTokens.userId, userId),
+      ),
+      twoFactorCredentials: await this.twoFactorCredentialsRepository.hardDeleteMany(
+        eq(twoFactorCredentials.userId, userId),
+      ),
+      recoveryCodes: await this.recoveryCodesRepository.hardDeleteMany(
+        eq(twoFactorRecoveryCodes.userId, userId),
       ),
       userEmails: await this.userEmailsRepository.hardDeleteMany(eq(userEmails.userId, userId)),
       externalIdentities: await this.externalIdentitiesRepository.hardDeleteMany(

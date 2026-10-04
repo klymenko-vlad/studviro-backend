@@ -3,8 +3,6 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
-import type { Transaction } from '../../database/database.tokens';
-import type { User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
@@ -15,12 +13,13 @@ import type { AuthenticatedUser } from './auth.constants';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
+import { SessionIssuer, type SessionContext } from './sessions/session-issuer.service';
 import { TokenService } from './token.service';
+import { TwoFactorChallenges } from './two-factor/two-factor-challenges.service';
+import { TwoFactorCredentialsRepository } from './two-factor/two-factor-credentials.repository';
+import { TwoFactorRequiredError } from './two-factor/two-factor-required.error';
 
-export interface SessionContext {
-  readonly userAgent?: string | undefined;
-  readonly ipAddress?: string | undefined;
-}
+export type { SessionContext } from './sessions/session-issuer.service';
 
 /**
  * An argon2 digest of a value nobody knows, verified against whenever the email
@@ -50,6 +49,9 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly passwords: PasswordService,
     private readonly txHost: TransactionHost,
+    private readonly sessions: SessionIssuer,
+    private readonly twoFactor: TwoFactorCredentialsRepository,
+    private readonly challenges: TwoFactorChallenges,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(AuthService.name);
@@ -64,7 +66,7 @@ export class AuthService {
         tx,
       );
 
-      return this.issueSession(entity, context, tx);
+      return this.sessions.start(entity, context, tx);
     });
   }
 
@@ -88,7 +90,11 @@ export class AuthService {
         })
       : user;
 
-    return this.issueSession(fresh, context);
+    if (await this.twoFactor.isEnabledFor(fresh.id)) {
+      throw new TwoFactorRequiredError(await this.challenges.open(fresh.id));
+    }
+
+    return this.sessions.start(fresh, context);
   }
 
   /**
@@ -157,6 +163,8 @@ export class AuthService {
       await this.refreshTokens.create(
         {
           userId: user.id,
+          sessionId: stored.sessionId,
+          sessionStartedAt: stored.sessionStartedAt,
           tokenHash: issuedHash,
           expiresAt: issued.expiresAt,
           userAgent: context.userAgent ?? null,
@@ -165,7 +173,7 @@ export class AuthService {
         tx,
       );
 
-      const access = await this.tokens.issueAccessToken(user);
+      const access = await this.tokens.issueAccessToken(user, stored.sessionId);
 
       return AuthTokensDto.of(
         access.token,
@@ -204,35 +212,6 @@ export class AuthService {
 
   async me(user: AuthenticatedUser): Promise<UserResponseDto> {
     return this.usersService.findOne(user.id);
-  }
-
-  private async issueSession(
-    user: User,
-    context: SessionContext,
-    tx?: Transaction,
-  ): Promise<AuthTokensDto> {
-    const [access, refresh] = await Promise.all([
-      this.tokens.issueAccessToken(user),
-      this.tokens.issueRefreshToken(user.id),
-    ]);
-
-    await this.refreshTokens.create(
-      {
-        userId: user.id,
-        tokenHash: this.tokens.hash(refresh.token),
-        expiresAt: refresh.expiresAt,
-        userAgent: context.userAgent ?? null,
-        ipAddress: context.ipAddress ?? null,
-      },
-      tx,
-    );
-
-    return AuthTokensDto.of(
-      access.token,
-      refresh.token,
-      access.expiresAt,
-      UserResponseDto.fromEntity(user),
-    );
   }
 }
 

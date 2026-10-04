@@ -11,7 +11,11 @@ import { UsersService } from '../users/users.service';
 
 import { AuthService, REFRESH_REUSE_GRACE_MS } from './auth.service';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
+import { SessionIssuer } from './sessions/session-issuer.service';
 import { TokenService } from './token.service';
+import { TwoFactorChallenges } from './two-factor/two-factor-challenges.service';
+import { TwoFactorCredentialsRepository } from './two-factor/two-factor-credentials.repository';
+import { TwoFactorRequiredError } from './two-factor/two-factor-required.error';
 
 const USER = {
   id: 'user-1',
@@ -34,6 +38,8 @@ function storedToken(overrides: Record<string, unknown> = {}) {
     userId: USER.id,
     tokenHash: 'hash:refresh-token',
     replacedByTokenHash: null,
+    sessionId: 'session-1',
+    sessionStartedAt: new Date('2026-01-01'),
     revokedAt: null,
     expiresAt: new Date(Date.now() + 86_400_000),
     userAgent: null,
@@ -78,6 +84,9 @@ describe('AuthService', () => {
 
   const passwords = { hash: vi.fn(), verify: vi.fn(), needsRehash: vi.fn(() => false) };
 
+  const twoFactor = { isEnabledFor: vi.fn(() => Promise.resolve(false)) };
+  const challenges = { open: vi.fn(() => Promise.resolve('challenge-token')) };
+
   // Runs the callback inline: the unit under test is the ordering of the writes,
   // not Postgres' transaction semantics, which the e2e suite covers.
   const txHost = { run: vi.fn((fn: (tx: unknown) => unknown) => fn(undefined)) };
@@ -94,6 +103,9 @@ describe('AuthService', () => {
         { provide: TokenService, useValue: tokens },
         { provide: PasswordService, useValue: passwords },
         { provide: TransactionHost, useValue: txHost },
+        SessionIssuer,
+        { provide: TwoFactorCredentialsRepository, useValue: twoFactor },
+        { provide: TwoFactorChallenges, useValue: challenges },
         { provide: PinoLogger, useValue: { setContext: vi.fn(), warn: vi.fn() } },
       ],
     }).compile();
@@ -139,6 +151,42 @@ describe('AuthService', () => {
       expect(usersRepository.findSignInCandidate).toHaveBeenCalledWith(credentials.email, {
         consistent: true,
       });
+    });
+
+    it('holds the session back behind a challenge when two-factor is on', async () => {
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(true);
+      twoFactor.isEnabledFor.mockResolvedValueOnce(true);
+
+      const attempt = service.login(credentials, {});
+
+      await expect(attempt).rejects.toBeInstanceOf(TwoFactorRequiredError);
+      await expect(attempt).rejects.toMatchObject({
+        code: 'TWO_FACTOR_REQUIRED',
+        details: { challengeToken: 'challenge-token' },
+      });
+      expect(challenges.open).toHaveBeenCalledWith(USER.id);
+      expect(refreshTokens.create).not.toHaveBeenCalled();
+    });
+
+    it('does not reveal two-factor to a wrong password', async () => {
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(false);
+
+      await expect(service.login(credentials, {})).rejects.toThrow(UnauthenticatedError);
+      expect(twoFactor.isEnabledFor).not.toHaveBeenCalled();
+      expect(challenges.open).not.toHaveBeenCalled();
+    });
+
+    it('starts each sign-in as its own session, carried into the access token', async () => {
+      usersRepository.findSignInCandidate.mockResolvedValue(USER);
+      passwords.verify.mockResolvedValue(true);
+
+      await service.login(credentials, {});
+
+      const [values] = refreshTokens.create.mock.calls[0] as [{ sessionId: string }];
+      expect(values.sessionId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(tokens.issueAccessToken).toHaveBeenCalledWith(USER, values.sessionId);
     });
 
     it('never stores the refresh token itself, only its hash', async () => {
@@ -207,9 +255,14 @@ describe('AuthService', () => {
 
       expect(refreshTokens.revoke).toHaveBeenCalledWith('rt-1', 'hash:next-refresh', undefined);
       expect(refreshTokens.create).toHaveBeenCalledWith(
-        expect.objectContaining({ tokenHash: 'hash:next-refresh' }),
+        expect.objectContaining({
+          tokenHash: 'hash:next-refresh',
+          sessionId: 'session-1',
+          sessionStartedAt: new Date('2026-01-01'),
+        }),
         undefined,
       );
+      expect(tokens.issueAccessToken).toHaveBeenCalledWith(USER, 'session-1');
       expect(result.refreshToken).toBe('next-refresh');
     });
 

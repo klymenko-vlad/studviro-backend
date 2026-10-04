@@ -18,6 +18,8 @@ export interface AnonymisedIdentity {
 export interface ErasureTally {
   readonly refreshTokens: number;
   readonly passwordResetTokens: number;
+  readonly twoFactorCredentials: number;
+  readonly recoveryCodes: number;
   readonly userEmails: number;
   readonly externalIdentities: number;
   readonly invitations: number;

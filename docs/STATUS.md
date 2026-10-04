@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-09-25
+Last updated: 2026-10-04
 
 ## What this is
 
@@ -59,6 +59,13 @@ ADRs 0032–0034: exam attendance, the waiting list for a full course and the no
 a place on it comes free, captcha, storage reclamation, the paginated directory, the k6
 fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
+**Account security (B53, ADR 0037)** shipped on 2026-10-04 at the user's request, ahead of
+B31: `/account/settings` edits the profile, changes the password, turns on two-step
+verification (TOTP plus recovery codes, a second step at sign-in) and lists and ends
+sessions. A session is now a sign-in, carried in the access token as `sid`. Not built: an
+institution requiring two-step verification, passkeys, changing the email address and
+security mail (both wait on B37), and deleting your own account.
+
 ## What to do next
 
 **Next task: B31 — times in the institution's own time zone.** The client pins `Europe/Kyiv`
@@ -73,12 +80,25 @@ first** — ask what a registrar should be able to do before building it.
 
 Noticed while walking, not fixed:
 
+- **The API never sees a client's address.** The BFF calls it from its own host, so every
+  session records the BFF's IP and the credential throttle counts all sign-ins through one
+  BFF instance together. Forwarding `X-Forwarded-For` as-is would let a caller pick their
+  throttle key; it needs the API to trust the BFF as a proxy hop (ADR 0037).
+- **This machine's disk is full** (5.8 GB free of 687 GB). MinIO answers every upload
+  `507`, so the storage, submissions, materials and personal-data e2e suites fail locally.
+  They pass against a MinIO with room (`STORAGE_ENDPOINT=…`).
+- **StudViro's Postgres container cannot start here**: another project's `db` holds port 5432. The 2026-10-04 walk ran against a throwaway Postgres on 5440 and Redis on 6390.
+- The account menu has _Account_ and _Account settings_ as two entries. A single account
+  page with tabs may read better once there is more to put there.
+
 - On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
   was created by hand and has almost no data, so walk the seeded one. The walk left behind a
   course _AUDX-01_, a pending invitation to `audit.walkthrough.registrar@example.com` and a
   few marks on Algorithms; `pnpm db:seed` puts it back.
 - `backend/.env` here had no `STORAGE_*` block, so every upload was signed for AWS and
   failed. The MinIO defaults from `.env.example` were added on 2026-09-25.
+- The global `agent-browser` link points into a deleted worktree. Call
+  `~/.nvm/versions/node/v22.22.2/lib/node_modules/agent-browser/bin/agent-browser-linux-x64`.
 - `agent-browser click` by ref can land under the sticky header once a button is
   scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
   not an app bug.
@@ -142,7 +162,7 @@ Noticed while walking, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **555 kB** against a measured 550.78 kB. `.size-limit.mjs` has the full reasoning.
+  now **580 kB** against a measured 576.16 kB; account security spent 15.71 kB of it. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one

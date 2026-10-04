@@ -14,6 +14,7 @@ const production = {
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
   METRICS_TOKEN: 'm'.repeat(32),
+  TWO_FACTOR_SECRET_KEY: 't'.repeat(32),
   STORAGE_ACCESS_KEY_ID: 'real-object-store-key',
   STORAGE_SECRET_ACCESS_KEY: 'real-object-store-secret',
 };
@@ -85,6 +86,12 @@ describe('validateEnv', () => {
       const { JWT_ACCESS_SECRET: _omitted, ...withoutAccessSecret } = production;
 
       expect(() => validateEnv(withoutAccessSecret)).toThrow(/JWT_ACCESS_SECRET/);
+    });
+
+    it('rejects the development two-factor key', () => {
+      const { TWO_FACTOR_SECRET_KEY: _omitted, ...withoutKey } = production;
+
+      expect(() => validateEnv(withoutKey)).toThrow(/TWO_FACTOR_SECRET_KEY/);
     });
 
     it('rejects reusing one secret for both access and refresh tokens', () => {

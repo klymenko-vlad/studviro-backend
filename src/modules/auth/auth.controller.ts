@@ -24,18 +24,24 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 
 import type { AuthenticatedUser } from './auth.constants';
-import { AuthService, type SessionContext } from './auth.service';
+import { AuthService } from './auth.service';
 import { CredentialThrottle } from './decorators/credential-throttle.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { sessionContextOf } from './session-context';
+import { TwoFactorLoginDto } from './two-factor/dto/two-factor-login.dto';
+import { TwoFactorLoginService } from './two-factor/two-factor-login.service';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly twoFactorLogin: TwoFactorLoginService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -60,6 +66,20 @@ export class AuthController {
   @ApiErrorResponses()
   login(@Body() dto: LoginDto, @Req() request: unknown): Promise<AuthTokensDto> {
     return this.auth.login(dto, sessionContextOf(request));
+  }
+
+  @Public()
+  @Post('login/two-factor')
+  @HttpCode(HttpStatus.OK)
+  @CredentialThrottle()
+  @ApiOperation({ summary: 'Finish a sign-in with an authenticator or recovery code' })
+  @ApiOkResponse({ type: AuthTokensDto })
+  @ApiErrorResponses()
+  completeTwoFactorLogin(
+    @Body() dto: TwoFactorLoginDto,
+    @Req() request: unknown,
+  ): Promise<AuthTokensDto> {
+    return this.twoFactorLogin.complete(dto, sessionContextOf(request));
   }
 
   @Public()
@@ -99,21 +119,4 @@ export class AuthController {
   me(@CurrentUser() user: AuthenticatedUser): Promise<UserResponseDto> {
     return this.auth.me(user);
   }
-}
-
-/**
- * Recorded against each refresh token so a user can recognise their own
- * sessions, and so a leaked-token investigation has somewhere to start.
- */
-function sessionContextOf(request: unknown): SessionContext {
-  const { headers, ip } = request as {
-    headers?: Record<string, string | string[] | undefined>;
-    ip?: string;
-  };
-  const agent = headers?.['user-agent'];
-
-  return {
-    userAgent: Array.isArray(agent) ? agent[0] : agent,
-    ipAddress: ip,
-  };
 }

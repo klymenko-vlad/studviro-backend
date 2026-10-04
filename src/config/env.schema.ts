@@ -8,6 +8,7 @@ export type AppRole = z.infer<typeof AppRole>;
 
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
 const DEV_CAPTCHA_SECRET = 'dev-only-insecure-captcha-secret-do-not-use-in-prod';
+const DEV_TWO_FACTOR_SECRET_KEY = 'dev-only-insecure-two-factor-key-do-not-use-in-prod';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -141,6 +142,9 @@ export const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
 
+  TWO_FACTOR_SECRET_KEY: z.string().min(32).default(DEV_TWO_FACTOR_SECRET_KEY),
+  TWO_FACTOR_ISSUER: z.string().min(1).default('StudViro'),
+
   METRICS_ENABLED: bool('true'),
   METRICS_TOKEN: z.string().min(32).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
@@ -197,6 +201,13 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     if (env[key] === DEV_JWT_SECRET) {
       reject(key, 'must be set to a unique secret in production');
     }
+  }
+
+  if (env.TWO_FACTOR_SECRET_KEY === DEV_TWO_FACTOR_SECRET_KEY) {
+    reject(
+      'TWO_FACTOR_SECRET_KEY',
+      'must be set to a unique secret in production; with the shipped one a database dump yields every authenticator secret',
+    );
   }
 
   // The shipped secret would let anyone sign their own challenge, which is the

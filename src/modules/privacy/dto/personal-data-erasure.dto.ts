@@ -7,6 +7,8 @@ import type { ErasureTally } from '../erasure-rules';
 export class ErasureTallyDto implements ErasureTally {
   @Expose() @ApiProperty() refreshTokens!: number;
   @Expose() @ApiProperty() passwordResetTokens!: number;
+  @Expose() @ApiProperty() twoFactorCredentials!: number;
+  @Expose() @ApiProperty() recoveryCodes!: number;
   @Expose() @ApiProperty() userEmails!: number;
   @Expose() @ApiProperty() externalIdentities!: number;
   @Expose() @ApiProperty() invitations!: number;

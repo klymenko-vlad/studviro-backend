@@ -72,6 +72,11 @@ export interface JwtConfig {
   readonly refreshTtl: string;
 }
 
+export interface TwoFactorConfig {
+  readonly secretKey: string;
+  readonly issuer: string;
+}
+
 @Injectable()
 export class AppConfigService {
   constructor(private readonly config: ConfigService<Env, true>) {}
@@ -152,6 +157,13 @@ export class AppConfigService {
     return {
       ttlMs: this.config.get<number>('THROTTLE_TTL_MS'),
       limit: this.config.get<number>('THROTTLE_LIMIT'),
+    };
+  }
+
+  get twoFactor(): TwoFactorConfig {
+    return {
+      secretKey: this.config.get<string>('TWO_FACTOR_SECRET_KEY'),
+      issuer: this.config.get<string>('TWO_FACTOR_ISSUER'),
     };
   }
 

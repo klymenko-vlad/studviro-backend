@@ -15,5 +15,6 @@ export * from './password-reset-tokens';
 export * from './refresh-tokens';
 export * from './role-assignments';
 export * from './scheduling';
+export * from './two-factor';
 export * from './user-emails';
 export * from './users';

@@ -29,6 +29,8 @@ import {
   studyGroups,
   submissionFiles,
   submissions,
+  twoFactorCredentials,
+  twoFactorRecoveryCodes,
   userEmails,
   users,
 } from '../../src/database/schema';
@@ -432,7 +434,19 @@ describe('Personal data export and erasure (e2e)', () => {
     });
 
     it('destroys the credentials rather than soft-deleting them', async () => {
-      await eraseAs(admin, student.user.id);
+      await harness.db.insert(twoFactorCredentials).values({
+        userId: student.user.id,
+        secretCiphertext: 'v1.a.b.c',
+        enabledAt: new Date(),
+      });
+      await harness.db
+        .insert(twoFactorRecoveryCodes)
+        .values({ userId: student.user.id, codeHash: 'hash' });
+
+      const erased = await eraseAs(admin, student.user.id);
+      expect(erased.json()).toMatchObject({
+        tally: { twoFactorCredentials: 1, recoveryCodes: 1 },
+      });
 
       const { tokens, resets, emails, identities, invites } = await rowsOf(student.user.id);
 
@@ -441,6 +455,18 @@ describe('Personal data export and erasure (e2e)', () => {
       expect(emails).toEqual([]);
       expect(identities).toEqual([]);
       expect(invites).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(twoFactorCredentials)
+          .where(eq(twoFactorCredentials.userId, student.user.id)),
+      ).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(twoFactorRecoveryCodes)
+          .where(eq(twoFactorRecoveryCodes.userId, student.user.id)),
+      ).toEqual([]);
     });
 
     it('leaves an erased person unable to sign in', async () => {
