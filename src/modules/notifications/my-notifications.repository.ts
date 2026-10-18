@@ -4,6 +4,7 @@ import { and, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import {
   courseOfferings,
   courses,
+  examTerms,
   notificationDeliveries,
   notificationEvents,
   type NotificationPayload,
@@ -98,6 +99,9 @@ export class MyNotificationsRepository {
   }
 
   private selectMine(institutionId: string, userId: string, conditions: (SQL | undefined)[]) {
+    // An exam-registration event names only its term; the course comes through it.
+    const offeringOfEvent = sql`coalesce(${notificationEvents.courseOfferingId}, ${examTerms.courseOfferingId})`;
+
     return this.reader
       .select({
         deliveryId: notificationDeliveries.id,
@@ -108,7 +112,7 @@ export class MyNotificationsRepository {
         payload: notificationEvents.payload,
         examTermId: notificationEvents.examTermId,
         learningActivityId: notificationEvents.learningActivityId,
-        courseOfferingId: notificationEvents.courseOfferingId,
+        courseOfferingId: courseOfferings.id,
         courseCode: courses.code,
         courseTitle: courses.title,
       })
@@ -117,7 +121,8 @@ export class MyNotificationsRepository {
         notificationEvents,
         eq(notificationEvents.id, notificationDeliveries.notificationEventId),
       )
-      .leftJoin(courseOfferings, eq(courseOfferings.id, notificationEvents.courseOfferingId))
+      .leftJoin(examTerms, eq(examTerms.id, notificationEvents.examTermId))
+      .leftJoin(courseOfferings, eq(courseOfferings.id, offeringOfEvent))
       .leftJoin(courses, eq(courses.id, courseOfferings.courseId))
       .where(
         and(

@@ -12,6 +12,7 @@ import {
   type CanonicalRole,
   type ExamTerm,
 } from '../../src/database/schema';
+import { ExamRegistrationNotificationsService } from '../../src/modules/notifications/exam-registration-notifications.service';
 import { ExamTermNotificationsService } from '../../src/modules/notifications/exam-term-notifications.service';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
@@ -22,7 +23,9 @@ interface NotificationBody {
   readAt: string | null;
   startsAt: string | null;
   previousStartsAt: string | null;
+  courseOfferingId: string | null;
   courseCode: string | null;
+  courseTitle: string | null;
 }
 
 const MONDAY = new Date('2026-05-18T09:00:00.000Z');
@@ -154,6 +157,35 @@ describe('Notifications (e2e)', () => {
       { type: 'exam_term_published', courseCode: 'INF/ALG/22', occurrenceCount: 1 },
     ]);
     expect(await unreadCount(actor)).toBe(1);
+  });
+
+  it('names the course of an exam the student registered for (B32)', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id);
+    const term = await examTerm(new Date('2026-06-02T08:00:00.000Z'));
+    const [registration] = await harness.db
+      .insert(examRegistrations)
+      .values({
+        institutionId,
+        examTermId: term.id,
+        userId: actor.user.id,
+        status: 'registered',
+        registeredAt: MONDAY,
+      })
+      .returning();
+
+    await harness.app
+      .get(ExamRegistrationNotificationsService)
+      .confirmed(registration!, MONDAY);
+
+    expect(await inbox(actor)).toMatchObject([
+      {
+        type: 'exam_registration_confirmed',
+        courseOfferingId: offeringId,
+        courseCode: 'INF/ALG/22',
+        courseTitle: 'Algorithms',
+      },
+    ]);
   });
 
   it('folds a term rescheduled twice on one day into a single notification', async () => {
