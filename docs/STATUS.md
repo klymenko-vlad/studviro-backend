@@ -77,13 +77,13 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: B31 — times in the institution's own time zone.** The client pins `Europe/Kyiv`
-(`shared/config/i18n/request.ts`), so a Bratislava institution sees every time an hour
-late, and the exam-term and assignment forms store what is typed as UTC.
+**Next task: B33 — links land on the offering's Overview, never on the thing.** B31 (time
+zones) shipped on 2026-10-18, and B32's missing course name with it; B33 is what is left of
+"notifications that land nowhere useful".
 
 After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
 2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
-B32 and B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
+B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
 the product feel like separate screens rather than one tool. **B35 needs a product answer
 first** — ask what a registrar should be able to do before building it.
 
@@ -171,8 +171,8 @@ Noticed while walking, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **580 kB** against a measured 578.35 kB; account security spent 15.71 kB of it and
-  the calendar subscription card 2.19 kB. `.size-limit.mjs` has the full reasoning.
+  now **580 kB** against a measured 579.18 kB; account security spent 15.71 kB of it, the
+  calendar subscription card 2.19 kB and the institution clock 0.83 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
