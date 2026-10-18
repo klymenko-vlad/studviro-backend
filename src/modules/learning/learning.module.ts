@@ -50,6 +50,11 @@ import { SubmissionsService } from './submissions.service';
     MyAssessmentResultsService,
     MyAssessmentResultsRepository,
   ],
-  exports: [LearningSpacesService, MyDeadlinesService, MyAssessmentResultsService],
+  exports: [
+    LearningSpacesService,
+    MyDeadlinesService,
+    MyAssessmentResultsService,
+    LearningAccessService,
+  ],
 })
 export class LearningModule {}

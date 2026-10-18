@@ -34,6 +34,8 @@ export const NOTIFICATION_TYPES = [
   'exam_registration_refused',
   'submission_marked',
   'waitlist_place_free',
+  'discussion_thread_started',
+  'discussion_reply',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationType = pgEnum('notification_type', NOTIFICATION_TYPES);
@@ -53,6 +55,8 @@ export interface NotificationPayload {
   eventTitle?: string;
   eventType?: string;
   reason?: string;
+  threadTitle?: string;
+  threadId?: string;
 }
 
 export const notificationEvents = pgTable(

@@ -66,6 +66,9 @@ sessions. A session is now a sign-in, carried in the access token as `sid`. Not 
 institution requiring two-step verification, passkeys, changing the email address and
 security mail, and deleting your own account.
 
+**Course discussion (B58, ADR 0040)** shipped on 2026-10-18: a _Discussion_ tab on each
+course page, moderated by its teachers.
+
 **Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
 SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
 

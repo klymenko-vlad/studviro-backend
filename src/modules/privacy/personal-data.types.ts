@@ -169,6 +169,16 @@ export interface ExportedSubmission {
   files: ExportedFile[];
 }
 
+export interface ExportedDiscussionPost {
+  id: string;
+  threadId: string;
+  threadTitle: string;
+  courseOfferingId: string;
+  body: string;
+  hiddenAt: Date | null;
+  createdAt: Date;
+}
+
 export interface ExportedNotification {
   type: NotificationType;
   occurredAt: Date;
@@ -195,6 +205,7 @@ export interface PersonalDataExport {
   assessmentResults: ExportedAssessmentResult[];
   activityCompletions: ExportedActivityCompletion[];
   submissions: ExportedSubmission[];
+  discussionPosts: ExportedDiscussionPost[];
   notifications: ExportedNotification[];
   files: ExportedFile[];
 }

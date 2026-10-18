@@ -30,6 +30,7 @@ import { InvitationsRepository } from '../invitations/invitations.repository';
 import { StorageService } from '../storage/storage.service';
 import { UsersRepository } from '../users/users.repository';
 
+import { DiscussionDataRepository } from './discussion-data.repository';
 import type { PersonalDataErasure } from './dto/personal-data-erasure.dto';
 import {
   anonymisedIdentity,
@@ -65,6 +66,7 @@ export class PersonalDataErasureService {
     private readonly externalIdentitiesRepository: ExternalIdentitiesRepository,
     private readonly invitationsRepository: InvitationsRepository,
     private readonly learningData: LearningDataRepository,
+    private readonly discussionData: DiscussionDataRepository,
     private readonly storage: StorageService,
     private readonly audit: AuditService,
   ) {}
@@ -90,6 +92,7 @@ export class PersonalDataErasureService {
         ...(await this.clearFreeText(institutionId, userId)),
         submissionFiles: await this.dropSubmissionFiles(institutionId, userId),
         storedObjects: files.length,
+        discussionPosts: await this.discussionData.erase(institutionId, userId, new Date()),
       };
 
       await this.anonymise(userId, erasureId);

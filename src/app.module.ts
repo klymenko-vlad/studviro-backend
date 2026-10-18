@@ -25,6 +25,7 @@ import { CalendarExportModule } from './modules/calendar-export/calendar-export.
 import { CaptchaModule } from './modules/captcha/captcha.module';
 import { CatalogueModule } from './modules/catalogue/catalogue.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { DiscussionsModule } from './modules/discussions/discussions.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -157,6 +158,7 @@ function workerModules(): DynamicModule[] {
     PrivacyModule,
     SchedulingModule,
     CalendarExportModule,
+    DiscussionsModule,
     SearchModule,
     StorageModule,
     CaptchaModule,

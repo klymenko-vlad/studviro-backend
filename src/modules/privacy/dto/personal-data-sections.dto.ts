@@ -196,6 +196,17 @@ export class ExportedFileDto {
 }
 
 @Exclude()
+export class ExportedDiscussionPostDto {
+  @Expose() @ApiProperty(uuid) id!: string;
+  @Expose() @ApiProperty(uuid) threadId!: string;
+  @Expose() @ApiProperty() threadTitle!: string;
+  @Expose() @ApiProperty(uuid) courseOfferingId!: string;
+  @Expose() @ApiProperty() body!: string;
+  @Expose() @ApiProperty(nullableDateTime) hiddenAt!: Date | null;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) createdAt!: Date;
+}
+
+@Exclude()
 export class ExportedSubmissionDto {
   @Expose() @ApiProperty(uuid) id!: string;
   @Expose() @ApiProperty(uuid) learningActivityId!: string;

@@ -5,6 +5,7 @@ export * from './audit-events';
 export * from './calendar-feeds';
 export * from './course-results';
 export * from './demo-requests';
+export * from './discussions';
 export * from './enrollments';
 export * from './external-identities';
 export * from './institution-settings';

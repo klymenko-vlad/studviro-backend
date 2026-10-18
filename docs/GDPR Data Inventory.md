@@ -429,6 +429,22 @@ Not risks yet — those are in `DPIA.md` — but facts about the code:
 - **No rectification trail.** A corrected grade is a status change with a free-text note; who
   requested the correction is not recorded.
 
+## Course discussions
+
+### `discussion_threads`, `discussion_posts` — `discussions.ts`
+
+`title` (threads), `body` (posts), `author_id`, `hidden_at`, `hidden_by_id`.
+**Subject:** students and teachers of a course offering who write in its discussion.
+**Why:** communication within a course (ADR 0040).
+**Category:** free text written by the person, which may contain anything they chose to
+write, and a record of moderation (who hid what).
+**Deleted by:** the author (a deleted post's text is overwritten at once and the row kept so
+replies stay in order), erasure (overwrites every post of the person and the titles of
+threads they opened), and cascade from the course offering.
+**Exported:** every post the person wrote, with its thread and course.
+**Retention:** `TODO(institution)`. How long a course's discussion outlives the course is the
+institution's call.
+
 ## Outgoing mail
 
 **What:** the recipient's address, their display name (welcome only), and a reset or

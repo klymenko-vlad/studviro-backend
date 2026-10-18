@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 
 import { AcademicDataRepository } from './academic-data.repository';
 import { AccountDataRepository } from './account-data.repository';
+import { DiscussionDataRepository } from './discussion-data.repository';
 import { LearningDataRepository } from './learning-data.repository';
 import { PersonalDataErasureController } from './personal-data-erasure.controller';
 import { PersonalDataErasureService } from './personal-data-erasure.service';
@@ -21,6 +22,7 @@ import { RelatedInstitutionsRepository } from './related-institutions.repository
   providers: [
     AcademicDataRepository,
     AccountDataRepository,
+    DiscussionDataRepository,
     LearningDataRepository,
     PersonalDataErasureService,
     PersonalDataExportService,

@@ -68,6 +68,12 @@ export class NotificationResponseDto {
   })
   reason!: string | null;
 
+  @Expose() @ApiProperty({ type: String, nullable: true }) threadTitle!: string | null;
+
+  @Expose()
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  discussionThreadId!: string | null;
+
   static fromRow(row: MyNotificationRow): NotificationResponseDto {
     const dto = new NotificationResponseDto();
 
@@ -91,6 +97,8 @@ export class NotificationResponseDto {
     dto.attempt = row.payload.attempt ?? null;
     dto.eventTitle = row.payload.eventTitle ?? null;
     dto.reason = row.payload.reason ?? null;
+    dto.threadTitle = row.payload.threadTitle ?? null;
+    dto.discussionThreadId = row.payload.threadId ?? null;
 
     return dto;
   }

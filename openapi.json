@@ -1561,7 +1561,9 @@
                 "enrollment.corrected",
                 "exam_term.cancelled",
                 "exam_registration.attendance_recorded",
-                "personal_data.erased"
+                "personal_data.erased",
+                "discussion.hidden",
+                "discussion.restored"
               ]
             }
           },
@@ -1577,7 +1579,9 @@
                 "enrollment",
                 "exam_term",
                 "exam_registration",
-                "personal_data_erasure"
+                "personal_data_erasure",
+                "discussion_thread",
+                "discussion_post"
               ]
             }
           },
@@ -11842,6 +11846,677 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads": {
+      "get": {
+        "operationId": "listDiscussionThreads",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionThreadListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The threads of a course’s discussion, most recently active first",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "operationId": "startDiscussionThread",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDiscussionThreadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionThreadDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Start a thread",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}": {
+      "get": {
+        "operationId": "getDiscussionThread",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionThreadDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A thread with its posts",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts": {
+      "post": {
+        "operationId": "replyToDiscussionThread",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDiscussionPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionThreadDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Reply in a thread",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts/{postId}": {
+      "delete": {
+        "operationId": "deleteDiscussionPost",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Delete a post you wrote",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/visibility": {
+      "put": {
+        "operationId": "setDiscussionThreadVisibility",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscussionVisibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Hide a thread from students, or restore it",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts/{postId}/visibility": {
+      "put": {
+        "operationId": "setDiscussionPostVisibility",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscussionVisibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Hide a post from students, or restore it",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/search": {
       "get": {
         "description": "Permission decides what is searched rather than what is filtered afterwards, so a kind the caller cannot read is never queried and an empty result cannot be read as proof that something does not exist.",
@@ -13024,7 +13699,9 @@
               "enrollment.corrected",
               "exam_term.cancelled",
               "exam_registration.attendance_recorded",
-              "personal_data.erased"
+              "personal_data.erased",
+              "discussion.hidden",
+              "discussion.restored"
             ]
           },
           "subjectType": {
@@ -13035,7 +13712,9 @@
               "enrollment",
               "exam_term",
               "exam_registration",
-              "personal_data_erasure"
+              "personal_data_erasure",
+              "discussion_thread",
+              "discussion_post"
             ]
           },
           "subjectId": {
@@ -14803,7 +15482,9 @@
               "exam_registration_cancelled",
               "exam_registration_refused",
               "submission_marked",
-              "waitlist_place_free"
+              "waitlist_place_free",
+              "discussion_thread_started",
+              "discussion_reply"
             ],
             "type": "string"
           },
@@ -14886,6 +15567,15 @@
             "type": "string",
             "nullable": true,
             "description": "Why the source system refused, when it did."
+          },
+          "threadTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "discussionThreadId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           }
         },
         "required": [
@@ -14908,7 +15598,9 @@
           "previousGrade",
           "attempt",
           "eventTitle",
-          "reason"
+          "reason",
+          "threadTitle",
+          "discussionThreadId"
         ]
       },
       "UnreadNotificationsResponseDto": {
@@ -17542,6 +18234,47 @@
           "files"
         ]
       },
+      "ExportedDiscussionPostDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threadTitle": {
+            "type": "string"
+          },
+          "courseOfferingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "body": {
+            "type": "string"
+          },
+          "hiddenAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "threadId",
+          "threadTitle",
+          "courseOfferingId",
+          "body",
+          "hiddenAt",
+          "createdAt"
+        ]
+      },
       "ExportedNotificationDto": {
         "type": "object",
         "properties": {
@@ -17563,7 +18296,9 @@
               "exam_registration_cancelled",
               "exam_registration_refused",
               "submission_marked",
-              "waitlist_place_free"
+              "waitlist_place_free",
+              "discussion_thread_started",
+              "discussion_reply"
             ]
           },
           "occurredAt": {
@@ -17691,6 +18426,12 @@
               "$ref": "#/components/schemas/ExportedSubmissionDto"
             }
           },
+          "discussionPosts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedDiscussionPostDto"
+            }
+          },
           "notifications": {
             "type": "array",
             "items": {
@@ -17723,6 +18464,7 @@
           "assessmentResults",
           "activityCompletions",
           "submissions",
+          "discussionPosts",
           "notifications",
           "files"
         ]
@@ -17768,6 +18510,9 @@
           },
           "submissionNotes": {
             "type": "number"
+          },
+          "discussionPosts": {
+            "type": "number"
           }
         },
         "required": [
@@ -17783,7 +18528,8 @@
           "storedObjects",
           "conflictNotes",
           "assessmentFeedback",
-          "submissionNotes"
+          "submissionNotes",
+          "discussionPosts"
         ]
       },
       "PersonalDataErasureResponseDto": {
@@ -19849,6 +20595,213 @@
         "required": [
           "url",
           "createdAt"
+        ]
+      },
+      "DiscussionAuthorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName"
+        ]
+      },
+      "DiscussionThreadSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DiscussionAuthorDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "Hidden by a moderator."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "author",
+          "createdAt",
+          "lastActivityAt",
+          "postCount",
+          "hidden"
+        ]
+      },
+      "DiscussionThreadListDto": {
+        "type": "object",
+        "properties": {
+          "canModerate": {
+            "type": "boolean"
+          },
+          "threads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscussionThreadSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "canModerate",
+          "threads"
+        ]
+      },
+      "CreateDiscussionThreadDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ]
+      },
+      "DiscussionPostDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DiscussionAuthorDto"
+          },
+          "body": {
+            "type": "string",
+            "nullable": true,
+            "description": "Null when deleted, or hidden from a reader who cannot restore it."
+          },
+          "state": {
+            "enum": [
+              "visible",
+              "hidden",
+              "deleted"
+            ],
+            "type": "string"
+          },
+          "mine": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "body",
+          "state",
+          "mine",
+          "createdAt"
+        ]
+      },
+      "DiscussionThreadDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DiscussionAuthorDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "Hidden by a moderator."
+          },
+          "canModerate": {
+            "type": "boolean"
+          },
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscussionPostDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "author",
+          "createdAt",
+          "lastActivityAt",
+          "postCount",
+          "hidden",
+          "canModerate",
+          "posts"
+        ]
+      },
+      "CreateDiscussionPostDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "DiscussionVisibilityDto": {
+        "type": "object",
+        "properties": {
+          "hidden": {
+            "type": "boolean",
+            "description": "True hides the item from students; false restores it."
+          }
+        },
+        "required": [
+          "hidden"
         ]
       },
       "SearchHitDto": {

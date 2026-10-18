@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { DiscussionNotificationsService } from './discussion-notifications.service';
 import { EnrollmentNotificationsService } from './enrollment-notifications.service';
 import { ExamRegistrationNotificationsService } from './exam-registration-notifications.service';
 import { ExamTermNotificationsService } from './exam-term-notifications.service';
@@ -18,6 +19,7 @@ import { WaitlistNotificationsService } from './waitlist-notifications.service';
 @Module({
   controllers: [MyNotificationsController],
   providers: [
+    DiscussionNotificationsService,
     NotificationEmitterRepository,
     NotificationEmitterService,
     ExamTermNotificationsService,
@@ -42,6 +44,7 @@ import { WaitlistNotificationsService } from './waitlist-notifications.service';
     NotificationEmitterService,
     MyNotificationsService,
     WaitlistNotificationsService,
+    DiscussionNotificationsService,
   ],
 })
 export class NotificationsModule {}
