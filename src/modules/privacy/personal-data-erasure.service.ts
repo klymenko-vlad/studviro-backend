@@ -3,6 +3,7 @@ import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import {
   assessmentResults,
+  calendarFeeds,
   enrollments,
   externalIdentities,
   invitations,
@@ -123,6 +124,7 @@ export class PersonalDataErasureService {
       | 'passwordResetTokens'
       | 'twoFactorCredentials'
       | 'recoveryCodes'
+      | 'calendarFeeds'
       | 'userEmails'
       | 'externalIdentities'
       | 'invitations'
@@ -141,6 +143,13 @@ export class PersonalDataErasureService {
       recoveryCodes: await this.recoveryCodesRepository.hardDeleteMany(
         eq(twoFactorRecoveryCodes.userId, userId),
       ),
+      calendarFeeds: (
+        await this.txHost
+          .client()
+          .delete(calendarFeeds)
+          .where(eq(calendarFeeds.userId, userId))
+          .returning({ id: calendarFeeds.id })
+      ).length,
       userEmails: await this.userEmailsRepository.hardDeleteMany(eq(userEmails.userId, userId)),
       externalIdentities: await this.externalIdentitiesRepository.hardDeleteMany(
         eq(externalIdentities.userId, userId),

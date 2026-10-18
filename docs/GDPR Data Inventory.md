@@ -37,8 +37,8 @@ where it bites.
 
 This was the state until O4. **Two routes hard-delete.** Erasure
 (`src/modules/privacy/personal-data-erasure.service.ts`, ADR 0030) removes, for one person:
-`refresh_tokens`, `password_reset_tokens`, `user_emails`, `external_identities`, this
-institution's `invitations` to the person, and the `submission_files` rows whose objects it
+`refresh_tokens`, `password_reset_tokens`, `calendar_feeds`, `user_emails`,
+`external_identities`, this institution's `invitations` to the person, and the `submission_files` rows whose objects it
 removes from the store. The daily expiry sweep
 (`src/modules/auth/expired-token-purge.service.ts`) removes, across all users, the
 `refresh_tokens` and `password_reset_tokens` rows that are past `expires_at`. Everything else
@@ -141,6 +141,18 @@ unknown token. The residual value is low (a hash of a dead 32-byte random token)
 _fact and timing_ of each reset is a behavioural trace of one named user, and that trace now
 lives one token lifetime — `RESET_TTL_MS`, one hour — plus at most a day until the next
 sweep, rather than for ever.
+
+### `calendar_feeds` — `calendar-feeds.ts`
+
+`institution_id`, `user_id`, `token_hash`.
+**Subject:** a user who turned on a calendar subscription.
+**Why:** the secret URL a calendar app polls (ADR 0038). The raw token is never stored —
+SHA-256 only.
+**Category:** authentication. The row says only that a person has a live feed and since when;
+what the feed serves is read from the timetable, exam and learning tables at each poll.
+**Deleted by:** the owner (replacing or turning off the feed hard-deletes the row), erasure,
+and cascade from `users`.
+**Retention:** none needed: the row lives exactly as long as the owner keeps the feed.
 
 ### `invitations` — `invitations.ts`
 

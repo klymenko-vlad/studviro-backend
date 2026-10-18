@@ -49,6 +49,13 @@ stripped `/api` — so a scrape configuration written before this change must be
 `Authorization: Bearer …`. What to alert on, and at what threshold, is in
 `docs/Observability.md`.
 
+## Calendar subscriptions
+
+A student's calendar subscription URL is built from `APP_URL`
+(`{APP_URL}/api/v1/calendar-feeds/{token}.ics`), and Google Calendar, Outlook and Apple
+Calendar fetch it from their own servers. In production `APP_URL` must therefore be the
+API's public `https` origin, not an internal hostname. Nothing else to configure (ADR 0038).
+
 ## First account
 
 There is no seeding in production: `db:seed` refuses to run with `NODE_ENV=production` on

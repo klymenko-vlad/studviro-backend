@@ -13,6 +13,7 @@ import {
 
 const tally: ErasureTally = {
   refreshTokens: 3,
+  calendarFeeds: 1,
   passwordResetTokens: 1,
   twoFactorCredentials: 1,
   recoveryCodes: 10,

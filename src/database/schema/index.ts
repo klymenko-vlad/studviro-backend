@@ -2,6 +2,7 @@ export * from './_relations';
 export * from './_shared';
 export * from './academic-structure';
 export * from './audit-events';
+export * from './calendar-feeds';
 export * from './course-results';
 export * from './demo-requests';
 export * from './enrollments';

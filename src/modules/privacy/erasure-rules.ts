@@ -17,6 +17,7 @@ export interface AnonymisedIdentity {
 
 export interface ErasureTally {
   readonly refreshTokens: number;
+  readonly calendarFeeds: number;
   readonly passwordResetTokens: number;
   readonly twoFactorCredentials: number;
   readonly recoveryCodes: number;

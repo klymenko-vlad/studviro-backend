@@ -7,6 +7,7 @@ import {
   assessmentResults,
   assessments,
   auditEvents,
+  calendarFeeds,
   courseOfferings,
   courses,
   enrollments,
@@ -442,11 +443,20 @@ describe('Personal data export and erasure (e2e)', () => {
       await harness.db
         .insert(twoFactorRecoveryCodes)
         .values({ userId: student.user.id, codeHash: 'hash' });
+      await harness.db
+        .insert(calendarFeeds)
+        .values({ institutionId, userId: student.user.id, tokenHash: 'feed-hash' });
 
       const erased = await eraseAs(admin, student.user.id);
       expect(erased.json()).toMatchObject({
-        tally: { twoFactorCredentials: 1, recoveryCodes: 1 },
+        tally: { twoFactorCredentials: 1, recoveryCodes: 1, calendarFeeds: 1 },
       });
+      expect(
+        await harness.db
+          .select()
+          .from(calendarFeeds)
+          .where(eq(calendarFeeds.userId, student.user.id)),
+      ).toEqual([]);
 
       const { tokens, resets, emails, identities, invites } = await rowsOf(student.user.id);
 
