@@ -9,7 +9,8 @@ Two hosted halves, one product. Both track `dev`.
 
 The client never calls the API from the browser. `NEXT_PUBLIC_API_URL` points at the
 Render origin and every browser-side call goes through the same-origin BFF under
-`/api/proxy` and `/api/auth`.
+`/api/proxy` and `/api/auth`. The one exception is a file upload, which goes straight to
+the bucket (see `STORAGE_PUBLIC_URL` below).
 
 ## Migrations are a deploy step, not a manual one
 
@@ -121,6 +122,12 @@ submission in the institution public, and the application cannot detect that for
 **CORS on the bucket is required**, because the browser uploads to it directly. Allow `PUT`
 from the client's origin with the `content-type` header. Without it uploads fail in the
 browser while working perfectly from a server, which is a confusing afternoon.
+
+**The client must name the bucket's origin too.** Its Content Security Policy allows no
+cross-origin request except to `STORAGE_PUBLIC_URL`, a server-side variable on the Vercel
+project: the same value as `STORAGE_ENDPOINT` for R2, the bucket's own URL
+(`https://<bucket>.s3.<region>.amazonaws.com`) for AWS. Left unset, the browser refuses
+every upload before it leaves the page, and the console names `connect-src`.
 
 **A removed file's object is dropped by the application, not by the bucket.** A nightly
 sweep at 04:00 deletes the objects of materials tombstoned longer ago than

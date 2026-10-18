@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-04
+Last updated: 2026-10-18
 
 ## What this is
 
@@ -65,6 +65,9 @@ verification (TOTP plus recovery codes, a second step at sign-in) and lists and 
 sessions. A session is now a sign-in, carried in the access token as `sid`. Not built: an
 institution requiring two-step verification, passkeys, changing the email address and
 security mail (both wait on B37), and deleting your own account.
+
+**Uploads from the browser (B54)** were blocked by the client's CSP until 2026-10-18. The
+client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deployment.md`).
 
 ## What to do next
 
