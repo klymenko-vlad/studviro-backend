@@ -674,7 +674,9 @@ function required(ids: ReadonlyMap<string, string>, key: string, what: string): 
 function namedAliases(plan: DemoPlan, accounts: NamedAccounts): Map<string, string> {
   const aliases = new Map<string, string>();
   const firstTeacher = allDepartments(plan)[0]?.teachers[0];
-  const firstStudent = allPrograms(plan)[0]?.students[0];
+  // A second-year student, so the account has a finished year of results behind it.
+  const students = allPrograms(plan)[0]?.students ?? [];
+  const firstStudent = students.find((student) => student.studyYear === 2) ?? students[0];
 
   if (firstTeacher) aliases.set(firstTeacher.key, accounts.teacherEmail);
   if (firstStudent) aliases.set(firstStudent.person.key, accounts.studentEmail);

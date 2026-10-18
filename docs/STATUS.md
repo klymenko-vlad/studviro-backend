@@ -100,6 +100,9 @@ Noticed while walking, not fixed:
 - The account menu has _Account_ and _Account settings_ as two entries. A single account
   page with tabs may read better once there is more to put there.
 
+- The demo student `ada@studviro.local` is a second-year student since 2026-10-18: a
+  student's past-year enrolments now follow the study year they were in then, so nobody
+  repeats a course and first-years have no history.
 - On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
   was created by hand and has almost no data, so walk the seeded one. The walk left behind a
   course _AUDX-01_, a pending invitation to `audit.walkthrough.registrar@example.com` and a

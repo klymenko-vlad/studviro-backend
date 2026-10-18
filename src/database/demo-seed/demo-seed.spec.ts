@@ -63,12 +63,30 @@ describe('what the plan derives', () => {
     expect(new Set(offerings.map((offering) => offering.key)).size).toBe(offerings.length);
   });
 
-  it('only enrols students of the course’s study year', () => {
+  it('enrols a student in the courses of the study year they were in that academic year', () => {
     expect(
       enrollments.every(
-        (enrollment) => enrollment.student.studyYear === enrollment.offering.course.studyYear,
+        (enrollment) =>
+          enrollment.student.studyYear + enrollment.offering.term.yearOffset ===
+          enrollment.offering.course.studyYear,
       ),
     ).toBe(true);
+  });
+
+  it('gives a first-year student no history from before they started', () => {
+    expect(
+      enrollments.some(
+        (enrollment) => enrollment.student.studyYear === 1 && enrollment.offering.term.isPast,
+      ),
+    ).toBe(false);
+  });
+
+  it('never has a student take the same course in two academic years', () => {
+    const taken = enrollments.map(
+      (enrollment) => `${enrollment.student.person.key}:${enrollment.offering.course.key}`,
+    );
+
+    expect(new Set(taken).size).toBe(taken.length);
   });
 
   it('never enrols the same student in the same offering twice', () => {

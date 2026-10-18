@@ -112,7 +112,9 @@ export function planEnrollments(
 ): PlannedEnrollment[] {
   return offerings.flatMap((offering) =>
     offering.program.students
-      .filter((student) => student.studyYear === offering.course.studyYear)
+      .filter(
+        (student) => student.studyYear + offering.term.yearOffset === offering.course.studyYear,
+      )
       .map((student, index) => ({
         key: `ENR-${offering.key}-${student.person.key}`,
         offering,
