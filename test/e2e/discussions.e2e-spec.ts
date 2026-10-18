@@ -24,7 +24,7 @@ interface PostBody {
   body: string | null;
   state: 'visible' | 'hidden' | 'deleted';
   mine: boolean;
-  author: { displayName: string };
+  author: { displayName: string; isTeacher: boolean };
 }
 
 interface ThreadBody {
@@ -163,16 +163,20 @@ describe('Course discussion (e2e)', () => {
     });
     expect(reply.statusCode).toBe(201);
 
+    await call(teacher, 'POST', `${base()}/${thread.id}/posts`, { body: 'Yes, exactly.' });
+
     const read = (await call(student, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
+    expect(read.posts.map((post) => post.author.isTeacher)).toEqual([false, false, true]);
     expect(read.posts.map((post) => post.body)).toEqual([
       'What does stable mean?',
       'It keeps equal keys in their original order.',
+      'Yes, exactly.',
     ]);
     expect(read.posts[0]!.mine).toBe(true);
     expect(read.canModerate).toBe(false);
 
     const list = (await call(classmate, 'GET', base())).json<{ threads: ThreadBody[] }>();
-    expect(list.threads).toMatchObject([{ title: 'Question 3', postCount: 2 }]);
+    expect(list.threads).toMatchObject([{ title: 'Question 3', postCount: 3 }]);
   });
 
   it('tells the teacher about a new thread and the people in it about a reply', async () => {

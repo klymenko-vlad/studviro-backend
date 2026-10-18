@@ -30,7 +30,7 @@ export interface ThreadList {
 
 export interface PostView extends VisiblePost {
   readonly id: string;
-  readonly author: { id: string; displayName: string };
+  readonly author: { id: string; displayName: string; isTeacher: boolean };
   readonly createdAt: Date;
 }
 
@@ -66,7 +66,10 @@ export class DiscussionsService {
   async thread(caller: DiscussionCaller, threadId: string): Promise<ThreadDetail> {
     const viewer = await this.access.viewer(caller);
     const { thread, authorName } = await this.access.thread(caller, threadId, viewer);
-    const posts = await this.repository.postsOf(thread.id);
+    const [posts, teachers] = await Promise.all([
+      this.repository.postsOf(thread.id),
+      this.repository.teachersOf(caller.offeringId),
+    ]);
 
     return {
       ...summaryOf(
@@ -77,7 +80,11 @@ export class DiscussionsService {
       canModerate: viewer.moderates,
       posts: posts.map(({ post, authorName: name }) => ({
         id: post.id,
-        author: { id: post.authorId, displayName: name },
+        author: {
+          id: post.authorId,
+          displayName: name,
+          isTeacher: teachers.includes(post.authorId),
+        },
         createdAt: post.createdAt,
         ...visiblePost(post, viewer),
       })),
@@ -102,7 +109,9 @@ export class DiscussionsService {
       });
       await this.notifications.threadStarted(
         created,
-        await this.repository.teachersOf(caller.offeringId, caller.userId),
+        (await this.repository.teachersOf(caller.offeringId)).filter(
+          (id) => id !== caller.userId,
+        ),
         now,
       );
 

@@ -41,13 +41,18 @@ export class DiscussionThreadListDto {
 }
 
 @Exclude()
+export class DiscussionPostAuthorDto extends DiscussionAuthorDto {
+  @Expose() @ApiProperty({ description: 'Teaches this course offering.' }) isTeacher!: boolean;
+}
+
+@Exclude()
 export class DiscussionPostDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
 
   @Expose()
-  @Type(() => DiscussionAuthorDto)
-  @ApiProperty({ type: DiscussionAuthorDto })
-  author!: DiscussionAuthorDto;
+  @Type(() => DiscussionPostAuthorDto)
+  @ApiProperty({ type: DiscussionPostAuthorDto })
+  author!: DiscussionPostAuthorDto;
 
   @Expose()
   @ApiProperty({

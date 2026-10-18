@@ -20689,6 +20689,27 @@
           "body"
         ]
       },
+      "DiscussionPostAuthorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "isTeacher": {
+            "type": "boolean",
+            "description": "Teaches this course offering."
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "isTeacher"
+        ]
+      },
       "DiscussionPostDto": {
         "type": "object",
         "properties": {
@@ -20697,7 +20718,7 @@
             "format": "uuid"
           },
           "author": {
-            "$ref": "#/components/schemas/DiscussionAuthorDto"
+            "$ref": "#/components/schemas/DiscussionPostAuthorDto"
           },
           "body": {
             "type": "string",

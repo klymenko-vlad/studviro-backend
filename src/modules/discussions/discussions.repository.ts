@@ -195,7 +195,7 @@ export class DiscussionsRepository {
     return rows.map((row) => row.userId);
   }
 
-  async teachersOf(offeringId: string, exceptUserId: string): Promise<string[]> {
+  async teachersOf(offeringId: string): Promise<string[]> {
     const rows = await this.client
       .selectDistinct({ userId: teachingAssignments.userId })
       .from(teachingAssignments)
@@ -203,7 +203,6 @@ export class DiscussionsRepository {
         and(
           eq(teachingAssignments.courseOfferingId, offeringId),
           isNull(teachingAssignments.deletedAt),
-          ne(teachingAssignments.userId, exceptUserId),
         ),
       );
 
