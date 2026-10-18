@@ -1,11 +1,8 @@
-// Must stay the first import: it starts the SMTP server this suite reads from.
-
+import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { institutions, roleAssignments, type CanonicalRole } from '../../src/database/schema';
-import { createTestHarness, type TestHarness } from '../setup/app-harness';
-
-import { mailpit, MAILPIT_API } from './mail.env';
+import type { TestHarness } from '../setup/app-harness';
 
 interface MailpitSummary {
   ID: string;
@@ -18,6 +15,30 @@ interface MailpitMessage {
   Text: string;
   HTML: string;
   From: { Address: string };
+}
+
+let mailpit: StartedTestContainer;
+let MAILPIT_API: string;
+
+/**
+ * Starts a Mailpit and points the transport at it before the application is
+ * imported: `config.module.ts` validates the environment on import, so the
+ * harness is loaded only once the variables are set. Every other suite keeps
+ * `MAIL_TRANSPORT=log` and needs no mail server.
+ */
+async function startMailpit(): Promise<void> {
+  mailpit = await new GenericContainer('axllent/mailpit:latest')
+    .withExposedPorts(1025, 8025)
+    .withWaitStrategy(Wait.forHttp('/livez', 8025))
+    .start();
+  MAILPIT_API = `http://${mailpit.getHost()}:${mailpit.getMappedPort(8025)}/api/v1`;
+
+  process.env.MAIL_TRANSPORT = 'smtp';
+  process.env.SMTP_HOST = mailpit.getHost();
+  process.env.SMTP_PORT = String(mailpit.getMappedPort(1025));
+  process.env.MAIL_FROM = 'StudViro <no-reply@studviro.test>';
+  process.env.WEB_APP_URL = 'https://app.studviro.test';
+  process.env.QUEUE_PREFIX = `test-mail-${process.pid}`;
 }
 
 async function inbox(address: string, attempts = 50): Promise<MailpitMessage> {
@@ -42,6 +63,8 @@ describe('Mail delivery over SMTP (e2e)', () => {
   let harness: TestHarness;
 
   beforeAll(async () => {
+    await startMailpit();
+    const { createTestHarness } = await import('../setup/app-harness.js');
     harness = await createTestHarness();
   });
 
