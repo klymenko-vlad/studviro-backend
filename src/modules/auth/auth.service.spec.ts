@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
 import { TransactionHost } from '../../database/transaction.host';
+import { QueueProducer } from '../../queue/queue.producer';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersRepository } from '../users/users.repository';
 import { UsersService } from '../users/users.service';
@@ -90,6 +91,7 @@ describe('AuthService', () => {
   // Runs the callback inline: the unit under test is the ordering of the writes,
   // not Postgres' transaction semantics, which the e2e suite covers.
   const txHost = { run: vi.fn((fn: (tx: unknown) => unknown) => fn(undefined)) };
+  const queue = { enqueueEmail: vi.fn() };
 
   let service: AuthService;
 
@@ -107,6 +109,7 @@ describe('AuthService', () => {
         { provide: TwoFactorCredentialsRepository, useValue: twoFactor },
         { provide: TwoFactorChallenges, useValue: challenges },
         { provide: PinoLogger, useValue: { setContext: vi.fn(), warn: vi.fn() } },
+        { provide: QueueProducer, useValue: queue },
       ],
     }).compile();
 
@@ -132,6 +135,32 @@ describe('AuthService', () => {
         transaction,
       );
       expect(refreshTokens.create).toHaveBeenCalledWith(expect.any(Object), transaction);
+    });
+
+    it('queues a welcome mail in the account’s language once the account exists', async () => {
+      txHost.run.mockImplementationOnce((fn: (tx: unknown) => unknown) => fn({}));
+      usersService.create.mockResolvedValue(UserResponseDto.fromEntity(USER));
+      usersRepository.findByIdOrFail.mockResolvedValue(USER);
+
+      await service.register({ ...credentials, displayName: 'Ada' }, {});
+
+      expect(queue.enqueueEmail).toHaveBeenCalledWith('welcome', {
+        userId: USER.id,
+        email: USER.email,
+        displayName: USER.displayName,
+        locale: USER.locale,
+      });
+    });
+
+    it('still signs the person up when the welcome cannot be queued', async () => {
+      txHost.run.mockImplementationOnce((fn: (tx: unknown) => unknown) => fn({}));
+      usersService.create.mockResolvedValue(UserResponseDto.fromEntity(USER));
+      usersRepository.findByIdOrFail.mockResolvedValue(USER);
+      queue.enqueueEmail.mockRejectedValueOnce(new Error('redis down'));
+
+      await expect(
+        service.register({ ...credentials, displayName: 'Ada' }, {}),
+      ).resolves.toBeDefined();
     });
   });
 

@@ -3,6 +3,7 @@ import { Global, Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 
 import { AppConfigService } from '../config/app-config.service';
+import { MailModule } from '../mail/mail.module';
 
 import { EmailProcessor } from './processors/email.processor';
 import { QUEUES, type QueueName } from './queue.constants';
@@ -46,6 +47,7 @@ export class QueueModule {
   static forWorkers(): DynamicModule {
     return {
       module: QueueModule,
+      imports: [MailModule],
       providers: [EmailProcessor],
       exports: [EmailProcessor],
     };

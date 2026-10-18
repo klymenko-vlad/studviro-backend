@@ -7,6 +7,7 @@ import { InvalidInputError, PermissionDeniedError } from '../../common/errors/do
 import { AppConfigService } from '../../config/app-config.service';
 import type { Transaction } from '../../database/database.tokens';
 import { isUniqueViolation } from '../../database/repository/database-error';
+import type { Invitation } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { TokenService } from '../auth/token.service';
 import type { ScopeRef } from '../authorization/authorization.constants';
@@ -19,6 +20,7 @@ import { UsersRepository } from '../users/users.repository';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { InvitationResponseDto } from './dto/invitation-response.dto';
+import { InvitationMailer } from './invitation-mailer';
 import { InvitationsRepository } from './invitations.repository';
 import { MergeService } from './merge.service';
 
@@ -49,6 +51,7 @@ export class InvitationsService {
     private readonly passwords: PasswordService,
     private readonly txHost: TransactionHost,
     private readonly config: AppConfigService,
+    private readonly mailer: InvitationMailer,
   ) {}
 
   async create(
@@ -99,6 +102,7 @@ export class InvitationsService {
       tokenHash,
       expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
     });
+    await this.mailer.send(created, token);
 
     return InvitationResponseDto.fromEntity(
       created,
@@ -117,7 +121,7 @@ export class InvitationsService {
     institutionId: string,
     address: string,
     tx: Transaction,
-  ): Promise<{ invitationId: string; token: string }> {
+  ): Promise<{ invitation: Invitation; token: string }> {
     const token = randomBytes(32).toString('hex');
     const tokenHash = this.tokens.hash(token);
 
@@ -135,7 +139,7 @@ export class InvitationsService {
       tx,
     );
 
-    return { invitationId: created.id, token };
+    return { invitation: created, token };
   }
 
   /** Whether a caller may be shown a raw token directly, absent mail transport. */

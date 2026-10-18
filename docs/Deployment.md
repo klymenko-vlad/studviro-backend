@@ -49,6 +49,27 @@ stripped `/api` — so a scrape configuration written before this change must be
 `Authorization: Bearer …`. What to alert on, and at what threshold, is in
 `docs/Observability.md`.
 
+## Mail
+
+Password-reset, invitation and welcome mail go out through any SMTP provider (ADR 0039).
+Until one is configured, `MAIL_TRANSPORT=log` logs each message's recipient and subject and
+sends nothing: nobody can recover a password, and an invitation reaches its recipient only
+if an administrator passes the link on by hand.
+
+| Variable         | Default                              | Notes                                                       |
+| ---------------- | ------------------------------------ | ----------------------------------------------------------- |
+| `MAIL_TRANSPORT` | `log`                                | `smtp` to send                                              |
+| `MAIL_FROM`      | `StudViro <no-reply@studviro.local>` | Must be changed when sending in production                  |
+| `WEB_APP_URL`    | `http://localhost:3001`              | The client's public origin; every link in a message uses it |
+| `SMTP_HOST`      | unset                                | Required with `smtp`                                        |
+| `SMTP_PORT`      | `587`                                | `465` with `SMTP_SECURE=true`                               |
+| `SMTP_SECURE`    | `false`                              | `true` for implicit TLS; 587 upgrades with STARTTLS anyway  |
+| `SMTP_USER`      | unset                                | With `SMTP_PASSWORD`, or neither                            |
+| `SMTP_PASSWORD`  | unset                                |                                                             |
+
+The sending domain needs SPF and DKIM records for the provider, or receiving servers file
+the mail as spam. Which provider, and the credentials, are the institution's to supply.
+
 ## Calendar subscriptions
 
 A student's calendar subscription URL is built from `APP_URL`

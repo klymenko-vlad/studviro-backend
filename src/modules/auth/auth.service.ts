@@ -3,7 +3,9 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
+import type { User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { QueueProducer } from '../../queue/queue.producer';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersRepository } from '../users/users.repository';
@@ -53,21 +55,40 @@ export class AuthService {
     private readonly twoFactor: TwoFactorCredentialsRepository,
     private readonly challenges: TwoFactorChallenges,
     private readonly logger: PinoLogger,
+    private readonly queue: QueueProducer,
   ) {
     this.logger.setContext(AuthService.name);
   }
 
   async register(dto: CreateUserDto, context: SessionContext): Promise<AuthTokensDto> {
-    return this.txHost.run(async (tx) => {
+    const { tokens, entity } = await this.txHost.run(async (tx) => {
       const user = await this.usersService.create(dto, tx);
-      const entity = await this.usersRepository.findByIdOrFail(
+      const created = await this.usersRepository.findByIdOrFail(
         user.id,
         { consistent: true },
         tx,
       );
 
-      return this.sessions.start(entity, context, tx);
+      return { tokens: await this.sessions.start(created, context, tx), entity: created };
     });
+
+    await this.welcome(entity);
+
+    return tokens;
+  }
+
+  /** A lost welcome is not worth failing a sign-up over; a lost reset would be. */
+  private async welcome(user: User): Promise<void> {
+    try {
+      await this.queue.enqueueEmail('welcome', {
+        userId: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        locale: user.locale,
+      });
+    } catch (error) {
+      this.logger.warn({ err: error, userId: user.id }, 'welcome mail not queued');
+    }
   }
 
   async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensDto> {

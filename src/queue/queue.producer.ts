@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import type { JobsOptions } from 'bullmq';
 
-import { emailJobSchemas, type EmailJobName, type EmailJobPayload } from './jobs/email.jobs';
+import { emailJobSchemas, type EmailJobInput, type EmailJobName } from './jobs/email.jobs';
 import { QUEUES } from './queue.constants';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class QueueProducer {
 
   async enqueueEmail<TName extends EmailJobName>(
     name: TName,
-    payload: EmailJobPayload<TName>,
+    payload: EmailJobInput<TName>,
     options?: JobsOptions,
   ): Promise<string> {
     const data = emailJobSchemas[name].parse(payload);
@@ -24,7 +24,7 @@ export class QueueProducer {
 
   async enqueueEmailOnce<TName extends EmailJobName>(
     name: TName,
-    payload: EmailJobPayload<TName>,
+    payload: EmailJobInput<TName>,
     key: string,
     ttlMs = 60_000,
   ): Promise<string> {

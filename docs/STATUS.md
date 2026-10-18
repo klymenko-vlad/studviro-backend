@@ -64,7 +64,10 @@ B31: `/account/settings` edits the profile, changes the password, turns on two-s
 verification (TOTP plus recovery codes, a second step at sign-in) and lists and ends
 sessions. A session is now a sign-in, carried in the access token as `sid`. Not built: an
 institution requiring two-step verification, passkeys, changing the email address and
-security mail (both wait on B37), and deleting your own account.
+security mail, and deleting your own account.
+
+**Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
+SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
 
 **Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
 and a `studviro.ics` download on the calendar page.

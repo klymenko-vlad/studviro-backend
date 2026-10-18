@@ -9,6 +9,7 @@ export type AppRole = z.infer<typeof AppRole>;
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
 const DEV_CAPTCHA_SECRET = 'dev-only-insecure-captcha-secret-do-not-use-in-prod';
 const DEV_TWO_FACTOR_SECRET_KEY = 'dev-only-insecure-two-factor-key-do-not-use-in-prod';
+const DEV_MAIL_FROM = 'StudViro <no-reply@studviro.local>';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -157,6 +158,22 @@ export const envSchema = z.object({
   SWAGGER_USER: z.string().min(1).optional(),
   SWAGGER_PASSWORD: z.string().min(16).optional(),
 
+  /** The client's public origin, for links in mail: reset, invitation, sign-in. */
+  WEB_APP_URL: z.url().default('http://localhost:3001'),
+
+  /**
+   * `log` writes each message to the log and sends nothing, so development and
+   * CI need no mail server. `smtp` sends through any provider that speaks it;
+   * locally that is the Mailpit in `docker compose` (ADR 0039).
+   */
+  MAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+  MAIL_FROM: z.string().min(3).default(DEV_MAIL_FROM),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: bool('false'),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASSWORD: z.string().min(1).optional(),
+
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(5_000),
 });
@@ -169,6 +186,25 @@ export type Env = z.infer<typeof envSchema>;
  * every default hostile to work with, the risky combinations are rejected only
  * where they matter.
  */
+function assertMailTransport(env: Env, ctx: z.RefinementCtx): void {
+  if (env.MAIL_TRANSPORT !== 'smtp') return;
+
+  if (!env.SMTP_HOST) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SMTP_HOST'],
+      message: 'is required when MAIL_TRANSPORT=smtp',
+    });
+  }
+  if (env.SMTP_PASSWORD && !env.SMTP_USER) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SMTP_USER'],
+      message: 'must be set together with SMTP_PASSWORD',
+    });
+  }
+}
+
 function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
   if (env.NODE_ENV !== 'production') return;
 
@@ -234,12 +270,21 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     }
   }
 
+  if (env.MAIL_TRANSPORT === 'smtp' && env.MAIL_FROM === DEV_MAIL_FROM) {
+    reject(
+      'MAIL_FROM',
+      'must be an address the institution sends from; mail from a .local address is refused or junked by every receiving server',
+    );
+  }
+
   if (env.METRICS_ENABLED && !env.METRICS_TOKEN) {
     reject('METRICS_TOKEN', 'must be set when metrics are enabled in production');
   }
 }
 
-const validatedEnvSchema = envSchema.superRefine(assertProductionHardening);
+const validatedEnvSchema = envSchema
+  .superRefine(assertMailTransport)
+  .superRefine(assertProductionHardening);
 
 export function validateEnv(raw: Record<string, unknown>): Env {
   const result = validatedEnvSchema.safeParse(raw);

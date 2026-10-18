@@ -70,6 +70,15 @@ services:
         mc mb --ignore-existing local/studviro
         mc anonymous set none local/studviro
 
+  # Catches every message the app sends in development: SMTP on 1025, a web
+  # inbox on http://localhost:8025. Nothing leaves the machine.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
   app:
     profiles: ['app']
     build:

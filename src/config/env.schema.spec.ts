@@ -150,4 +150,40 @@ describe('validateEnv', () => {
       );
     });
   });
+
+  describe('mail', () => {
+    it('logs mail instead of sending it unless a transport is chosen', () => {
+      const env = validateEnv(base);
+
+      expect(env.MAIL_TRANSPORT).toBe('log');
+      expect(env.WEB_APP_URL).toBe('http://localhost:3001');
+    });
+
+    it('needs a host before it can send over SMTP', () => {
+      expect(() => validateEnv({ ...base, MAIL_TRANSPORT: 'smtp' })).toThrow(/SMTP_HOST/u);
+      expect(() =>
+        validateEnv({ ...base, MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'localhost' }),
+      ).not.toThrow();
+    });
+
+    it('refuses an SMTP password without a user, which no server accepts', () => {
+      expect(() =>
+        validateEnv({ ...base, MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'h', SMTP_PASSWORD: 'p' }),
+      ).toThrow(/SMTP_USER/u);
+    });
+
+    it('refuses to send production mail from the development address', () => {
+      expect(() =>
+        validateEnv({ ...production, MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.org' }),
+      ).toThrow(/MAIL_FROM/u);
+      expect(() =>
+        validateEnv({
+          ...production,
+          MAIL_TRANSPORT: 'smtp',
+          SMTP_HOST: 'smtp.example.org',
+          MAIL_FROM: 'StudViro <noreply@ukf.sk>',
+        }),
+      ).not.toThrow();
+    });
+  });
 });

@@ -6,6 +6,7 @@ import { PasswordService } from '../../../common/crypto/password.service';
 import { InvalidInputError } from '../../../common/errors/domain.error';
 import { AppConfigService } from '../../../config/app-config.service';
 import { TransactionHost } from '../../../database/transaction.host';
+import { QueueProducer } from '../../../queue/queue.producer';
 import { UsersRepository } from '../../users/users.repository';
 import { RefreshTokensRepository } from '../refresh-tokens.repository';
 import { TokenService } from '../token.service';
@@ -31,6 +32,7 @@ export class PasswordResetService {
     private readonly passwords: PasswordService,
     private readonly txHost: TransactionHost,
     private readonly config: AppConfigService,
+    private readonly queue: QueueProducer,
   ) {}
 
   /**
@@ -44,10 +46,18 @@ export class PasswordResetService {
     if (!user) return {};
 
     const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + RESET_TTL_MS);
     await this.resetTokens.create({
       userId: user.id,
       tokenHash: this.tokens.hash(token),
-      expiresAt: new Date(Date.now() + RESET_TTL_MS),
+      expiresAt,
+    });
+    await this.queue.enqueueEmail('passwordReset', {
+      userId: user.id,
+      email: user.email,
+      resetToken: token,
+      expiresAt,
+      locale: user.locale,
     });
 
     return this.config.isProduction ? {} : { devToken: token };

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Institution, RoleAssignment } from '../../database/schema';
 import type { DerivedRolesRepository } from '../authorization/derived-roles.repository';
 import type { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
+import type { InvitationMailer } from '../invitations/invitation-mailer';
 import type { InvitationsService } from '../invitations/invitations.service';
 import type { UsersRepository } from '../users/users.repository';
 
@@ -40,11 +41,12 @@ function serviceWith(
   const invitations = {
     createForNewInstitution: vi
       .fn()
-      .mockResolvedValue({ invitationId: 'invitation-1', token: 'raw-token' }),
+      .mockResolvedValue({ invitation: { id: 'invitation-1' }, token: 'raw-token' }),
     isDevToken: vi.fn().mockReturnValue(true),
   };
 
   const derivedRoles = { institutionsFor: vi.fn().mockResolvedValue([]) };
+  const invitationMailer = { send: vi.fn() };
 
   return {
     repository,
@@ -58,7 +60,9 @@ function serviceWith(
       derivedRoles as unknown as DerivedRolesRepository,
       users as unknown as UsersRepository,
       invitations as unknown as InvitationsService,
+      invitationMailer as unknown as InvitationMailer,
     ),
+    invitationMailer,
   };
 }
 
@@ -185,6 +189,20 @@ describe('InstitutionsService', () => {
     );
     expect(created.firstAdminInvitationDevToken).toBe('raw-token');
     expect(roleAssignments.create).not.toHaveBeenCalled();
+  });
+
+  it('mails the first administrator their invitation once the institution exists', async () => {
+    const { service, invitationMailer } = serviceWith([], [institution(UPJS, 'upjs')]);
+
+    await service.create({
+      code: 'upjs',
+      name: 'UPJŠ',
+      defaultLocale: 'sk',
+      timezone: 'Europe/Bratislava',
+      firstAdminEmail: 'admin@upjs.sk',
+    });
+
+    expect(invitationMailer.send).toHaveBeenCalledWith({ id: 'invitation-1' }, 'raw-token');
   });
 
   it('hides the invitation token outside development', async () => {

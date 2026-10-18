@@ -9,6 +9,7 @@ import { isUniqueViolation } from '../../database/repository/database-error';
 import { institutions } from '../../database/schema';
 import { DerivedRolesRepository } from '../authorization/derived-roles.repository';
 import { RoleAssignmentsRepository } from '../authorization/role-assignments.repository';
+import { InvitationMailer } from '../invitations/invitation-mailer';
 import { InvitationsService } from '../invitations/invitations.service';
 import { UsersRepository } from '../users/users.repository';
 
@@ -24,6 +25,7 @@ export class InstitutionsService {
     private readonly derivedRoles: DerivedRolesRepository,
     private readonly users: UsersRepository,
     private readonly invitations: InvitationsService,
+    private readonly invitationMailer: InvitationMailer,
   ) {}
 
   /**
@@ -47,7 +49,7 @@ export class InstitutionsService {
     }
 
     try {
-      return await this.repository.transaction(async (tx) => {
+      const { response, invitation } = await this.repository.transaction(async (tx) => {
         const created = await this.repository.create(
           {
             code: dto.code,
@@ -70,7 +72,7 @@ export class InstitutionsService {
             tx,
           );
 
-          return InstitutionResponseDto.fromEntity(created);
+          return { response: InstitutionResponseDto.fromEntity(created), invitation: null };
         }
 
         const firstAdminEmail = dto.firstAdminEmail;
@@ -81,17 +83,25 @@ export class InstitutionsService {
           );
         }
 
-        const { token } = await this.invitations.createForNewInstitution(
+        const issued = await this.invitations.createForNewInstitution(
           created.id,
           firstAdminEmail,
           tx,
         );
 
-        return InstitutionResponseDto.fromEntity(
-          created,
-          this.invitations.isDevToken() ? token : undefined,
-        );
+        return {
+          response: InstitutionResponseDto.fromEntity(
+            created,
+            this.invitations.isDevToken() ? issued.token : undefined,
+          ),
+          invitation: issued,
+        };
       });
+
+      if (invitation !== null)
+        await this.invitationMailer.send(invitation.invitation, invitation.token);
+
+      return response;
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ConflictError(

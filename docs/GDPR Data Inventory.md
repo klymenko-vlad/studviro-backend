@@ -428,3 +428,13 @@ Not risks yet — those are in `DPIA.md` — but facts about the code:
   number: it can no longer authenticate anyone.
 - **No rectification trail.** A corrected grade is a status change with a free-text note; who
   requested the correction is not recorded.
+
+## Outgoing mail
+
+**What:** the recipient's address, their display name (welcome only), and a reset or
+invitation link carrying a raw token (ADR 0039).
+**Where:** the BullMQ job payload in Redis until the job is removed (an hour after it
+completes, a day after a final failure), and then the SMTP provider.
+**Processor:** the SMTP provider is a processor for these messages. Which one:
+`TODO(institution)`. In development the messages go to a local Mailpit and leave nothing
+behind outside the machine.

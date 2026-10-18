@@ -16,6 +16,19 @@ export interface HttpConfig {
   readonly trustProxy: boolean | string | string[];
 }
 
+export interface MailConfig {
+  readonly transport: Env['MAIL_TRANSPORT'];
+  readonly from: string;
+  readonly webAppUrl: string;
+  readonly smtp: {
+    readonly host: string | undefined;
+    readonly port: number;
+    readonly secure: boolean;
+    readonly user: string | undefined;
+    readonly password: string | undefined;
+  };
+}
+
 export interface DatabaseConfig {
   readonly url: string;
   readonly replicaUrl: string | undefined;
@@ -204,6 +217,21 @@ export class AppConfigService {
       maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
       signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
       reclaimAfterDays: this.config.get<number>('STORAGE_RECLAIM_AFTER_DAYS'),
+    };
+  }
+
+  get mail(): MailConfig {
+    return {
+      transport: this.config.get<Env['MAIL_TRANSPORT']>('MAIL_TRANSPORT'),
+      from: this.config.get<string>('MAIL_FROM'),
+      webAppUrl: this.config.get<string>('WEB_APP_URL'),
+      smtp: {
+        host: this.config.get<string | undefined>('SMTP_HOST'),
+        port: this.config.get<number>('SMTP_PORT'),
+        secure: this.config.get<boolean>('SMTP_SECURE'),
+        user: this.config.get<string | undefined>('SMTP_USER'),
+        password: this.config.get<string | undefined>('SMTP_PASSWORD'),
+      },
     };
   }
 
