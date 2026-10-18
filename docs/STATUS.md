@@ -177,8 +177,9 @@ Noticed while walking, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **580 kB** against a measured 579.18 kB; account security spent 15.71 kB of it, the
-  calendar subscription card 2.19 kB and the institution clock 0.83 kB. `.size-limit.mjs` has the full reasoning.
+  now **595 kB** against a measured 585.08 kB: account security spent 15.71 kB, the calendar
+  subscription card 2.19 kB, the institution clock 0.83 kB and the course discussion 5.8 kB,
+  which is what raised it from 580 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
