@@ -66,6 +66,9 @@ sessions. A session is now a sign-in, carried in the access token as `sid`. Not 
 institution requiring two-step verification, passkeys, changing the email address and
 security mail (both wait on B37), and deleting your own account.
 
+**Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
+and a `studviro.ics` download on the calendar page.
+
 **Uploads from the browser (B54)** were blocked by the client's CSP until 2026-10-18. The
 client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deployment.md`).
 
@@ -165,7 +168,8 @@ Noticed while walking, not fixed:
 - **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
   to come back down; the app measured 506 kB. By the time that was taken it measured
   **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
-  now **580 kB** against a measured 576.16 kB; account security spent 15.71 kB of it. `.size-limit.mjs` has the full reasoning.
+  now **580 kB** against a measured 578.35 kB; account security spent 15.71 kB of it and
+  the calendar subscription card 2.19 kB. `.size-limit.mjs` has the full reasoning.
   Every reduction lever that file has ever named is spent; the next person needing room
   will have to ship less.
 - A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
