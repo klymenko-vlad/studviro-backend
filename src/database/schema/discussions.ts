@@ -49,6 +49,8 @@ export const discussionPosts = pgTable(
       .notNull()
       .references(() => users.id),
     body: text('body').notNull(),
+    /** Set when the author last changed the text; readers see it was edited. */
+    editedAt: timestampColumn('edited_at'),
     hiddenAt: timestampColumn('hidden_at'),
     hiddenById: uuid('hidden_by_id').references(() => users.id),
     deletedAt,

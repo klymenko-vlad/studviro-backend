@@ -1,0 +1,1 @@
+ALTER TABLE "discussion_posts" ADD COLUMN "edited_at" timestamp (3) with time zone;

@@ -172,6 +172,20 @@ export class DiscussionsRepository {
       .where(eq(discussionPosts.id, postId));
   }
 
+  async editPost(postId: string, body: string, now: Date): Promise<void> {
+    await this.client
+      .update(discussionPosts)
+      .set({ body, editedAt: now, updatedAt: now })
+      .where(eq(discussionPosts.id, postId));
+  }
+
+  async renameThread(threadId: string, title: string, now: Date): Promise<void> {
+    await this.client
+      .update(discussionThreads)
+      .set({ title, updatedAt: now })
+      .where(eq(discussionThreads.id, threadId));
+  }
+
   /** The text goes at once; the row stays so the replies around it keep their order. */
   async deletePost(postId: string, now: Date): Promise<void> {
     await this.client

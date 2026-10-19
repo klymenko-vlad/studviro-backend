@@ -65,6 +65,15 @@ export class DiscussionPostDto {
   @Expose() @ApiProperty({ enum: POST_STATES }) state!: PostState;
   @Expose() @ApiProperty() mine!: boolean;
   @Expose() @ApiProperty({ type: String, format: 'date-time' }) createdAt!: Date;
+
+  @Expose()
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'When the author last changed the text; null if never.',
+  })
+  editedAt!: Date | null;
 }
 
 @Exclude()

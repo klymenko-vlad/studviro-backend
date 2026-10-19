@@ -32,6 +32,7 @@ export interface PostView extends VisiblePost {
   readonly id: string;
   readonly author: { id: string; displayName: string; isTeacher: boolean };
   readonly createdAt: Date;
+  readonly editedAt: Date | null;
 }
 
 export interface ThreadDetail extends ThreadSummary {
@@ -86,6 +87,7 @@ export class DiscussionsService {
           isTeacher: teachers.includes(post.authorId),
         },
         createdAt: post.createdAt,
+        editedAt: post.deletedAt === null ? post.editedAt : null,
         ...visiblePost(post, viewer),
       })),
     };
@@ -151,6 +153,57 @@ export class DiscussionsService {
     return this.thread(caller, thread.id);
   }
 
+  /**
+   * The author corrects their own words. Not while a teacher has the post or
+   * its thread hidden: what was taken down is restored first, then changed.
+   */
+  async editPost(
+    caller: DiscussionCaller,
+    threadId: string,
+    postId: string,
+    body: string,
+    now = new Date(),
+  ): Promise<ThreadDetail> {
+    const viewer = await this.access.viewer(caller);
+    const { thread } = await this.access.thread(caller, threadId, viewer);
+    const post = await this.repository.findPost(thread.id, postId);
+    if (post?.deletedAt !== null) {
+      throw new EntityNotFoundError('discussion post', postId);
+    }
+    assertAuthor(
+      post.authorId,
+      caller.userId,
+      'DISCUSSION_NOT_YOUR_POST',
+      'Only the person who wrote a post may edit it',
+    );
+    assertNotHidden(thread.hiddenAt ?? post.hiddenAt);
+
+    await this.repository.editPost(post.id, body.trim(), now);
+
+    return this.thread(caller, thread.id);
+  }
+
+  async renameThread(
+    caller: DiscussionCaller,
+    threadId: string,
+    title: string,
+    now = new Date(),
+  ): Promise<ThreadDetail> {
+    const viewer = await this.access.viewer(caller);
+    const { thread } = await this.access.thread(caller, threadId, viewer);
+    assertAuthor(
+      thread.authorId,
+      caller.userId,
+      'DISCUSSION_NOT_YOUR_THREAD',
+      'Only the person who started a thread may rename it',
+    );
+    assertNotHidden(thread.hiddenAt);
+
+    await this.repository.renameThread(thread.id, title.trim(), now);
+
+    return this.thread(caller, thread.id);
+  }
+
   async deletePost(
     caller: DiscussionCaller,
     threadId: string,
@@ -171,6 +224,16 @@ export class DiscussionsService {
     }
 
     await this.repository.deletePost(post.id, now);
+  }
+}
+
+function assertAuthor(authorId: string, userId: string, code: string, message: string): void {
+  if (authorId !== userId) throw new PermissionDeniedError(code, message);
+}
+
+function assertNotHidden(hiddenAt: Date | null): void {
+  if (hiddenAt !== null) {
+    throw new ConflictError('DISCUSSION_HIDDEN', 'A hidden post or thread cannot be edited');
   }
 }
 

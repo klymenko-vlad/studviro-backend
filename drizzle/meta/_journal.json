@@ -225,6 +225,13 @@
       "when": 1792397555449,
       "tag": "0031_lovely_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792398271310,
+      "tag": "0032_loose_roulette",
+      "breakpoints": true
     }
   ]
 }

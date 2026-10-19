@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common';
@@ -30,6 +31,7 @@ import {
   CreateDiscussionPostDto,
   CreateDiscussionThreadDto,
   DiscussionVisibilityDto,
+  EditDiscussionThreadDto,
 } from './dto/discussion-input.dto';
 import { DiscussionThreadDto, DiscussionThreadListDto } from './dto/discussion-response.dto';
 
@@ -111,6 +113,58 @@ export class DiscussionsController {
   ): Promise<DiscussionThreadDto> {
     return DiscussionThreadDto.from(
       await this.discussions.reply({ institutionId, offeringId, userId }, threadId, dto.body),
+    );
+  }
+
+  @Patch(':threadId')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'renameDiscussionThread',
+    summary: 'Rename a thread you started',
+  })
+  @ApiOkResponse({ type: DiscussionThreadDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async renameThread(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Param('threadId', ParseUUIDPipe) threadId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: EditDiscussionThreadDto,
+  ): Promise<DiscussionThreadDto> {
+    return DiscussionThreadDto.from(
+      await this.discussions.renameThread(
+        { institutionId, offeringId, userId },
+        threadId,
+        dto.title,
+      ),
+    );
+  }
+
+  @Patch(':threadId/posts/:postId')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'editDiscussionPost',
+    summary: 'Edit a post you wrote',
+    description:
+      'Readers see that the post was edited. A hidden post or a post in a hidden thread is refused.',
+  })
+  @ApiOkResponse({ type: DiscussionThreadDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async editPost(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Param('threadId', ParseUUIDPipe) threadId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateDiscussionPostDto,
+  ): Promise<DiscussionThreadDto> {
+    return DiscussionThreadDto.from(
+      await this.discussions.editPost(
+        { institutionId, offeringId, userId },
+        threadId,
+        postId,
+        dto.body,
+      ),
     );
   }
 

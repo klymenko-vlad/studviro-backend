@@ -38,3 +38,12 @@ export class DiscussionVisibilityDto {
   @IsBoolean()
   hidden!: boolean;
 }
+
+export class EditDiscussionThreadDto {
+  @ApiProperty({ minLength: 1, maxLength: MAX_THREAD_TITLE })
+  @Transform(trimmed)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(MAX_THREAD_TITLE)
+  title!: string;
+}

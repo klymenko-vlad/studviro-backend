@@ -24,6 +24,7 @@ interface PostBody {
   body: string | null;
   state: 'visible' | 'hidden' | 'deleted';
   mine: boolean;
+  editedAt: string | null;
   author: { displayName: string; isTeacher: boolean };
 }
 
@@ -68,7 +69,7 @@ describe('Course discussion (e2e)', () => {
 
   const call = (
     actor: Actor | null,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     payload?: object,
   ) =>
@@ -229,6 +230,50 @@ describe('Course discussion (e2e)', () => {
 
     const read = (await call(teacher, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
     expect(read.posts[0]).toMatchObject({ state: 'deleted', body: null });
+  });
+
+  it('lets an author correct their own post and thread title, marked as edited', async () => {
+    const thread = await start(student);
+    const opening = thread.posts[0]!;
+    const post = `${base()}/${thread.id}/posts/${opening.id}`;
+    expect(opening.editedAt).toBeNull();
+
+    expect((await call(classmate, 'PATCH', post, { body: 'mine now' })).statusCode).toBe(403);
+    expect((await call(teacher, 'PATCH', post, { body: 'mine now' })).statusCode).toBe(403);
+    expect((await call(student, 'PATCH', post, { body: '  ' })).statusCode).toBe(400);
+
+    const edited = await call(student, 'PATCH', post, { body: 'What does stable mean here?' });
+    expect(edited.statusCode, edited.body).toBe(200);
+    expect(edited.json<ThreadBody>().posts[0]).toMatchObject({
+      body: 'What does stable mean here?',
+      editedAt: expect.any(String),
+    });
+
+    expect(
+      (await call(classmate, 'PATCH', `${base()}/${thread.id}`, { title: 'Hijacked' }))
+        .statusCode,
+    ).toBe(403);
+    const renamed = await call(student, 'PATCH', `${base()}/${thread.id}`, {
+      title: 'Question 3: stability',
+    });
+    expect(renamed.json<ThreadBody>().title).toBe('Question 3: stability');
+  });
+
+  it('refuses to edit what a teacher has hidden until it is restored', async () => {
+    const thread = await start(student);
+    const opening = thread.posts[0]!;
+    const post = `${base()}/${thread.id}/posts/${opening.id}`;
+
+    await call(teacher, 'PUT', `${post}/visibility`, { hidden: true });
+    expect((await call(student, 'PATCH', post, { body: 'Nothing to see' })).statusCode).toBe(
+      409,
+    );
+
+    await call(teacher, 'PUT', `${post}/visibility`, { hidden: false });
+    expect((await call(student, 'PATCH', post, { body: 'Reworded' })).statusCode).toBe(200);
+
+    await call(student, 'DELETE', post);
+    expect((await call(student, 'PATCH', post, { body: 'Back again' })).statusCode).toBe(404);
   });
 
   it('lets the teacher hide a post, keeps it from students, and can restore it', async () => {

@@ -43,5 +43,9 @@ obvious moderator and an obvious end.
 
 - A conversation outside any course (study groups, a whole year) has no home. That is
   deliberate for now.
-- Editing a post is not possible; a mistake is deleted and written again.
+- ~~Editing a post is not possible.~~ Amended 2026-10-19: an author edits their own post
+  (`edited_at`, shown as _edited_) and the title of a thread they started. Nothing a
+  teacher has hidden can be edited until it is restored, so a taken-down post cannot be
+  quietly rewritten. No edit history is kept: the moderator sees the current text, and a
+  history would be one more copy of personal data to erase.
 - Rate limiting is the global per-IP throttle; nothing is specific to posting.
