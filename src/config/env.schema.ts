@@ -77,6 +77,15 @@ export const envSchema = z.object({
    */
   STORAGE_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(67_108_864),
 
+  /**
+   * `clamav` streams every confirmed upload through clamd before any row
+   * names it; `off` trusts the files as they come (ADR 0042).
+   */
+  MALWARE_SCAN: z.enum(['off', 'clamav']).default('off'),
+  CLAMAV_HOST: z.string().min(1).default('localhost'),
+  CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
+  CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+
   /** Short-lived by design: a read link that outlives the reader's session is a leak. */
   STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(3_600).default(300),
 

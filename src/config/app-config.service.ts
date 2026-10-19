@@ -67,6 +67,11 @@ export interface StorageConfig {
   reclaimAfterDays: number;
 }
 
+export interface MalwareScanConfig {
+  readonly enabled: boolean;
+  readonly clamd: { readonly host: string; readonly port: number; readonly timeoutMs: number };
+}
+
 export interface CaptchaConfig {
   readonly enabled: boolean;
   readonly secret: string;
@@ -218,6 +223,17 @@ export class AppConfigService {
       maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
       signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
       reclaimAfterDays: this.config.get<number>('STORAGE_RECLAIM_AFTER_DAYS'),
+    };
+  }
+
+  get malwareScan(): MalwareScanConfig {
+    return {
+      enabled: this.config.get<Env['MALWARE_SCAN']>('MALWARE_SCAN') === 'clamav',
+      clamd: {
+        host: this.config.get<string>('CLAMAV_HOST'),
+        port: this.config.get<number>('CLAMAV_PORT'),
+        timeoutMs: this.config.get<number>('CLAMAV_TIMEOUT_MS'),
+      },
     };
   }
 

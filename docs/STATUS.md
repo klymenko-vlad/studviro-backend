@@ -80,6 +80,9 @@ unread after five minutes.
 **Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
 and a `studviro.ics` download on the calendar page.
 
+**Malware scanning (B62, ADR 0042)** shipped on 2026-10-19: with `MALWARE_SCAN=clamav`
+every upload passes ClamAV before it is accepted; off by default.
+
 **Uploads from the browser (B54)** were blocked by the client's CSP until 2026-10-18. The
 client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deployment.md`).
 

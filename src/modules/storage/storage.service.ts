@@ -9,9 +9,14 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 
-import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
+import {
+  ConflictError,
+  DependencyUnavailableError,
+  EntityNotFoundError,
+} from '../../common/errors/domain.error';
 import { AppConfigService } from '../../config/app-config.service';
 
+import { MalwareScanner } from './malware/malware-scanner';
 import { StorageKeys } from './storage.keys';
 import type {
   ListedObject,
@@ -63,7 +68,10 @@ export class StorageService implements OnModuleDestroy {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
 
-  constructor(private readonly config: AppConfigService) {
+  constructor(
+    private readonly config: AppConfigService,
+    private readonly scanner: MalwareScanner,
+  ) {
     const storage = this.config.storage;
 
     this.client = new S3Client({
@@ -142,7 +150,45 @@ export class StorageService implements OnModuleDestroy {
       this.assertContentTypeAllowed(object.contentType);
     }
 
+    await this.assertClean(key, institutionId);
+
     return object;
+  }
+
+  /**
+   * Fails closed: with scanning on, a file that could not be scanned is not
+   * accepted, and the person is asked to try again rather than told it is fine.
+   */
+  private async assertClean(key: StorageKey, institutionId: string): Promise<void> {
+    if (!this.scanner.enabled) return;
+
+    let verdict;
+    try {
+      verdict = await this.scanner.scan(await this.read(key));
+    } catch (error) {
+      this.logger.error({ err: error, key }, 'malware scan failed');
+      throw new DependencyUnavailableError(
+        'MALWARE_SCAN_UNAVAILABLE',
+        'The file could not be checked for malware; try again in a moment',
+      );
+    }
+
+    if (!verdict.clean) {
+      this.logger.warn({ key, signature: verdict.signature }, 'infected upload refused');
+      await this.delete(key, institutionId);
+      throw new ConflictError('FILE_INFECTED', 'That file contains malware and was deleted', {
+        signature: verdict.signature,
+      });
+    }
+  }
+
+  private async read(key: StorageKey): Promise<AsyncIterable<Uint8Array>> {
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.config.storage.bucket, Key: key }),
+    );
+    if (response.Body === undefined) throw new EntityNotFoundError('stored_object', key);
+
+    return response.Body as AsyncIterable<Uint8Array>;
   }
 
   /**

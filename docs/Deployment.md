@@ -173,9 +173,14 @@ write and delete.
 
 **`TODO(institution)`**: whether object versioning is on — it would keep a reclaimed
 object alive as a noncurrent version, which defeats the sweep unless a noncurrent-version
-expiry rule is set beside it — and whether uploads must be virus-scanned before a marker
-can download them. ADR 0027 records that there is no scanner today and what the seam for
-one would be.
+expiry rule is set beside it.
+
+**Malware scanning (ADR 0042).** Off unless `MALWARE_SCAN=clamav`. Then every upload is
+streamed through clamd at `CLAMAV_HOST`:`CLAMAV_PORT` (3310) before it is accepted; an
+infected file is deleted and refused, and an unreachable scanner refuses uploads (503)
+rather than letting them through. Run ClamAV beside the API with about 1.5 GB of memory and
+its own `freshclam` updates, and raise clamd's `StreamMaxLength` to at least
+`STORAGE_MAX_UPLOAD_BYTES`, or files above 25 MiB cannot be scanned.
 
 ## Sessions across more than one instance of the client
 

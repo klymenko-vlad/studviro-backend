@@ -71,8 +71,8 @@ object store's own scanning where the provider offers it — with the object qua
 it passes. The queue and the confirm step are the right seams for it, and `confirm()` is
 deliberately the single place that would have to change.
 
-**`TODO(institution)`**: whether the institution's policy requires scanning before a
-submission is downloadable, and if so which scanner.
+Superseded 2026-10-19 by ADR 0042: `confirm()` now streams each upload through ClamAV when
+`MALWARE_SCAN=clamav`.
 
 ## Consequences
 

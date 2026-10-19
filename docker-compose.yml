@@ -79,6 +79,16 @@ services:
       - '1025:1025'
       - '8025:8025'
 
+  # Scans uploads when the API runs with MALWARE_SCAN=clamav (ADR 0042). Opt-in:
+  # `docker compose --profile scan up clamav`. The first start downloads the
+  # signatures and takes a few minutes before port 3310 answers.
+  clamav:
+    profiles: ['scan']
+    image: clamav/clamav-debian:stable
+    restart: unless-stopped
+    ports:
+      - '3310:3310'
+
   app:
     profiles: ['app']
     build:
