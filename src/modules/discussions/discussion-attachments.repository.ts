@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
-import { discussionAttachments, type DiscussionAttachment } from '../../database/schema';
+import {
+  discussionAttachments,
+  type DiscussionAttachment,
+  type FileScanStatus,
+} from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 export interface NewAttachment {
@@ -9,6 +13,7 @@ export interface NewAttachment {
   readonly filename: string;
   readonly contentType: string;
   readonly sizeBytes: number;
+  readonly scanStatus: FileScanStatus;
 }
 
 @Injectable()

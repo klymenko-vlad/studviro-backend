@@ -12,6 +12,7 @@ import {
   type LearningMaterialKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { assertNotInfected } from '../storage/assert-not-infected';
 import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
@@ -117,6 +118,7 @@ export class LearningMaterialsService {
           filename: stored === undefined ? null : (input.filename ?? null),
           contentType: stored?.contentType ?? null,
           sizeBytes: stored?.sizeBytes ?? null,
+          scanStatus: stored?.scanStatus ?? 'unscanned',
           position: await this.nextPosition(spaceId),
           visible: input.visible ?? true,
           createdById: userId,
@@ -200,6 +202,8 @@ export class LearningMaterialsService {
         'Only a file material can be downloaded',
       );
     }
+
+    assertNotInfected(material.scanStatus);
 
     return this.storage.createDownloadUrl(
       material.storageKey,

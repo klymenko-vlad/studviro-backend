@@ -1,4 +1,4 @@
-import { isNull } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -11,7 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { deletedAt, timestampColumn, timestamps } from './_shared';
+import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -100,6 +100,7 @@ export const learningMaterials = pgTable(
     filename: text('filename'),
     contentType: text('content_type'),
     sizeBytes: integer('size_bytes'),
+    scanStatus: scanStatusColumn(),
     position: integer('position').notNull().default(0),
     visible: boolean('visible').notNull().default(true),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
@@ -107,6 +108,9 @@ export const learningMaterials = pgTable(
     ...timestamps,
   },
   (table) => [
+    index('learning_materials_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
     index('learning_materials_space_idx')
       .on(table.learningSpaceId, table.position)
       .where(isNull(table.deletedAt)),
@@ -243,10 +247,14 @@ export const submissionFiles = pgTable(
     filename: text('filename').notNull(),
     contentType: text('content_type').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
+    scanStatus: scanStatusColumn(),
     deletedAt,
     ...timestamps,
   },
   (table) => [
+    index('submission_files_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
     index('submission_files_submission_idx')
       .on(table.submissionId)
       .where(isNull(table.deletedAt)),

@@ -1,7 +1,7 @@
-import { isNull } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import { index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import { deletedAt, timestampColumn, timestamps } from './_shared';
+import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -79,9 +79,13 @@ export const discussionAttachments = pgTable(
     filename: text('filename').notNull(),
     contentType: text('content_type').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
+    scanStatus: scanStatusColumn(),
     createdAt: timestampColumn('created_at').notNull().defaultNow(),
   },
   (table) => [
+    index('discussion_attachments_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
     index('discussion_attachments_post_idx').on(table.postId),
     // One object, one post: a key cannot be attached a second time to read it elsewhere.
     uniqueIndex('discussion_attachments_storage_key_idx').on(table.storageKey),

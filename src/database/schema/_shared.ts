@@ -1,4 +1,4 @@
-import { timestamp } from 'drizzle-orm/pg-core';
+import { pgEnum, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * Millisecond precision, deliberately.
@@ -27,3 +27,14 @@ export const timestamps = {
 
 /** Soft-delete marker. Null means the row is live. */
 export const deletedAt = timestampColumn('deleted_at');
+
+/**
+ * Where a stored file stands with the malware scanner (ADR 0042). `unscanned`
+ * means scanning was off when it was uploaded; `pending` files are usable and
+ * shown as not yet checked; an `infected` file's object has been deleted.
+ */
+export const FILE_SCAN_STATUSES = ['unscanned', 'pending', 'clean', 'infected'] as const;
+export type FileScanStatus = (typeof FILE_SCAN_STATUSES)[number];
+export const fileScanStatus = pgEnum('file_scan_status', FILE_SCAN_STATUSES);
+export const scanStatusColumn = () =>
+  fileScanStatus('scan_status').notNull().default('unscanned');

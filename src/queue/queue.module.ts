@@ -6,6 +6,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { MailModule } from '../mail/mail.module';
 
 import { EmailProcessor } from './processors/email.processor';
+import { MalwareScanProcessor } from './processors/malware-scan.processor';
 import { QUEUES, type QueueName } from './queue.constants';
 import { QueueProducer } from './queue.producer';
 
@@ -48,8 +49,8 @@ export class QueueModule {
     return {
       module: QueueModule,
       imports: [MailModule],
-      providers: [EmailProcessor],
-      exports: [EmailProcessor],
+      providers: [EmailProcessor, MalwareScanProcessor],
+      exports: [EmailProcessor, MalwareScanProcessor],
     };
   }
 }

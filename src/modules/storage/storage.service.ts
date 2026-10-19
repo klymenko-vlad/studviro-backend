@@ -9,16 +9,13 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 
-import {
-  ConflictError,
-  DependencyUnavailableError,
-  EntityNotFoundError,
-} from '../../common/errors/domain.error';
+import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import { AppConfigService } from '../../config/app-config.service';
+import { QueueProducer } from '../../queue/queue.producer';
 
-import { MalwareScanner } from './malware/malware-scanner';
 import { StorageKeys } from './storage.keys';
 import type {
+  ConfirmedObject,
   ListedObject,
   StoredObject,
   StorageKey,
@@ -34,6 +31,8 @@ import type {
  * pointing at attacker-authored HTML on the platform's own origin is stored
  * XSS with extra steps.
  */
+const SCAN_DELAY_MS = 2_000;
+
 export const ALLOWED_CONTENT_TYPES: readonly string[] = [
   'application/pdf',
   'application/zip',
@@ -70,7 +69,7 @@ export class StorageService implements OnModuleDestroy {
 
   constructor(
     private readonly config: AppConfigService,
-    private readonly scanner: MalwareScanner,
+    private readonly queue: QueueProducer,
   ) {
     const storage = this.config.storage;
 
@@ -127,7 +126,7 @@ export class StorageService implements OnModuleDestroy {
    * client that promised a 2 MB PDF and wrote 80 MB of something else is
    * caught here, before anything records the object as a submission.
    */
-  async confirm(key: StorageKey, institutionId: string): Promise<StoredObject> {
+  async confirm(key: StorageKey, institutionId: string): Promise<ConfirmedObject> {
     this.assertOwnedBy(key, institutionId);
 
     const object = await this.head(key);
@@ -150,39 +149,20 @@ export class StorageService implements OnModuleDestroy {
       this.assertContentTypeAllowed(object.contentType);
     }
 
-    await this.assertClean(key, institutionId);
+    if (!this.config.malwareScan.enabled) return { ...object, scanStatus: 'unscanned' };
 
-    return object;
-  }
-
-  /**
-   * Fails closed: with scanning on, a file that could not be scanned is not
-   * accepted, and the person is asked to try again rather than told it is fine.
-   */
-  private async assertClean(key: StorageKey, institutionId: string): Promise<void> {
-    if (!this.scanner.enabled) return;
-
-    let verdict;
+    // Delayed so the caller has written the row that names the object; the
+    // sweep catches any scan that still ran first.
     try {
-      verdict = await this.scanner.scan(await this.read(key));
+      await this.queue.enqueueScan(key, institutionId, SCAN_DELAY_MS);
     } catch (error) {
-      this.logger.error({ err: error, key }, 'malware scan failed');
-      throw new DependencyUnavailableError(
-        'MALWARE_SCAN_UNAVAILABLE',
-        'The file could not be checked for malware; try again in a moment',
-      );
+      this.logger.warn({ err: error, key }, 'scan not queued; the sweep will queue it');
     }
 
-    if (!verdict.clean) {
-      this.logger.warn({ key, signature: verdict.signature }, 'infected upload refused');
-      await this.delete(key, institutionId);
-      throw new ConflictError('FILE_INFECTED', 'That file contains malware and was deleted', {
-        signature: verdict.signature,
-      });
-    }
+    return { ...object, scanStatus: 'pending' };
   }
 
-  private async read(key: StorageKey): Promise<AsyncIterable<Uint8Array>> {
+  async read(key: StorageKey): Promise<AsyncIterable<Uint8Array>> {
     const response = await this.client.send(
       new GetObjectCommand({ Bucket: this.config.storage.bucket, Key: key }),
     );

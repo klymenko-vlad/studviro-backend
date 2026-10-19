@@ -21,6 +21,11 @@ export interface StoredObject {
   readonly contentType: string | undefined;
 }
 
+export interface ConfirmedObject extends StoredObject {
+  /** `pending` when a scan was queued for it, `unscanned` when scanning is off. */
+  readonly scanStatus: 'pending' | 'unscanned';
+}
+
 export interface UploadRequest {
   readonly institutionId: string;
   /** What the file is for — `materials`, `submissions`. Becomes part of the key. */

@@ -17091,6 +17091,16 @@
             "type": "number",
             "nullable": true
           },
+          "scanStatus": {
+            "enum": [
+              "unscanned",
+              "pending",
+              "clean",
+              "infected"
+            ],
+            "type": "string",
+            "description": "`pending`: usable, not yet checked for malware. `clean`: checked. `infected`: deleted, cannot be downloaded. `unscanned`: uploaded while scanning was off."
+          },
           "position": {
             "type": "number"
           },
@@ -17108,6 +17118,7 @@
           "filename",
           "contentType",
           "sizeBytes",
+          "scanStatus",
           "position",
           "visible"
         ]
@@ -17501,13 +17512,24 @@
           },
           "sizeBytes": {
             "type": "number"
+          },
+          "scanStatus": {
+            "enum": [
+              "unscanned",
+              "pending",
+              "clean",
+              "infected"
+            ],
+            "type": "string",
+            "description": "`pending`: usable, not yet checked for malware. `clean`: checked. `infected`: deleted, cannot be downloaded. `unscanned`: uploaded while scanning was off."
           }
         },
         "required": [
           "id",
           "filename",
           "contentType",
-          "sizeBytes"
+          "sizeBytes",
+          "scanStatus"
         ]
       },
       "SubmissionMarkDto": {
@@ -21387,13 +21409,24 @@
           },
           "sizeBytes": {
             "type": "number"
+          },
+          "scanStatus": {
+            "enum": [
+              "unscanned",
+              "pending",
+              "clean",
+              "infected"
+            ],
+            "type": "string",
+            "description": "`pending`: usable, not yet checked for malware. `clean`: checked. `infected`: deleted, cannot be downloaded. `unscanned`: uploaded while scanning was off."
           }
         },
         "required": [
           "id",
           "filename",
           "contentType",
-          "sizeBytes"
+          "sizeBytes",
+          "scanStatus"
         ]
       },
       "DiscussionPostDto": {

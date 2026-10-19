@@ -18,6 +18,7 @@ import {
   type SubmissionFile,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { assertNotInfected } from '../storage/assert-not-infected';
 import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
@@ -168,6 +169,7 @@ export class SubmissionsService {
             filename: file.filename,
             contentType: object.contentType ?? 'application/octet-stream',
             sizeBytes: object.sizeBytes,
+            scanStatus: object.scanStatus,
           })),
         );
       }
@@ -208,6 +210,7 @@ export class SubmissionsService {
       .limit(1);
 
     if (!file) throw new EntityNotFoundError('submission_file', fileId);
+    assertNotInfected(file.scanStatus);
 
     return this.storage.createDownloadUrl(file.storageKey, institutionId, file.filename);
   }

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
-import type { DiscussionAttachment } from '../../database/schema';
+import type { DiscussionAttachment, FileScanStatus } from '../../database/schema';
+import { assertNotInfected } from '../storage/assert-not-infected';
 import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
@@ -24,6 +25,7 @@ export interface AttachmentView {
   readonly filename: string;
   readonly contentType: string;
   readonly sizeBytes: number;
+  readonly scanStatus: FileScanStatus;
 }
 
 /**
@@ -93,6 +95,7 @@ export class DiscussionAttachmentsService {
           filename: claim.filename,
           contentType: object.contentType ?? 'application/octet-stream',
           sizeBytes: object.sizeBytes,
+          scanStatus: object.scanStatus,
         };
       }),
     );
@@ -123,6 +126,7 @@ export class DiscussionAttachmentsService {
     if (attachment === undefined) {
       throw new EntityNotFoundError('discussion attachment', attachmentId);
     }
+    assertNotInfected(attachment.scanStatus);
 
     return this.storage.createDownloadUrl(
       attachment.storageKey,
@@ -162,5 +166,6 @@ function viewOf(attachment: DiscussionAttachment): AttachmentView {
     filename: attachment.filename,
     contentType: attachment.contentType,
     sizeBytes: attachment.sizeBytes,
+    scanStatus: attachment.scanStatus,
   };
 }

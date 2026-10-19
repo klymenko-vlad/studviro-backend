@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
+import { FILE_SCAN_STATUSES, type FileScanStatus } from '../../../database/schema';
+import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
 import { POST_STATES, type PostState } from '../discussion-visibility';
 import type { ThreadDetail, ThreadList } from '../discussions.service';
 
@@ -51,6 +53,10 @@ export class DiscussionAttachmentDto {
   @Expose() @ApiProperty() filename!: string;
   @Expose() @ApiProperty() contentType!: string;
   @Expose() @ApiProperty() sizeBytes!: number;
+
+  @Expose()
+  @ApiProperty({ enum: FILE_SCAN_STATUSES, description: SCAN_STATUS_DESCRIPTION })
+  scanStatus!: FileScanStatus;
 }
 
 @Exclude()

@@ -7,7 +7,7 @@ export interface FakeClamd {
 }
 
 /** Answers INSTREAM like clamd: FOUND for the EICAR test string, OK otherwise. */
-export async function startFakeClamd(): Promise<FakeClamd> {
+export async function startFakeClamd(port = 0): Promise<FakeClamd> {
   const state = { scans: 0 };
   const server: Server = createServer((socket) => {
     let buffered = Buffer.alloc(0);
@@ -24,7 +24,7 @@ export async function startFakeClamd(): Promise<FakeClamd> {
       );
     });
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
 
   return {
     port: (server.address() as AddressInfo).port,

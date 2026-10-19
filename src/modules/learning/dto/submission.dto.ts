@@ -11,7 +11,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { SUBMISSION_STATES, type SubmissionState } from '../../../database/schema';
+import {
+  FILE_SCAN_STATUSES,
+  type FileScanStatus,
+  SUBMISSION_STATES,
+  type SubmissionState,
+} from '../../../database/schema';
+import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
 import { MAX_SUBMISSION_FILES, type SubmissionEntry } from '../submissions.service';
 
 const MAX_FILENAME = 255;
@@ -54,6 +60,10 @@ export class SubmissionFileResponseDto {
   @Expose() @ApiProperty() filename!: string;
   @Expose() @ApiProperty() contentType!: string;
   @Expose() @ApiProperty() sizeBytes!: number;
+
+  @Expose()
+  @ApiProperty({ enum: FILE_SCAN_STATUSES, description: SCAN_STATUS_DESCRIPTION })
+  scanStatus!: FileScanStatus;
 }
 
 @Exclude()
@@ -123,6 +133,7 @@ export class SubmissionResponseDto {
           filename: file.filename,
           contentType: file.contentType,
           sizeBytes: file.sizeBytes,
+          scanStatus: file.scanStatus,
         }),
       ),
       mark: entry.mark === null ? null : Object.assign(new SubmissionMarkDto(), entry.mark),

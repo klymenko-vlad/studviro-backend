@@ -71,7 +71,7 @@ object store's own scanning where the provider offers it — with the object qua
 it passes. The queue and the confirm step are the right seams for it, and `confirm()` is
 deliberately the single place that would have to change.
 
-Superseded 2026-10-19 by ADR 0042: `confirm()` now streams each upload through ClamAV when
+Superseded 2026-10-19 by ADR 0042: each upload is scanned by ClamAV in the background when
 `MALWARE_SCAN=clamav`.
 
 ## Consequences

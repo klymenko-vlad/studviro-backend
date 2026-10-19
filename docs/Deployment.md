@@ -176,11 +176,12 @@ object alive as a noncurrent version, which defeats the sweep unless a noncurren
 expiry rule is set beside it.
 
 **Malware scanning (ADR 0042).** Off unless `MALWARE_SCAN=clamav`. Then every upload is
-streamed through clamd at `CLAMAV_HOST`:`CLAMAV_PORT` (3310) before it is accepted; an
-infected file is deleted and refused, and an unreachable scanner refuses uploads (503)
-rather than letting them through. Run ClamAV beside the API with about 1.5 GB of memory and
-its own `freshclam` updates, and raise clamd's `StreamMaxLength` to at least
-`STORAGE_MAX_UPLOAD_BYTES`, or files above 25 MiB cannot be scanned.
+accepted as `pending` and scanned by a worker through clamd at `CLAMAV_HOST`:`CLAMAV_PORT`
+(3310); an infected file is deleted and its download refused. While clamd is unreachable,
+files stay `pending` and usable and are scanned when it returns. Run ClamAV beside the
+worker with about 1.5 GB of memory and its own `freshclam` updates, and raise clamd's
+`StreamMaxLength` to at least `STORAGE_MAX_UPLOAD_BYTES`, or files above 25 MiB stay
+`pending`.
 
 ## Sessions across more than one instance of the client
 

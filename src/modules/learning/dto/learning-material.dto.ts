@@ -13,10 +13,13 @@ import {
 } from 'class-validator';
 
 import {
+  FILE_SCAN_STATUSES,
+  type FileScanStatus,
   LEARNING_MATERIAL_KINDS,
   type LearningMaterial,
   type LearningMaterialKind,
 } from '../../../database/schema';
+import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
 
 const MAX_TITLE = 200;
 const MAX_DESCRIPTION = 2000;
@@ -113,6 +116,11 @@ export class LearningMaterialResponseDto {
   @Expose() @ApiProperty({ type: String, nullable: true }) filename!: string | null;
   @Expose() @ApiProperty({ type: String, nullable: true }) contentType!: string | null;
   @Expose() @ApiProperty({ type: Number, nullable: true }) sizeBytes!: number | null;
+
+  @Expose()
+  @ApiProperty({ enum: FILE_SCAN_STATUSES, description: SCAN_STATUS_DESCRIPTION })
+  scanStatus!: FileScanStatus;
+
   @Expose() @ApiProperty() position!: number;
   @Expose() @ApiProperty() visible!: boolean;
 
@@ -127,6 +135,7 @@ export class LearningMaterialResponseDto {
       filename: material.filename,
       contentType: material.contentType,
       sizeBytes: material.sizeBytes,
+      scanStatus: material.scanStatus,
       position: material.position,
       visible: material.visible,
     });

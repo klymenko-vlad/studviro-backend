@@ -4,11 +4,25 @@ import { Queue } from 'bullmq';
 import type { JobsOptions } from 'bullmq';
 
 import { emailJobSchemas, type EmailJobInput, type EmailJobName } from './jobs/email.jobs';
+import { mediaJobSchemas } from './jobs/media.jobs';
 import { QUEUES } from './queue.constants';
 
 @Injectable()
 export class QueueProducer {
-  constructor(@InjectQueue(QUEUES.EMAIL) private readonly emailQueue: Queue) {}
+  constructor(
+    @InjectQueue(QUEUES.EMAIL) private readonly emailQueue: Queue,
+    @InjectQueue(QUEUES.MEDIA) private readonly mediaQueue: Queue,
+  ) {}
+
+  /** One waiting scan per object: a second request while one is queued is a no-op. */
+  async enqueueScan(storageKey: string, institutionId: string, delayMs = 0): Promise<void> {
+    const data = mediaJobSchemas.scanObject.parse({ storageKey, institutionId });
+
+    await this.mediaQueue.add('scanObject', data, {
+      delay: delayMs,
+      deduplication: { id: `scan:${storageKey}` },
+    });
+  }
 
   async enqueueEmail<TName extends EmailJobName>(
     name: TName,
