@@ -1,7 +1,15 @@
+import { eq } from 'drizzle-orm';
 import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { institutions, roleAssignments, type CanonicalRole } from '../../src/database/schema';
+import {
+  institutions,
+  roleAssignments,
+  users,
+  type CanonicalRole,
+} from '../../src/database/schema';
+import { NotificationEmitterService } from '../../src/modules/notifications/notification-emitter.service';
+import { NotificationMailService } from '../../src/modules/notifications/notification-mail.service';
 import type { TestHarness } from '../setup/app-harness';
 
 interface MailpitSummary {
@@ -162,5 +170,107 @@ describe('Mail delivery over SMTP (e2e)', () => {
     const mail = await inbox('ada@example.org');
     expect(mail.Subject).toBe('Welcome to StudViro');
     expect(mail.Text).toContain('Ada Lovelace');
+  });
+
+  describe('e-mail copies of notifications (F15)', () => {
+    const AFTER_THE_DELAY = 6 * 60 * 1000;
+
+    async function gradeFor(userId: string, institutionId: string): Promise<void> {
+      await harness.app.get(NotificationEmitterService).emit({
+        institutionId,
+        type: 'grade_published',
+        subjectId: crypto.randomUUID(),
+        courseOfferingId: null,
+        examTermId: null,
+        learningActivityId: null,
+        payload: { grade: 'B' },
+        occurredAt: new Date(),
+        recipients: [userId],
+      });
+    }
+
+    async function sweep(): Promise<number> {
+      return harness.app
+        .get(NotificationMailService)
+        .sweep(new Date(Date.now() + AFTER_THE_DELAY));
+    }
+
+    async function setUp(locale = 'sk') {
+      const [institution] = await harness.db
+        .insert(institutions)
+        .values({ code: 'ukf', name: 'UKF Nitra', defaultLocale: 'sk' })
+        .returning();
+      const student = await harness.actingAs();
+      await harness.db.update(users).set({ locale }).where(eq(users.id, student.user.id));
+      await harness.db.insert(roleAssignments).values({
+        institutionId: institution!.id,
+        userId: student.user.id,
+        role: 'student' satisfies CanonicalRole,
+        scopeType: 'institution',
+        scopeId: null,
+      });
+
+      return { institutionId: institution!.id, student };
+    }
+
+    it('keeps the choice per person and mails an unread notification once', async () => {
+      const { institutionId, student } = await setUp();
+
+      const saved = await harness.inject({
+        method: 'PUT',
+        url: '/api/v1/users/me/notification-preferences',
+        headers: student.headers,
+        payload: { emailTypes: ['grade_published', 'grade_published'] },
+      });
+      expect(saved.statusCode, saved.body).toBe(200);
+      expect(saved.json()).toEqual({ emailTypes: ['grade_published'] });
+
+      await gradeFor(student.user.id, institutionId);
+      expect(await sweep()).toBe(1);
+      expect(await sweep()).toBe(0);
+
+      const mail = await inbox(student.user.email);
+      expect(mail.Subject).toBe('Známka zverejnená');
+      expect(mail.Text).toContain('Známka: B');
+      expect(mail.Text).toContain(
+        `https://app.studviro.test/institutions/${institutionId}/notifications`,
+      );
+    });
+
+    it('mails nothing to a person who did not ask, or who already read it', async () => {
+      const { institutionId, student } = await setUp('en');
+      await gradeFor(student.user.id, institutionId);
+      expect(await sweep()).toBe(0);
+
+      await harness.inject({
+        method: 'PUT',
+        url: '/api/v1/users/me/notification-preferences',
+        headers: student.headers,
+        payload: { emailTypes: ['grade_published'] },
+      });
+      // Opting in does not mail what was already there.
+      expect(await sweep()).toBe(0);
+
+      await gradeFor(student.user.id, institutionId);
+      await harness.inject({
+        method: 'POST',
+        url: `/api/v1/institutions/${institutionId}/me/notifications/read-all`,
+        headers: student.headers,
+      });
+      expect(await sweep()).toBe(0);
+      await expect(inbox(student.user.email, 5)).rejects.toThrow(/no mail/);
+    });
+
+    it('refuses a type that does not exist', async () => {
+      const student = await harness.actingAs();
+      const response = await harness.inject({
+        method: 'PUT',
+        url: '/api/v1/users/me/notification-preferences',
+        headers: student.headers,
+        payload: { emailTypes: ['everything'] },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 });

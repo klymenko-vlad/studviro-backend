@@ -173,6 +173,11 @@ export const envSchema = z.object({
   SMTP_SECURE: bool('false'),
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASSWORD: z.string().min(1).optional(),
+  /**
+   * How long a notification waits unread in the application before its e-mail
+   * copy goes out. Whoever saw it in the meantime gets no mail about it (F15).
+   */
+  NOTIFICATION_MAIL_DELAY_S: z.coerce.number().int().min(0).default(300),
 
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(5_000),

@@ -12,16 +12,21 @@ import { MyNotificationsRepository } from './my-notifications.repository';
 import { MyNotificationsService } from './my-notifications.service';
 import { NotificationEmitterRepository } from './notification-emitter.repository';
 import { NotificationEmitterService } from './notification-emitter.service';
+import { NotificationMailRepository } from './notification-mail.repository';
+import { NotificationMailService } from './notification-mail.service';
+import { NotificationPreferencesController } from './notification-preferences.controller';
 import { TimetableNotificationsService } from './timetable-notifications.service';
 import { WaitlistNotificationsRepository } from './waitlist-notifications.repository';
 import { WaitlistNotificationsService } from './waitlist-notifications.service';
 
 @Module({
-  controllers: [MyNotificationsController],
+  controllers: [MyNotificationsController, NotificationPreferencesController],
   providers: [
     DiscussionNotificationsService,
     NotificationEmitterRepository,
     NotificationEmitterService,
+    NotificationMailRepository,
+    NotificationMailService,
     ExamTermNotificationsService,
     ExamRegistrationNotificationsService,
     EnrollmentNotificationsService,

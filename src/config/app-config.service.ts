@@ -20,6 +20,7 @@ export interface MailConfig {
   readonly transport: Env['MAIL_TRANSPORT'];
   readonly from: string;
   readonly webAppUrl: string;
+  readonly notificationDelaySeconds: number;
   readonly smtp: {
     readonly host: string | undefined;
     readonly port: number;
@@ -225,6 +226,7 @@ export class AppConfigService {
       transport: this.config.get<Env['MAIL_TRANSPORT']>('MAIL_TRANSPORT'),
       from: this.config.get<string>('MAIL_FROM'),
       webAppUrl: this.config.get<string>('WEB_APP_URL'),
+      notificationDelaySeconds: this.config.get<number>('NOTIFICATION_MAIL_DELAY_S'),
       smtp: {
         host: this.config.get<string | undefined>('SMTP_HOST'),
         port: this.config.get<number>('SMTP_PORT'),

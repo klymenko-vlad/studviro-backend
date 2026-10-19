@@ -5,6 +5,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../config/app-config.service';
 import { MailTransport } from '../../mail/mail-transport';
 import { invitationMail } from '../../mail/templates/invitation.mail';
+import { notificationMail } from '../../mail/templates/notification.mail';
 import { passwordResetMail } from '../../mail/templates/password-reset.mail';
 import { welcomeMail } from '../../mail/templates/welcome.mail';
 import { QueueMetrics } from '../../metrics/queue.metrics';
@@ -28,6 +29,7 @@ export class EmailProcessor extends BaseProcessor<EmailJobSchemas> {
     passwordReset: (payload: EmailJobPayload<'passwordReset'>, job: Job) =>
       this.sendPasswordReset(payload, job),
     invitation: (payload: EmailJobPayload<'invitation'>) => this.sendInvitation(payload),
+    notification: (payload: EmailJobPayload<'notification'>) => this.sendNotification(payload),
   };
 
   constructor(
@@ -79,6 +81,21 @@ export class EmailProcessor extends BaseProcessor<EmailJobSchemas> {
         institutionName: payload.institutionName,
         role: payload.role,
         expiresAt: payload.expiresAt,
+        locale: payload.locale,
+      }),
+    });
+  }
+
+  private async sendNotification(payload: EmailJobPayload<'notification'>): Promise<void> {
+    await this.transport.send({
+      to: payload.email,
+      ...notificationMail({
+        type: payload.type,
+        payload: payload.payload,
+        courseCode: payload.courseCode,
+        courseTitle: payload.courseTitle,
+        notificationsUrl: this.link(`/institutions/${payload.institutionId}/notifications`),
+        timeZone: payload.timeZone,
         locale: payload.locale,
       }),
     });

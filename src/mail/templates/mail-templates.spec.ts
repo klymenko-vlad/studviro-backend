@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { invitationMail } from './invitation.mail';
+import { notificationMail } from './notification.mail';
 import { passwordResetMail } from './password-reset.mail';
 import { welcomeMail } from './welcome.mail';
 
@@ -107,5 +108,60 @@ describe('welcomeMail', () => {
     });
 
     expect(mail.html).not.toContain('javascript:');
+  });
+});
+
+describe('notificationMail', () => {
+  const base = {
+    courseCode: 'INF101',
+    courseTitle: 'Programovanie',
+    notificationsUrl: 'https://app.example.org/institutions/i/notifications',
+    timeZone: 'Europe/Bratislava',
+  };
+
+  it('names the course and the moment on the institution’s clock', () => {
+    const mail = notificationMail({
+      ...base,
+      type: 'exam_term_rescheduled',
+      payload: {
+        startsAt: '2026-01-20T08:00:00.000Z',
+        previousStartsAt: '2026-01-19T08:00:00.000Z',
+      },
+      locale: 'sk',
+    });
+
+    expect(mail.subject).toBe('Skúškový termín presunutý: INF101 Programovanie');
+    expect(mail.text).toContain('Kedy: 20. januára 2026 o 09:00');
+    expect(mail.text).toContain('Predtým: 19. januára 2026 o 09:00');
+    expect(mail.text).toContain('nastaveniach účtu');
+  });
+
+  it('carries the thread a reply belongs to, escaped in HTML', () => {
+    const mail = notificationMail({
+      ...base,
+      type: 'discussion_reply',
+      payload: { threadTitle: 'Exam <scope>' },
+      locale: 'en',
+    });
+
+    expect(mail.subject).toBe('New reply in a discussion: INF101 Programovanie');
+    expect(mail.text).toContain('About: Exam <scope>');
+    expect(mail.html).toContain('About: Exam &lt;scope&gt;');
+    expect(mail.html).toContain('href="https://app.example.org/institutions/i/notifications"');
+  });
+
+  it('leaves out what a notification does not have', () => {
+    const mail = notificationMail({
+      ...base,
+      courseCode: null,
+      courseTitle: null,
+      type: 'grade_published',
+      payload: { grade: 'A' },
+      locale: 'en',
+    });
+
+    expect(mail.subject).toBe('Grade published');
+    expect(mail.text).not.toContain('Course:');
+    expect(mail.text).toContain('Grade: A');
   });
 });

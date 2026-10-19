@@ -4,6 +4,7 @@ import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import {
   assessmentResults,
   calendarFeeds,
+  notificationEmailPreferences,
   enrollments,
   externalIdentities,
   invitations,
@@ -95,6 +96,11 @@ export class PersonalDataErasureService {
         discussionPosts: await this.discussionData.erase(institutionId, userId, new Date()),
       };
 
+      // Nothing to report, but nothing should be mailed to an anonymised row.
+      await this.txHost
+        .client()
+        .delete(notificationEmailPreferences)
+        .where(eq(notificationEmailPreferences.userId, userId));
       await this.anonymise(userId, erasureId);
 
       for (const file of files) {

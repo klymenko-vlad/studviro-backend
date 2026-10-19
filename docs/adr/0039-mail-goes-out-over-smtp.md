@@ -46,5 +46,5 @@ service such as Postmark, Amazon SES or Brevo. All of them speak SMTP.
   trusted with session challenges; it is not exposed.
 - The SMTP provider becomes a GDPR processor for addresses and message content. Which
   one is the institution's decision (`TODO(institution)` in the inventory).
-- No notification copies by mail yet (requirement F15). The transport and the templates
-  are what it would build on.
+- Notification copies by mail (requirement F15) came later on the same transport, opt-in
+  per type (ADR 0041).

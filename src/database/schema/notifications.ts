@@ -1,10 +1,11 @@
-import { isNull } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import {
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   uniqueIndex,
   uuid,
@@ -101,6 +102,12 @@ export const notificationDeliveries = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     readAt: timestampColumn('read_at'),
+    /**
+     * When the e-mail copy was queued, for a person who asked for one. Set once
+     * and never cleared: a folded event re-opens the delivery as unread, and
+     * one mail per event per day is the promise, not one per fold.
+     */
+    emailedAt: timestampColumn('emailed_at'),
     deletedAt,
     ...timestamps,
   },
@@ -111,7 +118,30 @@ export const notificationDeliveries = pgTable(
     index('notification_deliveries_user_idx')
       .on(table.institutionId, table.userId)
       .where(isNull(table.deletedAt)),
+    // What the mail sweep reads every minute: still unread, not yet mailed.
+    index('notification_deliveries_mail_due_idx')
+      .on(table.createdAt)
+      .where(
+        sql`${table.emailedAt} is null and ${table.readAt} is null and ${table.deletedAt} is null`,
+      ),
   ],
+);
+
+/**
+ * The notification types a person also wants by e-mail. A row is an opt-in;
+ * no row means the notification stays in the application, which is the
+ * default for every type (F15).
+ */
+export const notificationEmailPreferences = pgTable(
+  'notification_email_preferences',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationType('type').notNull(),
+    createdAt: timestampColumn('created_at').notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.type] })],
 );
 
 export type NotificationEvent = typeof notificationEvents.$inferSelect;

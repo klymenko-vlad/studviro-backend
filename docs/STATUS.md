@@ -72,6 +72,10 @@ course page, moderated by its teachers.
 **Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
 SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
 
+**Notification mail (B59, ADR 0041)** shipped on 2026-10-19: e-mail copies of the
+notification types a person turns on in `/account/settings`, sent only for what is still
+unread after five minutes.
+
 **Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
 and a `studviro.ics` download on the calendar page.
 

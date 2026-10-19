@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { CANONICAL_ROLES } from '../../database/schema';
+import { CANONICAL_ROLES, NOTIFICATION_TYPES } from '../../database/schema';
 
 const locale = z.string().min(2).default('en');
 
@@ -24,6 +24,16 @@ export const emailJobSchemas = {
     institutionName: z.string().min(1),
     role: z.enum(CANONICAL_ROLES),
     expiresAt: z.coerce.date(),
+    locale,
+  }),
+  notification: z.object({
+    email: z.email(),
+    institutionId: z.uuid(),
+    type: z.enum(NOTIFICATION_TYPES),
+    payload: z.record(z.string(), z.unknown()),
+    courseCode: z.string().nullable(),
+    courseTitle: z.string().nullable(),
+    timeZone: z.string().min(1),
     locale,
   }),
 } as const;

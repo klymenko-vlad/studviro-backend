@@ -3213,6 +3213,129 @@
         ]
       }
     },
+    "/api/v1/users/me/notification-preferences": {
+      "get": {
+        "operationId": "getMyNotificationPreferences",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Which notification types the current user also gets by e-mail",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "description": "Replaces the whole set. A copy goes out only for a notification still unread after a few minutes, and only for notifications made after the type was turned on.",
+        "operationId": "updateMyNotificationPreferences",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferencesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Choose which notification types also arrive by e-mail",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/users/me/identities": {
       "get": {
         "operationId": "listMyIdentities",
@@ -15612,6 +15735,75 @@
         },
         "required": [
           "unreadCount"
+        ]
+      },
+      "NotificationPreferencesResponseDto": {
+        "type": "object",
+        "properties": {
+          "emailTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exam_term_published",
+                "exam_term_rescheduled",
+                "exam_term_cancelled",
+                "assignment_due_published",
+                "assignment_due_rescheduled",
+                "grade_published",
+                "grade_corrected",
+                "enrollment_confirmed",
+                "enrollment_rejected",
+                "timetable_event_rescheduled",
+                "timetable_event_cancelled",
+                "exam_registration_confirmed",
+                "exam_registration_cancelled",
+                "exam_registration_refused",
+                "submission_marked",
+                "waitlist_place_free",
+                "discussion_thread_started",
+                "discussion_reply"
+              ]
+            }
+          }
+        },
+        "required": [
+          "emailTypes"
+        ]
+      },
+      "UpdateNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "emailTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exam_term_published",
+                "exam_term_rescheduled",
+                "exam_term_cancelled",
+                "assignment_due_published",
+                "assignment_due_rescheduled",
+                "grade_published",
+                "grade_corrected",
+                "enrollment_confirmed",
+                "enrollment_rejected",
+                "timetable_event_rescheduled",
+                "timetable_event_cancelled",
+                "exam_registration_confirmed",
+                "exam_registration_cancelled",
+                "exam_registration_refused",
+                "submission_marked",
+                "waitlist_place_free",
+                "discussion_thread_started",
+                "discussion_reply"
+              ]
+            },
+            "description": "Every notification type that should also arrive by e-mail. Types left out stay in the application only."
+          }
+        },
+        "required": [
+          "emailTypes"
         ]
       },
       "ExternalIdentityResponseDto": {

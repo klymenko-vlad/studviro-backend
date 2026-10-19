@@ -27,6 +27,18 @@ export function mailDate(date: Date, locale: MailLocale): string {
   }).format(date);
 }
 
+/** A moment as people at the institution read it on their own clock. */
+export function mailDateTime(date: Date, locale: MailLocale, timeZone: string): string {
+  return new Intl.DateTimeFormat(locale === 'sk' ? 'sk-SK' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone,
+  }).format(date);
+}
+
 /** One shape for every message: plain text first, and HTML that says the same. */
 export function composeMail(content: MailContent): ComposedMail {
   const text = [
