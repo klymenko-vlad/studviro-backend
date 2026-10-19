@@ -46,6 +46,14 @@ export class DiscussionPostAuthorDto extends DiscussionAuthorDto {
 }
 
 @Exclude()
+export class DiscussionAttachmentDto {
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
+  @Expose() @ApiProperty() filename!: string;
+  @Expose() @ApiProperty() contentType!: string;
+  @Expose() @ApiProperty() sizeBytes!: number;
+}
+
+@Exclude()
 export class DiscussionPostDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
 
@@ -74,6 +82,15 @@ export class DiscussionPostDto {
     description: 'When the author last changed the text; null if never.',
   })
   editedAt!: Date | null;
+
+  @Expose()
+  @Type(() => DiscussionAttachmentDto)
+  @ApiProperty({
+    type: DiscussionAttachmentDto,
+    isArray: true,
+    description: 'Empty when the text is withheld from this reader.',
+  })
+  attachments!: DiscussionAttachmentDto[];
 }
 
 @Exclude()

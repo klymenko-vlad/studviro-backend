@@ -12,7 +12,9 @@ import {
   teachingAssignments,
   type CanonicalRole,
 } from '../../src/database/schema';
+import { StorageService } from '../../src/modules/storage/storage.service';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
+import { putToStore } from '../setup/learning-fixture';
 
 interface Actor {
   user: { id: string };
@@ -25,6 +27,7 @@ interface PostBody {
   state: 'visible' | 'hidden' | 'deleted';
   mine: boolean;
   editedAt: string | null;
+  attachments: { id: string; filename: string; sizeBytes: number }[];
   author: { displayName: string; isTeacher: boolean };
 }
 
@@ -274,6 +277,112 @@ describe('Course discussion (e2e)', () => {
 
     await call(student, 'DELETE', post);
     expect((await call(student, 'PATCH', post, { body: 'Back again' })).statusCode).toBe(404);
+  });
+
+  describe('attachments', () => {
+    const upload = async (actor: Actor, filename = 'graf.png', body = 'png bytes') => {
+      const ticket = await call(actor, 'POST', `${base()}/attachment-tickets`, {
+        filename,
+        contentType: 'image/png',
+      });
+      expect(ticket.statusCode, ticket.body).toBe(201);
+      expect(ticket.json<{ maxBytes: number }>().maxBytes).toBe(10 * 1024 * 1024);
+      expect(await putToStore(ticket.json(), body)).toBe(200);
+
+      return { storageKey: ticket.json<{ key: string }>().key, filename };
+    };
+
+    const download = async (actor: Actor, threadId: string, post: PostBody) =>
+      call(
+        actor,
+        'GET',
+        `${base()}/${threadId}/posts/${post.id}/attachments/${post.attachments[0]!.id}/download`,
+      );
+
+    it('carries a file on a post that the course can download', async () => {
+      const file = await upload(student);
+      const created = await call(student, 'POST', base(), {
+        title: 'Graf k úlohe 3',
+        body: 'Prečo mi vychádza takto?',
+        attachments: [file],
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const thread = created.json<ThreadBody>();
+      expect(thread.posts[0]!.attachments).toMatchObject([
+        { filename: 'graf.png', sizeBytes: 9 },
+      ]);
+
+      const link = await download(classmate, thread.id, thread.posts[0]!);
+      expect(link.statusCode, link.body).toBe(200);
+      const bytes = await fetch(link.json<{ url: string }>().url);
+      expect(await bytes.text()).toBe('png bytes');
+
+      const reply = await call(student, 'POST', `${base()}/${thread.id}/posts`, {
+        body: 'A ešte jeden',
+        attachments: [await upload(student, 'druhy.png')],
+      });
+      expect(reply.json<ThreadBody>().posts[1]!.attachments).toHaveLength(1);
+    });
+
+    it('accepts only keys issued for the discussion of this institution', async () => {
+      const forged = `institutions/${institutionId}/submissions/${crypto.randomUUID()}/answer.pdf`;
+      const elsewhere = `institutions/${crypto.randomUUID()}/discussion/${crypto.randomUUID()}/x.png`;
+
+      for (const storageKey of [forged, elsewhere]) {
+        const response = await call(student, 'POST', base(), {
+          title: 'Hm',
+          body: 'x',
+          attachments: [{ storageKey, filename: 'x.png' }],
+        });
+        expect(response.statusCode).toBe(404);
+      }
+
+      const tooMany = await call(student, 'POST', base(), {
+        title: 'Hm',
+        body: 'x',
+        attachments: Array.from({ length: 4 }, (_, index) => ({
+          storageKey: `${forged}${index}`,
+          filename: 'x.png',
+        })),
+      });
+      expect(tooMany.statusCode).toBe(400);
+    });
+
+    it('withholds the file of a hidden post from students, and deletes it with the post', async () => {
+      const file = await upload(student);
+      const thread = (
+        await call(student, 'POST', base(), { title: 'T', body: 'B', attachments: [file] })
+      ).json<ThreadBody>();
+      const post = thread.posts[0]!;
+
+      await call(teacher, 'PUT', `${base()}/${thread.id}/posts/${post.id}/visibility`, {
+        hidden: true,
+      });
+      const asClassmate = (
+        await call(classmate, 'GET', `${base()}/${thread.id}`)
+      ).json<ThreadBody>();
+      expect(asClassmate.posts[0]!.attachments).toEqual([]);
+      expect((await download(classmate, thread.id, post)).statusCode).toBe(404);
+      expect((await download(teacher, thread.id, post)).statusCode).toBe(200);
+
+      await call(teacher, 'PUT', `${base()}/${thread.id}/posts/${post.id}/visibility`, {
+        hidden: false,
+      });
+      expect(
+        (await call(student, 'DELETE', `${base()}/${thread.id}/posts/${post.id}`)).statusCode,
+      ).toBe(204);
+      expect(await harness.app.get(StorageService).head(file.storageKey)).toBeUndefined();
+    });
+
+    it('keeps the discussion upload from anyone outside the course', async () => {
+      const outsider = await actingAs('student');
+      const ticket = await call(outsider, 'POST', `${base()}/attachment-tickets`, {
+        filename: 'x.png',
+        contentType: 'image/png',
+      });
+
+      expect(ticket.statusCode).toBe(403);
+    });
   });
 
   it('lets the teacher hide a post, keeps it from students, and can restore it', async () => {

@@ -23,6 +23,11 @@ import {
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import {
+  DownloadUrlResponseDto,
+  RequestUploadTicketDto,
+  UploadTicketResponseDto,
+} from '../learning/dto/upload-ticket.dto';
 
 import type { DiscussionCaller } from './discussion-access.service';
 import { DiscussionModerationService } from './discussion-moderation.service';
@@ -31,6 +36,7 @@ import {
   CreateDiscussionPostDto,
   CreateDiscussionThreadDto,
   DiscussionVisibilityDto,
+  EditDiscussionPostDto,
   EditDiscussionThreadDto,
 } from './dto/discussion-input.dto';
 import { DiscussionThreadDto, DiscussionThreadListDto } from './dto/discussion-response.dto';
@@ -83,6 +89,53 @@ export class DiscussionsController {
     );
   }
 
+  @Post('attachment-tickets')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'createDiscussionAttachmentTicket',
+    summary: 'Get a URL to upload a file for a post',
+    description:
+      'At most 10 MiB, of the kinds coursework accepts. Name the returned key in the post.',
+  })
+  @ApiCreatedResponse({ type: UploadTicketResponseDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async createAttachmentTicket(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: RequestUploadTicketDto,
+  ): Promise<UploadTicketResponseDto> {
+    return UploadTicketResponseDto.from(
+      await this.discussions.attachmentTicket({ institutionId, offeringId, userId }, dto),
+    );
+  }
+
+  @Get(':threadId/posts/:postId/attachments/:attachmentId/download')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'getDiscussionAttachmentDownloadUrl',
+    summary: 'A short-lived link to download a file attached to a post',
+  })
+  @ApiOkResponse({ type: DownloadUrlResponseDto })
+  @ApiErrorResponses({ notFound: true })
+  async attachmentDownload(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Param('threadId', ParseUUIDPipe) threadId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<DownloadUrlResponseDto> {
+    return DownloadUrlResponseDto.from(
+      await this.discussions.attachmentUrl(
+        { institutionId, offeringId, userId },
+        threadId,
+        postId,
+        attachmentId,
+      ),
+    );
+  }
+
   @Get(':threadId')
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({ operationId: 'getDiscussionThread', summary: 'A thread with its posts' })
@@ -112,7 +165,7 @@ export class DiscussionsController {
     @Body() dto: CreateDiscussionPostDto,
   ): Promise<DiscussionThreadDto> {
     return DiscussionThreadDto.from(
-      await this.discussions.reply({ institutionId, offeringId, userId }, threadId, dto.body),
+      await this.discussions.reply({ institutionId, offeringId, userId }, threadId, dto),
     );
   }
 
@@ -156,7 +209,7 @@ export class DiscussionsController {
     @Param('threadId', ParseUUIDPipe) threadId: string,
     @Param('postId', ParseUUIDPipe) postId: string,
     @CurrentUser('id') userId: string,
-    @Body() dto: CreateDiscussionPostDto,
+    @Body() dto: EditDiscussionPostDto,
   ): Promise<DiscussionThreadDto> {
     return DiscussionThreadDto.from(
       await this.discussions.editPost(

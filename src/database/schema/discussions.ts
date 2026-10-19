@@ -1,5 +1,5 @@
 import { isNull } from 'drizzle-orm';
-import { index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
@@ -62,7 +62,34 @@ export const discussionPosts = pgTable(
   ],
 );
 
+/**
+ * A file attached to a post. The row goes with the post: deleting a post or
+ * erasing its author removes the row, and the object follows, or is swept as
+ * an orphan the next night if the store was unreachable (ADR 0032).
+ */
+export const discussionAttachments = pgTable(
+  'discussion_attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => discussionPosts.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    createdAt: timestampColumn('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('discussion_attachments_post_idx').on(table.postId),
+    // One object, one post: a key cannot be attached a second time to read it elsewhere.
+    uniqueIndex('discussion_attachments_storage_key_idx').on(table.storageKey),
+  ],
+);
+
 export type DiscussionThread = typeof discussionThreads.$inferSelect;
 export type NewDiscussionThread = typeof discussionThreads.$inferInsert;
 export type DiscussionPost = typeof discussionPosts.$inferSelect;
 export type NewDiscussionPost = typeof discussionPosts.$inferInsert;
+export type DiscussionAttachment = typeof discussionAttachments.$inferSelect;

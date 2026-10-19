@@ -86,7 +86,10 @@ export class PersonalDataErasureService {
       );
 
       const erasureId = newErasureId();
-      const files = await this.learningData.files(institutionId, userId);
+      const files = [
+        ...(await this.learningData.files(institutionId, userId)),
+        ...(await this.discussionData.files(institutionId, userId)),
+      ];
 
       const tally: ErasureTally = {
         ...(await this.hardDeleteCredentials(institutionId, userId, person.email)),

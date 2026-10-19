@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
-import { discussionPosts, discussionThreads } from '../../database/schema';
+import {
+  discussionAttachments,
+  discussionPosts,
+  discussionThreads,
+} from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
-import type { ExportedDiscussionPost } from './personal-data.types';
+import type { ExportedDiscussionPost, ExportedFile } from './personal-data.types';
 
 /** What a person wrote in course discussions, for export and for erasure (ADR 0040). */
 @Injectable()
@@ -35,6 +39,26 @@ export class DiscussionDataRepository {
       .orderBy(asc(discussionPosts.createdAt));
   }
 
+  files(institutionId: string, userId: string): Promise<ExportedFile[]> {
+    return this.txHost
+      .reader()
+      .select({
+        storageKey: discussionAttachments.storageKey,
+        filename: discussionAttachments.filename,
+        contentType: discussionAttachments.contentType,
+        sizeBytes: discussionAttachments.sizeBytes,
+      })
+      .from(discussionAttachments)
+      .innerJoin(discussionPosts, eq(discussionPosts.id, discussionAttachments.postId))
+      .where(
+        and(
+          eq(discussionAttachments.institutionId, institutionId),
+          eq(discussionPosts.authorId, userId),
+        ),
+      )
+      .orderBy(asc(discussionAttachments.createdAt));
+  }
+
   /**
    * The text goes; the rows stay, so other people's replies keep their place
    * in the thread. A thread the person opened loses its title as well.
@@ -52,6 +76,14 @@ export class DiscussionDataRepository {
         ),
       )
       .returning({ id: discussionPosts.id });
+    if (posts.length > 0) {
+      await client.delete(discussionAttachments).where(
+        inArray(
+          discussionAttachments.postId,
+          posts.map((post) => post.id),
+        ),
+      );
+    }
     await client
       .update(discussionThreads)
       .set({ title: '', updatedAt: now })

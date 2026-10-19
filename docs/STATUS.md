@@ -67,7 +67,8 @@ institution requiring two-step verification, passkeys, changing the email addres
 security mail, and deleting your own account.
 
 **Course discussion (B58, ADR 0040)** shipped on 2026-10-18: a _Discussion_ tab on each
-course page, moderated by its teachers.
+course page, moderated by its teachers. Since 2026-10-19 an author edits their own posts
+(B60) and a post carries up to three files (B61).
 
 **Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
 SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).

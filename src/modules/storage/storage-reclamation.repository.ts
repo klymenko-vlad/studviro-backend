@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 
-import { learningMaterials, submissionFiles } from '../../database/schema';
+import {
+  discussionAttachments,
+  learningMaterials,
+  submissionFiles,
+} from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 import type { StorageKey } from './storage.types';
@@ -62,7 +66,7 @@ export class StorageReclamationRepository {
     if (keys.length === 0) return new Set();
 
     const client = this.txHost.client();
-    const [materials, submissions] = await Promise.all([
+    const [materials, submissions, attachments] = await Promise.all([
       client
         .select({ key: learningMaterials.storageKey })
         .from(learningMaterials)
@@ -71,10 +75,16 @@ export class StorageReclamationRepository {
         .select({ key: submissionFiles.storageKey })
         .from(submissionFiles)
         .where(inArray(submissionFiles.storageKey, [...keys])),
+      client
+        .select({ key: discussionAttachments.storageKey })
+        .from(discussionAttachments)
+        .where(inArray(discussionAttachments.storageKey, [...keys])),
     ]);
 
     return new Set(
-      [...materials, ...submissions].flatMap((row) => (row.key === null ? [] : [row.key])),
+      [...materials, ...submissions, ...attachments].flatMap((row) =>
+        row.key === null ? [] : [row.key],
+      ),
     );
   }
 }

@@ -8,8 +8,14 @@ import {
 import type { DiscussionThread } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { DiscussionNotificationsService } from '../notifications/discussion-notifications.service';
+import type { UploadTicket } from '../storage/storage.types';
 
 import { DiscussionAccessService, type DiscussionCaller } from './discussion-access.service';
+import {
+  DiscussionAttachmentsService,
+  type AttachmentClaim,
+  type AttachmentView,
+} from './discussion-attachments.service';
 import { visiblePost, type VisiblePost } from './discussion-visibility';
 import { DiscussionsRepository } from './discussions.repository';
 
@@ -33,6 +39,7 @@ export interface PostView extends VisiblePost {
   readonly author: { id: string; displayName: string; isTeacher: boolean };
   readonly createdAt: Date;
   readonly editedAt: Date | null;
+  readonly attachments: AttachmentView[];
 }
 
 export interface ThreadDetail extends ThreadSummary {
@@ -48,6 +55,7 @@ export class DiscussionsService {
     private readonly access: DiscussionAccessService,
     private readonly repository: DiscussionsRepository,
     private readonly notifications: DiscussionNotificationsService,
+    private readonly attachments: DiscussionAttachmentsService,
   ) {}
 
   async listThreads(caller: DiscussionCaller): Promise<ThreadList> {
@@ -71,6 +79,7 @@ export class DiscussionsService {
       this.repository.postsOf(thread.id),
       this.repository.teachersOf(caller.offeringId),
     ]);
+    const files = await this.attachments.byPost(posts.map((row) => row.post.id));
 
     return {
       ...summaryOf(
@@ -79,29 +88,35 @@ export class DiscussionsService {
         posts.filter((row) => row.post.deletedAt === null).length,
       ),
       canModerate: viewer.moderates,
-      posts: posts.map(({ post, authorName: name }) => ({
-        id: post.id,
-        author: {
-          id: post.authorId,
-          displayName: name,
-          isTeacher: teachers.includes(post.authorId),
-        },
-        createdAt: post.createdAt,
-        editedAt: post.deletedAt === null ? post.editedAt : null,
-        ...visiblePost(post, viewer),
-      })),
+      posts: posts.map(({ post, authorName: name }) => {
+        const visible = visiblePost(post, viewer);
+
+        return {
+          id: post.id,
+          author: {
+            id: post.authorId,
+            displayName: name,
+            isTeacher: teachers.includes(post.authorId),
+          },
+          createdAt: post.createdAt,
+          editedAt: post.deletedAt === null ? post.editedAt : null,
+          attachments: visible.body === null ? [] : (files.get(post.id) ?? []),
+          ...visible,
+        };
+      }),
     };
   }
 
   async startThread(
     caller: DiscussionCaller,
-    input: { title: string; body: string },
+    input: { title: string; body: string; attachments?: readonly AttachmentClaim[] },
     now = new Date(),
   ): Promise<ThreadDetail> {
     await this.access.viewer(caller);
+    const files = await this.attachments.confirm(caller.institutionId, input.attachments ?? []);
 
     const thread = await this.txHost.run(async () => {
-      const created = await this.repository.createThread({
+      const { thread: created, postId } = await this.repository.createThread({
         institutionId: caller.institutionId,
         courseOfferingId: caller.offeringId,
         authorId: caller.userId,
@@ -109,6 +124,7 @@ export class DiscussionsService {
         body: input.body.trim(),
         now,
       });
+      await this.attachments.record(caller.institutionId, postId, files);
       await this.notifications.threadStarted(
         created,
         (await this.repository.teachersOf(caller.offeringId)).filter(
@@ -126,7 +142,7 @@ export class DiscussionsService {
   async reply(
     caller: DiscussionCaller,
     threadId: string,
-    body: string,
+    input: { body: string; attachments?: readonly AttachmentClaim[] },
     now = new Date(),
   ): Promise<ThreadDetail> {
     const viewer = await this.access.viewer(caller);
@@ -134,15 +150,17 @@ export class DiscussionsService {
     if (thread.hiddenAt !== null) {
       throw new ConflictError('DISCUSSION_THREAD_HIDDEN', 'This thread has been hidden');
     }
+    const files = await this.attachments.confirm(caller.institutionId, input.attachments ?? []);
 
     await this.txHost.run(async () => {
-      await this.repository.createPost({
+      const post = await this.repository.createPost({
         institutionId: caller.institutionId,
         threadId: thread.id,
         authorId: caller.userId,
-        body: body.trim(),
+        body: input.body.trim(),
         now,
       });
+      await this.attachments.record(caller.institutionId, post.id, files);
       await this.notifications.replied(
         thread,
         await this.repository.participantsOf(thread.id, caller.userId),
@@ -223,7 +241,35 @@ export class DiscussionsService {
       );
     }
 
-    await this.repository.deletePost(post.id, now);
+    await this.txHost.run(async () => {
+      await this.repository.deletePost(post.id, now);
+      await this.attachments.remove(caller.institutionId, [post.id]);
+    });
+  }
+
+  async attachmentTicket(
+    caller: DiscussionCaller,
+    file: { filename: string; contentType: string },
+  ): Promise<UploadTicket> {
+    await this.access.viewer(caller);
+
+    return this.attachments.ticket(caller.institutionId, file);
+  }
+
+  async attachmentUrl(
+    caller: DiscussionCaller,
+    threadId: string,
+    postId: string,
+    attachmentId: string,
+  ): Promise<string> {
+    const viewer = await this.access.viewer(caller);
+    const { thread } = await this.access.thread(caller, threadId, viewer);
+    const post = await this.repository.findPost(thread.id, postId);
+    if (post === undefined || visiblePost(post, viewer).body === null) {
+      throw new EntityNotFoundError('discussion post', postId);
+    }
+
+    return this.attachments.downloadUrl(caller.institutionId, post.id, attachmentId);
   }
 }
 

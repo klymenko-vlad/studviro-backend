@@ -12145,6 +12145,219 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/attachment-tickets": {
+      "post": {
+        "description": "At most 10 MiB, of the kinds coursework accepts. Name the returned key in the post.",
+        "operationId": "createDiscussionAttachmentTicket",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestUploadTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadTicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get a URL to upload a file for a post",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts/{postId}/attachments/{attachmentId}/download": {
+      "get": {
+        "operationId": "getDiscussionAttachmentDownloadUrl",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A short-lived link to download a file attached to a post",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}": {
       "get": {
         "operationId": "getDiscussionThread",
@@ -12502,7 +12715,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateDiscussionPostDto"
+                "$ref": "#/components/schemas/EditDiscussionPostDto"
               }
             }
           }
@@ -21091,9 +21304,37 @@
           "threads"
         ]
       },
+      "DiscussionAttachmentClaimDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "The key from an attachment upload ticket."
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "graf.png"
+          }
+        },
+        "required": [
+          "storageKey",
+          "filename"
+        ]
+      },
       "CreateDiscussionThreadDto": {
         "type": "object",
         "properties": {
+          "attachments": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscussionAttachmentClaimDto"
+            }
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -21131,6 +21372,30 @@
           "isTeacher"
         ]
       },
+      "DiscussionAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "contentType",
+          "sizeBytes"
+        ]
+      },
       "DiscussionPostDto": {
         "type": "object",
         "properties": {
@@ -21166,6 +21431,13 @@
             "nullable": true,
             "format": "date-time",
             "description": "When the author last changed the text; null if never."
+          },
+          "attachments": {
+            "description": "Empty when the text is withheld from this reader.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscussionAttachmentDto"
+            }
           }
         },
         "required": [
@@ -21175,7 +21447,8 @@
           "state",
           "mine",
           "createdAt",
-          "editedAt"
+          "editedAt",
+          "attachments"
         ]
       },
       "DiscussionThreadDto": {
@@ -21231,6 +21504,13 @@
       "CreateDiscussionPostDto": {
         "type": "object",
         "properties": {
+          "attachments": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscussionAttachmentClaimDto"
+            }
+          },
           "body": {
             "type": "string",
             "minLength": 1,
@@ -21252,6 +21532,19 @@
         },
         "required": [
           "title"
+        ]
+      },
+      "EditDiscussionPostDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          }
+        },
+        "required": [
+          "body"
         ]
       },
       "DiscussionVisibilityDto": {

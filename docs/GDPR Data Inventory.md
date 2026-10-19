@@ -445,10 +445,30 @@ threads they opened), and cascade from the course offering.
 **Retention:** `TODO(institution)`. How long a course's discussion outlives the course is the
 institution's call.
 
+### `discussion_attachments` — `discussions.ts`
+
+`storage_key`, `filename`, `content_type`, `size_bytes` of up to three files per post, and
+the object itself in the store under `institutions/<id>/discussion/`.
+**Subject:** the post's author.
+**Category:** files the person chose to share with the course.
+**Deleted by:** deleting the post (row and object at once), erasure (every file of the
+person, row and object), cascade from the post. An object whose delete failed is left to
+the nightly orphan sweep.
+**Exported:** listed with the person's other stored files.
+
+## Notification e-mail preferences
+
+### `notification_email_preferences` — `notifications.ts`
+
+`user_id`, `type`, `created_at`: which notification types a person also wants by mail
+(ADR 0041). **Deleted by:** the person (turning a type off), erasure, cascade from the
+user. Not in the export: it is a setting, not a record about the person.
+
 ## Outgoing mail
 
-**What:** the recipient's address, their display name (welcome only), and a reset or
-invitation link carrying a raw token (ADR 0039).
+**What:** the recipient's address, their display name (welcome only), a reset or
+invitation link carrying a raw token (ADR 0039), and for a notification copy the course,
+what it concerns and a grade if it reports one (ADR 0041).
 **Where:** the BullMQ job payload in Redis until the job is removed (an hour after it
 completes, a day after a final failure), and then the SMTP provider.
 **Processor:** the SMTP provider is a processor for these messages. Which one:

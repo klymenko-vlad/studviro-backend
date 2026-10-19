@@ -35,9 +35,13 @@ obvious moderator and an obvious end.
   fold into one notification (ADR 0012).
 - **Personal data (ADR 0030):** the export carries every post the person wrote; erasure
   overwrites their posts and the titles of threads they opened and reports the count.
-- **No attachments, reactions, edits or real-time updates.** Plain text, at most 10,000
-  characters, refetched on demand. Each is a step that can come later without changing
-  the model.
+- **No reactions or real-time updates.** Plain text, at most 10,000 characters,
+  refetched on demand. Amended 2026-10-19: edits (below) and attachments came later.
+  A post carries up to three files of at most 10 MiB, of the kinds coursework accepts,
+  uploaded through a discussion ticket. Only a key issued for this institution's
+  discussion is accepted, so a submission's key cannot be re-published to the course. A
+  hidden post's files are withheld with its text; deleting the post or erasing its
+  author deletes them.
 
 ## Consequences
 

@@ -62,7 +62,10 @@ export class PersonalDataExportService {
       this.learning.activityCompletions(institutionId, userId),
       this.learning.submissions(institutionId, userId),
       this.learning.notifications(institutionId, userId),
-      this.learning.files(institutionId, userId),
+      Promise.all([
+        this.learning.files(institutionId, userId),
+        this.discussions.files(institutionId, userId),
+      ]).then(([submitted, attached]) => [...submitted, ...attached]),
       this.discussions.posts(institutionId, userId),
     ]);
 

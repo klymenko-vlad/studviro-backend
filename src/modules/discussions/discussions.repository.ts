@@ -108,7 +108,7 @@ export class DiscussionsRepository {
     title: string;
     body: string;
     now: Date;
-  }): Promise<DiscussionThread> {
+  }): Promise<{ thread: DiscussionThread; postId: string }> {
     const [thread] = await this.client
       .insert(discussionThreads)
       .values({
@@ -121,15 +121,19 @@ export class DiscussionsRepository {
       })
       .returning();
     if (!thread) throw new Error('the thread insert returned no row');
-    await this.client.insert(discussionPosts).values({
-      institutionId: values.institutionId,
-      threadId: thread.id,
-      authorId: values.authorId,
-      body: values.body,
-      createdAt: values.now,
-    });
+    const [post] = await this.client
+      .insert(discussionPosts)
+      .values({
+        institutionId: values.institutionId,
+        threadId: thread.id,
+        authorId: values.authorId,
+        body: values.body,
+        createdAt: values.now,
+      })
+      .returning({ id: discussionPosts.id });
+    if (!post) throw new Error('the post insert returned no row');
 
-    return thread;
+    return { thread, postId: post.id };
   }
 
   async createPost(values: {
