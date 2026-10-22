@@ -110,7 +110,7 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-was raised to 605 kB and measures 601.69 kB** — U1 must make room before adding code.
+was raised to 605 kB and measures 603.92 kB** — U1 must make room before adding code.
 
 Noticed while walking, not fixed:
 

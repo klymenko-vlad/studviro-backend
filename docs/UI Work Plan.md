@@ -364,6 +364,11 @@ when the action is available.
 
 ### U19. The calendar on a phone — **M**
 
+_Mostly done 2026-10-22 (frontend: week grid commit): a Week | List switch in `?view=`,
+phones default to the list and wide screens to the grid. Still open here: previous/next as
+icon buttons, filters behind a disclosure on phones, and the week boundary in the
+institution's zone._
+
 Agenda (day list) below `md`, week grid above, with a toggle; previous/next as icon buttons
 flanking the week label; filters behind a _Filters_ disclosure with fluid widths; the week
 boundary computed in the institution's zone.
@@ -497,3 +502,5 @@ _Record here what a step noticed but did not fix._
 - **N3/N4 (2026-10-22).** An administrator on a course page has no sidebar entry marked
   current — `/courses/:id` is not under any hub. And the course overview shows an
   administrator a _My enrolment_ card saying they are not enrolled, which is noise for them.
+- **2026-10-22.** The client JS budget measures **603.92 of 605 kB** after the week grid.
+  The next step that adds client code has to make room first.
