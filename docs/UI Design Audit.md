@@ -758,3 +758,280 @@ removes itself on the last page.
 actor ids by walking the whole directory. That is correct today and gets worse
 with the institution; it wants an endpoint that resolves the ids on screen,
 after which the `listForInstitution` wrapper exists for nobody.
+
+---
+
+# Third pass — 2026-10-22
+
+Scope: what shipped after the second pass (role-grouped sidebar and dashboard, account
+settings, course discussion and attachments, calendar subscription) plus three questions
+the first two passes did not ask — **can a non-technical first-time administrator set an
+institution up without help**, **where do lists need search, filters or sorting**, and
+**does the student surface work on a phone**. Read statically and driven at 1440×900 and
+390×844 against the seed, in English and Slovak, both themes. Seven reviewers, each finding
+spot-checked against the source before it was kept; one claim was rejected (below).
+
+Findings only. Nothing here has been implemented.
+
+## Verdict
+
+The second pass's composition layer held: new screens mostly reach for `PageShell`,
+`EmptyState` and `QueryError`. What regressed is not the look, it is **trust**. Twelve
+actions destroy or release something on one click; the permission lookup turns a network
+error into "you are not allowed"; the two forms that hand out authority ask for UUIDs.
+And the product has no answer at all to "I just got here — what do I do first?".
+
+## B1. One click destroys things, and there is no shared confirm
+
+**Severity: high.**
+
+No confirmation, no undo, on: `retire-org-unit-button.tsx:44`, `retire-room-button.tsx:44`,
+`retire-offering-button.tsx:47`, `retire-academic-term-button.tsx:44`,
+`unassign-teacher-button.tsx:51`, `exam-term-actions.tsx:96` (an exam date students may be
+registered on), `assignment-actions.tsx:83`, `material-actions.tsx:131`; on the student side
+cancelling an exam registration, withdrawing from a course and leaving a waiting list
+(`exam-registration-button.tsx:62-90`, `enrollment-button.tsx:84-132`); in account settings
+signing out a session or _all other sessions_, replacing the calendar link (silently breaks
+every subscribed calendar app) and dismissing recovery codes.
+
+Retire is also offered where it can never succeed: the server refuses a unit with children
+or dependants (`org-units.service.ts:80-96`), so on the seed nearly every **Retire** in the
+org-unit tree — including the one on the university itself — can only produce an error
+toast. That error says "retire or move those first"; no screen can move a unit.
+
+**Do:** one `ConfirmAction` in `shared/ui` that names the object and the consequence
+("Remove the exam on 12 Jan? 34 students are registered."), destructive variant, focus
+returned to the trigger. Hide Retire where the row has children; for reversible student
+actions, an **Undo** on the toast instead of a dialog.
+
+## B2. Authority is handed out by pasting identifiers
+
+**Severity: high.**
+
+- `create-institution-form.tsx:112-129` — the first field of a new institution is
+  _Account identifier_, a UUID nobody non-technical can obtain.
+- `grant-role-form.tsx:108,164` — person **and** scope are raw text inputs.
+- `role-assignment-row.tsx:19,22` — the resulting table prints `userId` and `scopeId` UUIDs.
+- `grant-role-form.tsx:50-55`, `invite-person-form.tsx:44-48` — role preselected to the
+  first enum value (`course_coordinator`) with scope `institution`, so pressing the button
+  without choosing anything grants a real role institution-wide.
+
+**Do:** `PersonPicker` for the person; scope becomes a select fed by org units /
+programmes / offerings according to scope type; no preselected role; the table resolves
+names through `listPeople({ userIds })`.
+
+## B3. A failed permission lookup is presented as a denial
+
+**Severity: high.** `entities/permission/model/use-permissions.ts:20-33` returns
+`{ can, roles, isPending }` only. On any error `can()` is `false`, so the sidebar shrinks to
+_Dashboard_, the dashboard says "You have … no role that comes with a dashboard", and every
+student view renders "Nie je vám dostupné". Reproduced live on a 429 — the busiest moment
+of a term is exactly when the API rate-limits. Expose `isError`/`refetch`, render
+`QueryError`, and never treat a transport failure as an authorisation answer.
+
+## B4. There is no guided path for a first-time administrator
+
+**Severity: high.** Nothing in `src` mentions onboarding or a checklist. A fresh
+institution lands on a term tile and an empty audit card. The real dependency chain:
+
+| #   | Step                 | Where                                                     | Needs                                              | Today, when the need is missing                                  |
+| --- | -------------------- | --------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | Org units            | `/org-units`                                              | —                                                  | fine                                                             |
+| 2   | Academic terms       | `/catalogue`, top card                                    | —                                                  | window optional; saved silently as _Never opens_                 |
+| 3   | Rooms                | bottom of `/org-units` — **no nav entry**                 | org units (optional)                               | select offers only _No unit_, no hint                            |
+| 4   | Programmes, courses  | `/catalogue`                                              | —                                                  | blank submit does nothing at all (`catalogue-entry-form.tsx:56`) |
+| 5   | Offerings            | `/catalogue`, third card                                  | courses **and** terms                              | one sentence, no links, form hidden                              |
+| 6   | People               | invite lives on `/roles`; **`/people` cannot add anyone** | —                                                  | —                                                                |
+| 7   | Roles                | `/roles`                                                  | people, scope                                      | UUIDs (B2)                                                       |
+| 8   | Programme membership | only via a programme name in the catalogue table          | people                                             | "Nobody here matches that"                                       |
+| 9   | Teaching             | offering → Overview                                       | people with a teacher role                         | "Nobody here matches that", nothing about the role               |
+| 10  | Timetable            | offering → Schedule                                       | rooms, groups (optional)                           | _No room_ indistinguishable from "no rooms exist"                |
+| 11  | Exam terms           | offering → Schedule                                       | rooms, teaching (for examiner)                     | empty examiner list, never explained                             |
+| 12  | Enrolment opens      | student `/enroll`                                         | open term window + offering + programme membership | student sees "No courses are on offer here yet."                 |
+
+**Do, three pieces, no tour library:**
+
+1. **Setup checklist on the administration dashboard.** One row per step above, in that
+   order, each ticked by a query that already exists (`orgUnitQueries.listForInstitution`,
+   `academicTermQueries.list` + `enrollmentWindowState`, `roomQueries.list`,
+   `catalogueQueries.courses`, `offeringAdminQueries.list`, `personQueries.page`,
+   `programMemberQueries.list`, …). Each unticked row links to the creator with `?add=<kind>`
+   so the form is focused on arrival. Hidden once every row is ticked; dismissible.
+2. **A prerequisite pattern for empty selects.** Replace the control, never the label:
+   _what is missing_ ("No rooms yet"), _why this form needs it_, _one link that fixes it_.
+   Submit disabled while it shows. Apply at the offering form (course, term), timetable and
+   exam forms (room, examiner), assign-teacher and admit-student (people).
+3. **Forms behind an Add action.** Every manage-* form is permanently open above its list.
+   Collapse to an **Add …** button that expands inline (or a sheet on mobile), open by
+   default only while the list is empty.
+
+Also: put the invite form on `/people`; give rooms a nav entry.
+
+## B5. Forms — shared defects
+
+- **Selects size to their content.** `shared/ui/select.tsx` wraps in `inline-block w-fit`,
+  so in every grid (16 features) each select is a different width and none fills its
+  column — _Kind_, _Room_ and _Who attends_ in the timetable form are three widths.
+  Make the wrapper `w-full` and let call sites narrow it.
+- **Every boolean is marked required.** `requiredFieldNames` treats `z.boolean()` as
+  required, so _Every week \*_ carries an asterisk on a switch.
+- **Placeholders read as values** — "FEI", "Faculty of Electrical Engineering and
+  Informatics", "Lecture", "2026/2027", "S1". Prefix with _e.g._; rules go in
+  `FormDescription`, never only in a placeholder.
+- **Validation messages are hard-coded English** in seven schemas (timetable, terms, exam
+  terms, assignments, rooms, study groups, programme members). `create-user/model/schema.ts`
+  already shows the keyed pattern.
+- **Fourteen verbs for "create"** ("Put on offer", "Schedule", "Offer term", "Open group",
+  "Admit", …) and one concept with several names (capacity is _Seats_ and _Places_; _Kind_,
+  _State_, _Attempt_; _Sits under_ vs _Belongs to_). Rule: _Add &lt;thing&gt;_ for every
+  create, _Save changes_ for every edit, one noun per concept.
+- **After submit** every form resets to blank and toasts; nothing focuses, scrolls to or
+  highlights the new row.
+- **Layouts:** two-column, three-column, single-column and `flex-wrap` + `mt-6` hacks.
+  One grid rule.
+- **Org-unit "Sits under"** lists names without their parent — _Department of Physics_
+  appears twice — and defaults to _root_ while _Kind_ defaults to _Faculty_, contradicting
+  its own hint.
+- **Offering form** carries `language` in model and payload but renders no field, so every
+  offering is created with `null`. Status defaults to `planned` from five unexplained values.
+- **Time zone** — the value every date is rendered in — is free text
+  (`regional-fields.tsx:49-62`).
+
+### The timetable form, redesigned
+
+Pass the offering's `term` and `groups` into the form (the parent already has them). Ask in
+the order a registrar thinks:
+
+1. **Who is it for?** Whole course / a group (group select only if chosen).
+2. **What kind of class?** Lecture · Seminar · Lab · … — default to the last one used.
+3. **When?** Weekday + from + to.
+4. **First class on** — `min`/`max` = term, defaulting to the first matching weekday.
+5. **Repeats?** _Every week — until 20 Dec 2026, 9 classes_ / _Just once_.
+6. **Where?** Room, _No room_ as an explicit last option; prerequisite pattern if none exist.
+7. **Title** — optional, placeholder _e.g. Lecture_.
+
+A live sentence above the button — _Seminar for group S1 · Mondays 09:00–11:00 · FEI-101 ·
+every week 21 Oct – 16 Dec 2026 · 9 classes_ — and the button reads **Add 9 classes**. After
+submit, keep who/kind/room/times, move the date on, focus it, ring the new slot. A conflict
+(409) is reported on room + time naming the clashing course.
+
+## B6. Search, filters and sorting
+
+No table can be sorted (`aria-sort` appears nowhere); `PaginationQueryDto` has `sortBy`
+and `order` but no controller exposes it. Only the people directory pages; only the audit
+trail filters. Recommendations, ranked by user value:
+
+| Screen                                                      | Rows seed / real       | Backend today                                  | Add                                                                                                      | Priority |
+| ----------------------------------------------------------- | ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------- |
+| People directory                                            | 178 / ~12k             | `q`, cursor                                    | `?q=` search (server-side — client filtering a paginated list silently misses rows), role + status chips | P1       |
+| Role assignments                                            | 5 / hundreds           | `userId`                                       | names first (B2), then person/role/scope filters                                                         | P1       |
+| Enrollable courses                                          | 144 / thousands        | `termId` (unused)                              | default to the term whose window is open; `?q=`                                                          | P1       |
+| Course offerings                                            | 144 / thousands        | nothing                                        | term select, `?q=` on code/title, _full_ / _no teacher_ chips                                            | P1       |
+| Audit trail                                                 | grows forever          | `action`, `actorUserId`, `subjectType`, cursor | `LoadMore` where "more exist" text is now; actor + subject filters                                       | P1       |
+| Catalogue courses                                           | 72 / ~1k               | nothing                                        | `?q=`, programme filter; the offering form's course `<select>` becomes searchable                        | P2       |
+| Programme members, learning spaces, roster, offering grades | tens–hundreds          | nothing                                        | name search; roster sorted by surname                                                                    | P2       |
+| My notifications                                            | silently capped at 100 | `unreadOnly`                                   | unread filter, say when truncated                                                                        | P2       |
+| Calendar, my exams                                          | small                  | filters exist                                  | move filter state into the URL                                                                           | P2       |
+| Org units, terms, my courses, my teaching, per-course tabs  | short                  | —                                              | **nothing**                                                                                              | —        |
+
+Global search hands a person hit to `/people` with no `?q=`, so it lands on an unfiltered
+page. One shared `ListToolbar` (debounced `type=search`, the existing `ChoiceFilter` /
+`ToggleFilter` promoted out of `filter-schedule`, URL state via `router.replace` as
+`offering-tabs` already does) adopted in the order of the table.
+
+## B7. Visual consistency in the screens the user flagged
+
+- **Org-unit tree.** Retire floats after variable-length names, so it never forms a
+  column; ghost style gives it the same weight as text; generous `py-1.5` + badge + action
+  on every row makes a 13-unit tree two screens tall. Align actions to a right column,
+  show them on hover/focus or in a row menu.
+- **People directory.** One _Teacher_ badge per teaching assignment — sixteen for one
+  person — never deduplicated and never naming the scope (`person-role-badges.tsx`). A
+  solid green _Active_ on every row is the loudest thing on the screen and says nothing;
+  render status only when it is not `active`. _Erase this person_ sits on every row as plain
+  text — move it into a row menu.
+
+## B8. Student surface on a phone
+
+- **Disabled affirmative buttons.** 83 dimmed _Prihlásiť sa_ / _Zapísať sa_ on closed or full
+  items; the reason is grey text above. Show the reason instead of the button.
+- **Enrolment is 19,634 px** of cards, oldest term first (`enrollable-offerings.repository.ts:82`),
+  and the "a place came free" notification sends students into it.
+- **Calendar** is a week grid with no agenda; filters (fixed `w-56`/`w-44`) and three text
+  buttons push the first class below 670 px. Agenda below `md`, filters behind a disclosure.
+- **Notifications** link only to the course root (`my-notifications.tsx:75-86`), never the
+  section; the link is an 18 px unstyled title; opening never marks read.
+- **Exam registration closes "4. 11."** with no time (`exam-term-card.tsx:117-128`).
+- **Submission** re-submit says "pick a file" while the uncontrolled input still shows one
+  (`submission-form.tsx:90-96`); no file list, limits stated only after a failed upload.
+- **Assessment table** clipped at 390 px mid-word ("Ohoc…") with no scroll affordance.
+- Three formats for one instant (01:00 / 1:00 / 9:00); the calendar's week is computed on
+  the browser clock while everything else uses the institution's.
+- Empty states for a brand-new student offer no action; two still bypass `EmptyState`.
+
+## B9. Course discussion
+
+- Post bodies have no `break-words` (`discussion-post-item.tsx:55`): one pasted link makes
+  the page 825 px wide at 390.
+- `<h2>` inside `CardTitle`'s `<h2>` (`offering-discussion.tsx:50-52`) — hydration error on
+  every visit, title announced twice.
+- `type-heading` (`thread-title.tsx:94`) is not a utility that exists.
+- Opening a thread uses `router.replace` (`offering-discussion.tsx:44`), so Back leaves the
+  course instead of returning to the thread list. Use `push` for `?thread=`.
+- Server messages are toasted verbatim: in Slovak, "discussion thread f3d2… not found" after
+  a teacher hides a thread. Map by `ApiError.code`.
+- Attachment uploads show no progress though `uploadViaTicket` takes `onProgress`; every
+  upload failure is one generic sentence; _not yet checked for malware_ never clears while the
+  page is open (no polling); attachments cannot be changed when editing a post.
+- Edit / Rename / New thread drop focus on `<body>`; four buttons all named _Hide_.
+
+## B10. Account settings
+
+- Fifteen sessions all read "Chrome on macOS"; `ipAddress` is in the DTO and never shown,
+  so the page cannot answer "which one is not me?". iOS Chrome/Firefox report as Safari
+  (`manage-sessions/model/device.ts`).
+- The calendar card has no error branch: a failed status query offers _Create subscription
+  link_, which replaces the working one.
+- 2FA: no copy button on the manual key; each mode swap drops focus on `<body>`; recovery
+  codes leave on one click.
+- A ~3,200 px page with five sections and no in-page navigation.
+
+## B11. Navigation and dashboard
+
+- Nothing in the chrome names the institution, and there is no switcher.
+- No collapse and no `md:` rail: 768–1023 px has no persistent nav.
+- Programme pages highlight nothing in the sidebar and have no back link.
+- The administration dashboard lost _this week_ and _deadlines_; section order disagrees
+  with the sidebar's for a person with several roles.
+- `Close` is hard-coded English in `sheet.tsx:74` and `dialog.tsx:70` — now in the primary
+  mobile nav and the malware dialog.
+
+## Still open from the earlier passes
+
+| Item            | Status                                                                           |
+| --------------- | -------------------------------------------------------------------------------- |
+| `DataTable`     | open — see B6                                                                    |
+| URL state       | partly — only the offering tabs and `?thread=`                                   |
+| Breadcrumbs     | open — programme and offering pages have none                                    |
+| `loading.tsx`   | open — zero files; one root `error.tsx` unmounts the sidebar on any failure      |
+| Sticky save bar | open — institution settings' Save is 2.5 screens down on a phone, no dirty guard |
+
+## Rejected
+
+_Offering tabs desync on Back._ They use `router.replace`, so there is no history entry for
+Back to disagree with. Correct as built.
+
+## Suggested order
+
+1. **Trust fixes, small and shared:** `ConfirmAction` (B1), `usePermissions` error state
+   (B3), `Select` width and boolean-required (B5), `Close` strings, `break-words`, the nested
+   `<h2>`.
+2. **No more UUIDs** (B2): `PersonPicker` and scope select in grant-role and
+   create-institution; names in the role table.
+3. **Guided setup** (B4): checklist, prerequisite pattern, forms behind _Add_, invite on
+   `/people`, rooms in the nav.
+4. **Timetable form redesign** as the reference guided form, then the copy rule applied
+   across the other forms (B5).
+5. **`ListToolbar`** on people, enrollable courses, offerings (B6).
+6. **Student phone pass** (B8): reasons instead of disabled buttons, notification deep
+   links, calendar agenda.
