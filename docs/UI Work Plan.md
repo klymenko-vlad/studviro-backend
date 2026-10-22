@@ -438,3 +438,7 @@ _Record here what a step noticed but did not fix._
   `Card`'s own `py-6` and `gap-6` around a `CardContent` that pads again.
 - **U0.** The bundle measured **594.51 kB against the 595 kB guard** after U0 (+0.8 kB).
   The next step that adds client code has to make room first.
+- **2026-10-22, off-plan pass.** The catalogue's _Course offerings_ table is shown to anyone
+  with `offering:read`, which students hold, and every row links to a course page that
+  refuses them. Search no longer offers those (backend `721d005`); the table still does.
+  U15 should show it to administrators only, or link a student's rows to `/enroll`.

@@ -98,7 +98,13 @@ B40, B41 and B45. The tracker rows it does not absorb — correctness and access
 as B43, B48 and B49 — stay in the **open table in `Task Tracker.md`** ("Found walking the
 app, 2026-09-25"); take B43 (a teacher reading another course through the API) before Phase
 2 of the plan. **B35 needs a product answer first** — ask what a registrar should be able
-to do before building it. **The bundle is at 594.51 of 595 kB** — U1 must make room.
+to do before building it.
+
+**Off-plan interface pass, 2026-10-22, at the user's request:** whole-card links, a calmer
+motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
+version as not premium), a phone bottom tab bar, and search that offers only course pages
+the caller can open, starting from their own courses and history. **The client JS budget
+was raised to 605 kB and measures 601.69 kB** — U1 must make room before adding code.
 
 Noticed while walking, not fixed:
 
