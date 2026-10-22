@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-18
+Last updated: 2026-10-22
 
 ## What this is
 
@@ -24,7 +24,7 @@ Design and acts as the BFF. Decisions live in `docs/adr/`.
 
 ```
 cd backend  && pnpm docker:up && pnpm db:migrate && pnpm db:seed && pnpm build && node dist/main.js
-cd frontend && pnpm dev            # port 3001; the API is on 3010
+cd frontend && pnpm dev            # port 3001; the API is on 3000 here (frontend/.env.local)
 ```
 
 `pnpm db:seed` writes a whole demo university — ~7,000 rows across twenty tables, including
@@ -92,10 +92,12 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 zones) shipped on 2026-10-18, and B32's missing course name with it; B33 is what is left of
 "notifications that land nowhere useful".
 
-After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
-2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
-B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
-the product feel like separate screens rather than one tool. **B35 needs a product answer
+After that, take **`docs/UI Work Plan.md`** from U1 in order (B33 is its U0). It turns the
+2026-10-22 audit pass (`UI Design Audit.md`, C1–C11) into 25 one-session steps and absorbs
+the tracker's UX rows B34, B38, B40, B41 and B45. The tracker rows it does not absorb —
+correctness and access defects such as B43, B48 and B49 — stay in the **open table in
+`Task Tracker.md`** ("Found walking the app, 2026-09-25"); take B43 (a teacher reading
+another course through the API) before Phase 2 of the plan. **B35 needs a product answer
 first** — ask what a registrar should be able to do before building it.
 
 Noticed while walking, not fixed:
