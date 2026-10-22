@@ -88,17 +88,17 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: B33 — links land on the offering's Overview, never on the thing.** B31 (time
-zones) shipped on 2026-10-18, and B32's missing course name with it; B33 is what is left of
-"notifications that land nowhere useful".
+**Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
+behind it** (tracker B41). B33 shipped on 2026-10-22 as the plan's U0: notifications and
+calendar, exam and result cards now open the course on the right tab, at the item.
 
-After that, take **`docs/UI Work Plan.md`** from U1 in order (B33 is its U0). It turns the
-2026-10-22 audit pass (`UI Design Audit.md`, C1–C11) into 25 one-session steps and absorbs
-the tracker's UX rows B34, B38, B40, B41 and B45. The tracker rows it does not absorb —
-correctness and access defects such as B43, B48 and B49 — stay in the **open table in
-`Task Tracker.md`** ("Found walking the app, 2026-09-25"); take B43 (a teacher reading
-another course through the API) before Phase 2 of the plan. **B35 needs a product answer
-first** — ask what a registrar should be able to do before building it.
+Then take the plan's steps in order. It turns the 2026-10-22 audit pass (`UI Design
+Audit.md`, C1–C11) into 25 one-session steps and absorbs the tracker's UX rows B34, B38,
+B40, B41 and B45. The tracker rows it does not absorb — correctness and access defects such
+as B43, B48 and B49 — stay in the **open table in `Task Tracker.md`** ("Found walking the
+app, 2026-09-25"); take B43 (a teacher reading another course through the API) before Phase
+2 of the plan. **B35 needs a product answer first** — ask what a registrar should be able
+to do before building it. **The bundle is at 594.51 of 595 kB** — U1 must make room.
 
 Noticed while walking, not fixed:
 

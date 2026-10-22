@@ -398,7 +398,7 @@ Each has a recommended default; use it unless told otherwise.
 
 Phases are ordered; inside a phase, the listed order. U0 first because it is already next.
 
-- [ ] U0 Notification and card links land on the thing (B33) — M
+- [x] U0 Notification and card links land on the thing (B33) — M · 2026-10-22
 - [ ] U1 `ConfirmAction` everywhere (B41) — M
 - [ ] U2 Failure, refusal and loading states (B40) — M
 - [ ] U3 Primitive and token fixes — S
@@ -430,3 +430,11 @@ change how the product feels to a newcomer; if time is short, stop after U13.
 ## Noticed
 
 _Record here what a step noticed but did not fix._
+
+- **U0 (2026-10-22).** A timetable change opens the calendar, not the course: a student's
+  _Schedule_ tab lists only exams. The calendar opens on the current week, so a class moved
+  to another week is a click away — U17 puts the week in the URL and can link to it.
+- **U0.** A read notification card has a band of empty space under it at phone width — the
+  `Card`'s own `py-6` and `gap-6` around a `CardContent` that pads again.
+- **U0.** The bundle measured **594.51 kB against the 595 kB guard** after U0 (+0.8 kB).
+  The next step that adds client code has to make room first.
