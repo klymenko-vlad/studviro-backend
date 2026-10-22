@@ -88,11 +88,14 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: N4 of `docs/UI Work Plan.md`** (Phase N, information architecture — the
-product owner asked for it on 2026-10-22 and it goes before U1). N1–N3 shipped the same day.
-Then U1.
+**Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
+behind it** (tracker B41). Phase N (information architecture, N1–N4) shipped on 2026-10-22:
+students have five menu entries, search and notifications live in the header, course tabs
+are Overview · Materials · Assignments · Schedule · Grades · Discussion · People, and
+administration is four hubs (Structure, Teaching offer, People, Institution) whose tabs
+live in `?tab=`; old addresses redirect.
 
-**After Phase N: U1 — `ConfirmAction` and every destructive action behind it** (tracker B41). B33 shipped on 2026-10-22 as the plan's U0: notifications and
+B33 shipped on 2026-10-22 as the plan's U0: notifications and
 calendar, exam and result cards now open the course on the right tab, at the item.
 
 Then take the plan's steps in order. It turns the 2026-10-22 audit pass (`UI Design

@@ -449,7 +449,7 @@ Phases are ordered; inside a phase, the listed order. U0 first because it is alr
 - [x] N1 Shell: five student entries, search and bell in the header — M · 2026-10-22
 - [x] N2 Course page tabs — M · 2026-10-22
 - [x] N3 Administration hubs — L · 2026-10-22
-- [ ] N4 Breadcrumbs — S
+- [x] N4 Breadcrumbs — S · 2026-10-22
 - [x] U0 Notification and card links land on the thing (B33) — M · 2026-10-22
 - [ ] U1 `ConfirmAction` everywhere (B41) — M
 - [ ] U2 Failure, refusal and loading states (B40) — M
@@ -494,3 +494,6 @@ _Record here what a step noticed but did not fix._
   with `offering:read`, which students hold, and every row links to a course page that
   refuses them. Search no longer offers those (backend `721d005`); the table still does.
   U15 should show it to administrators only, or link a student's rows to `/enroll`.
+- **N3/N4 (2026-10-22).** An administrator on a course page has no sidebar entry marked
+  current — `/courses/:id` is not under any hub. And the course overview shows an
+  administrator a _My enrolment_ card saying they are not enrolled, which is noise for them.
