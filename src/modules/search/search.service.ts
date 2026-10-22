@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
+  enrollments,
   orgUnits,
   programMemberships,
   programs,
@@ -16,6 +18,7 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import type { Permission } from '../authorization/permissions';
+import { administersOfferings } from '../courses/administers-offering';
 
 export const SEARCH_KINDS = [
   'course',
@@ -98,7 +101,7 @@ export class SearchService {
     const pattern = `%${escapeLike(query)}%`;
 
     const groups = await Promise.all(
-      searched.map((kind) => this.searchOne(kind, institutionId, pattern)),
+      searched.map((kind) => this.searchOne(kind, institutionId, userId, pattern)),
     );
 
     const hits = groups.flat();
@@ -122,13 +125,14 @@ export class SearchService {
   private searchOne(
     kind: SearchKind,
     institutionId: string,
+    userId: string,
     pattern: string,
   ): Promise<SearchHit[]> {
     switch (kind) {
       case 'course':
         return this.courses(institutionId, pattern);
       case 'offering':
-        return this.offerings(institutionId, pattern);
+        return this.offerings(institutionId, userId, pattern);
       case 'program':
         return this.programmes(institutionId, pattern);
       case 'person':
@@ -164,7 +168,25 @@ export class SearchService {
     }));
   }
 
-  private async offerings(institutionId: string, pattern: string): Promise<SearchHit[]> {
+  /**
+   * A course page opens for those who teach it, those enrolled on it and those
+   * who administer offerings (`CourseOfferingService.resolveViewerRole`), so
+   * that is all this offers: a hit that answers 403 when followed is worse than
+   * no hit. `offering:read` alone — which a student holds — is not a way in.
+   */
+  private async offerings(
+    institutionId: string,
+    userId: string,
+    pattern: string,
+  ): Promise<SearchHit[]> {
+    const administers = await administersOfferings(this.authorization, userId, institutionId);
+    const participates: SQL | undefined = administers
+      ? undefined
+      : or(
+          sql`exists (select 1 from ${teachingAssignments} where ${teachingAssignments.courseOfferingId} = ${courseOfferings.id} and ${teachingAssignments.userId} = ${userId} and ${teachingAssignments.deletedAt} is null)`,
+          sql`exists (select 1 from ${enrollments} where ${enrollments.courseOfferingId} = ${courseOfferings.id} and ${enrollments.userId} = ${userId} and ${enrollments.deletedAt} is null and ${inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES)})`,
+        );
+
     const rows = await this.reader
       .select({
         id: courseOfferings.id,
@@ -180,8 +202,10 @@ export class SearchService {
           eq(courseOfferings.institutionId, institutionId),
           isNull(courseOfferings.deletedAt),
           or(ilike(courses.title, pattern), ilike(courses.code, pattern)),
+          participates,
         ),
       )
+      .orderBy(desc(academicTerms.startsAt))
       .limit(PER_KIND);
 
     return rows.map((row) => ({
