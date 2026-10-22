@@ -180,7 +180,7 @@ _Closes the shared items of C5, C9, C11._
 - `Select` wrapper `w-full` (call sites narrow it where they want).
 - `requiredFieldNames` ignores `z.boolean()` — no asterisk on switches.
 - `Close` in `sheet.tsx` and `dialog.tsx` from `common.close`.
-- `break-words` on discussion post bodies; nested `<h2>` in `offering-discussion.tsx`;
+- `break-words` on discussion post bodies; nested `<h2>` in `offering-discussion.tsx` (done 2026-10-22, frontend `c1b8dd6`);
   `type-heading` → `type-section`.
 - One `formatInstant` (hour + minute, institution zone) replacing the three time formats;
   exam registration close shows the time.
