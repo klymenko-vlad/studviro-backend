@@ -2,6 +2,7 @@ import { Logger } from 'nestjs-pino';
 
 import { createApp } from './bootstrap';
 import { AppConfigService } from './config/app-config.service';
+import { MigrationsHealthIndicator } from './health/migrations.health';
 
 async function bootstrap(): Promise<void> {
   const app = await createApp();
@@ -12,6 +13,18 @@ async function bootstrap(): Promise<void> {
   // Node's default handler, which writes to stderr and never reaches the log
   // pipeline — so the one event worth alerting on is the one that is invisible.
   installProcessGuards(logger);
+
+  // The image migrates before it starts, but a Docker command overridden on the
+  // platform skips that silently and the service then answers 500 on every
+  // feature whose table is missing. Refusing to boot keeps the previous deploy
+  // serving and makes the failure the deploy's, not a user's.
+  const { applied, expected } = await app.get(MigrationsHealthIndicator).counts();
+  if (applied < expected) {
+    throw new Error(
+      `database is ${expected - applied} migration(s) behind (${applied}/${expected}); ` +
+        'run db:migrate:prod before starting',
+    );
+  }
 
   if (!config.servesHttp) {
     logger.log(`worker-only role, not binding a port (env=${config.nodeEnv})`, 'Bootstrap');

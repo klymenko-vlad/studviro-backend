@@ -23,6 +23,13 @@ export const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().default('0.0.0.0'),
 
+  /**
+   * The commit this build was made from. Render sets it on every deploy; the
+   * post-deploy check reads it back from `/health/live` to know the new build
+   * is the one answering before it trusts `/health/ready`.
+   */
+  RENDER_GIT_COMMIT: z.string().min(1).optional(),
+
   APP_URL: z.url().default('http://localhost:3000'),
   API_PREFIX: z.string().default('api'),
 

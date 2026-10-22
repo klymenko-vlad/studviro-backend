@@ -108,6 +108,10 @@ export class AppConfigService {
     return this.config.get<AppRole>('ROLE');
   }
 
+  get commit(): string | undefined {
+    return this.config.get<string | undefined>('RENDER_GIT_COMMIT');
+  }
+
   get servesHttp(): boolean {
     return this.role !== 'worker';
   }

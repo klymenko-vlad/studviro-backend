@@ -17,7 +17,7 @@ describe('Health (e2e)', () => {
     const res = await harness.inject({ url: '/health/live' });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ status: 'ok' });
+    expect(res.json()).toEqual({ status: 'ok', commit: null });
   });
 
   it('readiness reports the database as up', async () => {

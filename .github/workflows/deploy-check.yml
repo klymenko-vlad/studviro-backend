@@ -1,0 +1,53 @@
+name: Deploy check
+
+# Render deploys `dev` on its own, so nothing in CI saw the deploy that left the
+# database seven migrations behind: the old build kept answering, the new tables
+# did not exist, and the first sign was a user's 500. This waits for Render to
+# serve the pushed commit, then requires readiness — which compares applied
+# migrations with the shipped journal — to pass. A red run here is the alarm.
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  API_ORIGIN: https://studviro-backend.onrender.com
+
+jobs:
+  verify:
+    name: Deployed build is live and migrated
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Wait for Render to serve ${{ github.sha }}
+        run: |
+          # A free instance can take a minute to wake, and the Docker build a
+          # few more; 25 minutes covers both with room to spare.
+          deadline=$((SECONDS + 1500))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            commit=$(curl -fsS -m 90 "$API_ORIGIN/health/live" | jq -r '.commit // empty' || true)
+            if [ "$commit" = "$GITHUB_SHA" ]; then
+              echo "serving $commit"
+              exit 0
+            fi
+            echo "serving ${commit:-unknown}, waiting for $GITHUB_SHA"
+            sleep 20
+          done
+          echo "::error::Render never served $GITHUB_SHA. Check the deploy log: a failed migration stops the boot and leaves the previous build serving."
+          exit 1
+
+      - name: Readiness passes
+        run: |
+          status=$(curl -sS -m 60 -o body.json -w '%{http_code}' "$API_ORIGIN/health/ready")
+          cat body.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::/health/ready answered $status on the new build."
+            exit 1
+          fi

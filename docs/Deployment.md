@@ -24,10 +24,25 @@ pnpm db:migrate:prod    # node dist/database/migrate.js
 `dist/` and `drizzle/` both ship in the image, so this works with nothing but
 `DATABASE_URL` set.
 
-**Render must run it as the service's Pre-Deploy Command.** Without that, a fresh database
-serves a connectable-but-empty schema and every query fails with
-`relation "users" does not exist` while `/health` still reports the database up. That is
-exactly how this deployment spent several releases with no working sign-in.
+**The image runs it on every boot**, before the server starts (`CMD` in the `Dockerfile`).
+It used to be left to Render's Pre-Deploy Command, which the free instance type does not
+offer: the database stopped at migration 0027 and sessions, two-step verification and
+e-mail notification preferences all answered 500 until it was moved into the image.
+Without it, a fresh database serves a connectable-but-empty schema and every query fails
+with `relation "users" does not exist` while `/health/live` still reports the process up.
+A failed migration stops the boot, so the previous deploy keeps serving.
+
+Three layers keep it from happening again:
+
+1. **The image migrates on boot** (above).
+2. **The server refuses to start behind its schema.** `main.ts` compares applied
+   migrations with the shipped journal before it listens, so a Docker command overridden
+   in the Render dashboard — which skips step 1 silently — fails the deploy instead of
+   serving 500s.
+3. **`.github/workflows/deploy-check.yml` checks every push to `dev`.** It waits until
+   `/health/live` reports the pushed commit (`RENDER_GIT_COMMIT`, set by Render), then
+   requires `/health/ready` to answer 200. A deploy that never went out, or went out
+   unmigrated, turns the run red within half an hour instead of waiting for a user.
 
 ## Readiness proves the schema, not just the socket
 
