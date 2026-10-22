@@ -192,6 +192,37 @@ describe('My courses (e2e)', () => {
     expect(response.json()[0].status).toBe('completed');
   });
 
+  it('omits withdrawn and rejected courses from the unfiltered list, but keeps completed', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, runningOfferingId, { status: 'withdrawn' });
+    await enrol(actor.user.id, pastOfferingId, { status: 'completed' });
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/me/courses`,
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toHaveLength(1);
+    expect(response.json()[0].course.code).toBe('INF/DB/22');
+  });
+
+  it('still returns withdrawn courses when the student asks for them by name', async () => {
+    const actor = await actingAs('student');
+    await enrol(actor.user.id, runningOfferingId, { status: 'withdrawn' });
+
+    const response = await harness.inject({
+      method: 'GET',
+      url: `/api/v1/institutions/${institutionId}/me/courses?status=withdrawn`,
+      headers: actor.headers,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toHaveLength(1);
+    expect(response.json()[0].status).toBe('withdrawn');
+  });
+
   it('never returns another user’s enrolments', async () => {
     const actor = await actingAs('student');
     const other = await actingAs('student');

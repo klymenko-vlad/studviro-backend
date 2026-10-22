@@ -1,13 +1,7 @@
 import { isNull } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { courseOfferings, programs } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -40,14 +34,12 @@ export const programMemberships = pgTable(
     startedAt: timestampColumn('started_at'),
     endedAt: timestampColumn('ended_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('program_memberships_unique_idx')
       .on(table.programId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('program_memberships_external_id_unique_idx', table),
     index('program_memberships_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -59,9 +51,49 @@ export const ENROLLMENT_STATUSES = [
   'completed',
   'withdrawn',
   'rejected',
+  'waitlisted',
 ] as const;
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 export const enrollmentStatus = pgEnum('enrollment_status', ENROLLMENT_STATUSES);
+
+/**
+ * Statuses that place a student *in* the course right now: they occupy a seat, appear on the
+ * roster, count towards the teacher's enrolment total, see the course in their calendar and may
+ * register for its exam terms.
+ */
+export const ENROLLMENT_PARTICIPATING_STATUSES: readonly EnrollmentStatus[] = [
+  'provisioning',
+  'active',
+];
+
+/**
+ * Statuses that mean the student holds an academic record for the course — participation plus
+ * `completed`. A finished course still owes its student their grades and their transcript entry,
+ * so reads over results and course history use this wider set, never
+ * {@link ENROLLMENT_PARTICIPATING_STATUSES}.
+ */
+export const ENROLLMENT_RECORDED_STATUSES: readonly EnrollmentStatus[] = [
+  ...ENROLLMENT_PARTICIPATING_STATUSES,
+  'completed',
+];
+
+/**
+ * Statuses that hold a place against the offering's capacity. A request that
+ * has not been answered yet holds one, or two students could be given the last
+ * seat while neither is `active`.
+ */
+export const ENROLLMENT_OCCUPYING_STATUSES: readonly EnrollmentStatus[] = [
+  'requested',
+  ...ENROLLMENT_RECORDED_STATUSES,
+];
+
+/** Statuses a student may withdraw from themselves. */
+export const ENROLLMENT_WITHDRAWABLE_STATUSES: readonly EnrollmentStatus[] = [
+  'waitlisted',
+  'requested',
+  'provisioning',
+  'active',
+];
 
 export const ENROLLMENT_REQUIREMENT_TYPES = ['compulsory', 'optional', 'elective'] as const;
 export type EnrollmentRequirementType = (typeof ENROLLMENT_REQUIREMENT_TYPES)[number];
@@ -89,17 +121,16 @@ export const enrollments = pgTable(
     attempt: integer('attempt').notNull().default(1),
     enrolledAt: timestampColumn('enrolled_at'),
     withdrawnAt: timestampColumn('withdrawn_at'),
+    waitlistedAt: timestampColumn('waitlisted_at'),
     lmsProvisionedAt: timestampColumn('lms_provisioned_at'),
     lmsProvisioningError: text('lms_provisioning_error'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('enrollments_unique_idx')
       .on(table.courseOfferingId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('enrollments_external_id_unique_idx', table),
     index('enrollments_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
     index('enrollments_offering_status_idx')
       .on(table.courseOfferingId, table.status)
@@ -124,14 +155,12 @@ export const studyGroups = pgTable(
     name: text('name'),
     capacity: integer('capacity'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('study_groups_code_unique_idx')
       .on(table.courseOfferingId, table.code)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('study_groups_external_id_unique_idx', table),
   ],
 );
 
@@ -147,14 +176,12 @@ export const studyGroupMemberships = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('study_group_memberships_unique_idx')
       .on(table.studyGroupId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('study_group_memberships_external_id_unique_idx', table),
     index('study_group_memberships_user_id_idx')
       .on(table.userId)
       .where(isNull(table.deletedAt)),

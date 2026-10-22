@@ -1,115 +1,199 @@
 # Status
 
-Handoff note for the next agent. Keep it under ~100 lines; trim rather than append.
+Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-08-29
+Last updated: 2026-10-18
 
 ## What this is
 
-A unified academic platform integrating a Student Information System (AIS2) and an LMS
-(Moodle) behind one canonical model. `docs/Tasks Plan.md` holds the 71-step research backlog,
-`docs/Task Tracker.md` its live delivery state, and `docs/Feature Status.md` the product view.
-The delivery loop is `../.claude/skills/ship-backlog-step/`.
+**A standalone academic platform that does the job AIS2 and Moodle do between them.** The
+institution enters its own data and StudViro is where that data lives. There is no upstream.
+
+That changed on 2026-09-18: it had been scoped as a surface _over_ those two systems and the
+integration was never connected to anything. **Read `adr/0024` first.** `docs/Product Plan.md`
+is the live backlog; `Tasks Plan.md` and `Task Tracker.md` are superseded research output
+kept for the record — believe their banners.
 
 ## Stack
 
-NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · generated OpenAPI · Vitest +
-Testcontainers. The client is Next.js 16 App Router with Feature-Sliced Design and acts as
-the BFF. Decisions live in `docs/adr/`.
+NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · MinIO (S3-compatible) · generated
+OpenAPI · Vitest + Testcontainers. The client is Next.js 16 App Router with Feature-Sliced
+Design and acts as the BFF. Decisions live in `docs/adr/`.
 
-## Done
+## Start here
 
-- **Foundation** — modular monolith (ADR 0002), `ROLE=api|worker|all`, validated env, graceful
-  shutdown, request limits, Pino correlation logs, health, metrics, BullMQ, Redis locks and
-  idempotency.
-- **Persistence and canonical model** — Drizzle migrations, transaction-mediated and
-  institution-scoped repositories, keyset pagination, soft deletion, provenance and 25 academic
-  tables (ADR 0009). External identifiers are never primary keys.
-- **Authentication and identity** — argon2 credentials, rotating JWT/refresh sessions
-  (ADR 0003), linked-identity reads and conflict-safe provisioning. OIDC remains blocked on
-  institutional registration.
-- **Authorization** — canonical roles, scope ancestry, the permission catalogue,
-  `PermissionsGuard` / `@RequirePermission`, role assignment routes and the client role UI.
-- **Institution setup** — terminology, flags and connector selection resolve over platform
-  defaults through a guarded configuration API and settings screen.
-- **Connectors and synchronization** — connector contracts, deterministic `mock-sis`, registry
-  health/capabilities, ordered imports, provenance upserts, stale-write guards, tombstones,
-  child pruning, watermarks and a locked BullMQ run state machine.
-- **Course reads** (step 40) — the caller's term-grouped courses and a guarded 360° course
-  page with staff, own enrolment and study groups.
-- **Grades with provenance** (step 41) — `GET institutions/:id/me/course-results` behind
-  `grade:read` returns the calculated/proposed/official stages, the effective grade and source
-  metadata, on a grades screen and on each course page.
-- **Sync monitoring and retry** (step 47) — `/institutions/:id/sync` shows freshness per
-  domain, the latest run's per-domain counts and errors, and run history; `sync:run` starts
-  another and the screen polls while one is in flight.
-- **Student dashboard** (step 38) — `/institutions/:id` composes the reads already shipped
-  into a current-term course tile, a results tile and a rest-of-this-week tile, each gated on
-  the server's own answer (`enrollment:read`, `grade:read`, `schedule:read`) and linking
-  through to its full screen. No new endpoint.
-- **Unified calendar** (step 39) — `GET institutions/:id/me/timetable-events` behind
-  `schedule:read` returns the events overlapping a date range with room, study group, course,
-  term and provenance. A student sees the events of every offering they are enrolled in, and a
-  group event only as a member of that group; a teacher sees every event of an offering they
-  teach. `/institutions/:id/calendar` renders the week, grouped by day in the institution's
-  display timezone, with week navigation.
-- **API and CI** — generated, drift-checked `openapi.json`; both repositories run lint,
-  typecheck, coverage, build and security/contract gates in CI and through `pnpm verify`.
-- **Navigation and account creation** — `widgets/app-header` in the root layout,
-  `widgets/institution-nav` as a permission-gated tab bar on every `/institutions/:id` screen,
-  `/sign-up`, and `src/proxy.ts` protecting `/account` and `/institutions`.
-- **Deployment is migration-aware** — `pnpm db:migrate:prod` runs the compiled migrator
-  inside the pruned production image, and `/health/ready` now fails when
-  `drizzle.__drizzle_migrations` is behind the journal shipped in the image. See
-  `docs/Deployment.md`.
+```
+cd backend  && pnpm docker:up && pnpm db:migrate && pnpm db:seed && pnpm build && node dist/main.js
+cd frontend && pnpm dev            # port 3001; the API is on 3010
+```
 
-## Not done
+`pnpm db:seed` writes a whole demo university — ~7,000 rows across twenty tables, including
+the learning half, with one assignment already marked and one still open. Sign in at `/sign-in` as:
 
-- Exam terms, programs and the course catalogue still have no read API or screen, though
-  `mock-sis` imports all of them. Courses are reachable only through the caller's enrolments;
-  no search exists.
-- The calendar reads one week at a time and cannot be filtered from the screen, though the
-  endpoint takes `offeringId` and `type`. It shows no exam terms — those are step 42.
-- Role grants still require raw subject and scope identifiers because there is no user or
-  organization-unit directory.
-- Synchronization has no schedule (step 37 covers reconciliation, step 53 the Prometheus
-  freshness gauges). Runs are still started by hand, now from the screen rather than curl.
-- No Moodle or AIS2 connector implementation. AIS2 and OIDC require institutional access.
-- Institution configuration is read from PostgreSQL on every call; no caching.
-- The legacy flat `RolesGuard` still governs old user endpoints and should retire as
-  canonical routes replace them.
-- Theses, transcripts, notifications and audit are intentionally absent from the model.
+| Who           | Email                      |
+| ------------- | -------------------------- |
+| Administrator | `admin@studviro.local`     |
+| Registrar     | `registrar@studviro.local` |
+| Teacher       | `teacher@studviro.local`   |
+| Student       | `ada@studviro.local`       |
 
-## Deployment caveat — act on this first
+Password `correct horse battery staple` — **except** any account that already existed on this
+machine, which keeps the password it had. `admin@studviro.local` here is `newpassword123`.
 
-Render's service must run `pnpm db:migrate:prod` as its **Pre-Deploy Command** and probe
-`/health/ready`. Until it does, the hosted database has no schema and every query fails
-with `relation "users" does not exist` — which is where it stood on 2026-08-29. Details in
-`docs/Deployment.md`.
+## Where the backlog stands
 
-## Next task — exam-term view, step 42
+**`Product Plan.md` is complete — all thirty-three items, Phases 0 to 4, both halves of
+each.** It is the record of what was built and why, not a queue: the integration removed
+and the dataset generator recovered as a demo seed (Phase 0, ADR 0025); the registry an
+institution sets up by hand from nothing (Phase 1); the learning half (Phase 2, ADRs 0027
+and 0028); one timeline, study progress, search, WCAG 2.2 AA, mobile and terminology
+(Phase 3, ADR 0029); and the compliance, observability, backup, load, accessibility and
+guide work of Phase 4 (ADRs 0026 and 0030).
 
-- `exam_terms` and `exam_registrations` are imported by `mock-sis` and unread. Ship the
-  vertical slice the calendar deliberately left out: a `schedule:read` endpoint returning the
-  caller's exam terms for their enrolled offerings — kind, room, examiner, capacity,
-  registration window and their own registration if one exists — regenerate `openapi.json`,
-  then a screen at `/institutions/:id/exams` and a link from the course page. Browser-check it.
-- Registration itself is step 43 and needs `enrollment:manage` plus capacity and window rules;
-  step 42 reads only.
-- `widgets/institution-nav` needs a tab for every new screen, and `widgets/my-calendar` is the
-  closest model for a range-scoped read.
+The defect list this section used to carry has been worked through — 2026-09-19's eight
+fixes are recorded in `Task Tracker.md`'s defect table and in **ADR 0031**, which
+supersedes ADR 0028's guess at how a teacher derives a role.
 
-## Caveats
+Found work since has been shipped or closed as it turned up — tracker B4 and B14–B25,
+ADRs 0032–0034: exam attendance, the waiting list for a full course and the notice when
+a place on it comes free, captcha, storage reclamation, the paginated directory, the k6
+fixture, and the sign-in key fix. Read the tracker's table for any one of them.
 
-- `Tasks Plan.md` and `System Plan.md` are research output and contain broken private-use
-  citation markers; prefer the code, tracker and current practice.
-- Steps 1–22 were inferred from documents, not re-verified.
-- The client bundle measures 413.57 kB gzipped against the 455 kB guard, so the calendar did
-  not need the Radix Select swap still recorded under _Carried work_. Take that swap before
-  raising the guard again, not before spending the headroom.
-- Local development needs uncommitted `.env` files. Every port is env-driven, and the backend
-  `.env` must match the ports `docker-compose.yml` publishes (5432 / 6379). The dev seed creates
-  only two users and no institution; canonical demo data requires an institution row, a role
-  grant, `academicSystemConnector: mock-sis` and a `mock-sis` run. `mock-sis` schedules its
-  teaching weeks from the term start, so a calendar check needs an enrolment for the signed-in
-  user and the week navigation to reach the first teaching week.
+**Account security (B53, ADR 0037)** shipped on 2026-10-04 at the user's request, ahead of
+B31: `/account/settings` edits the profile, changes the password, turns on two-step
+verification (TOTP plus recovery codes, a second step at sign-in) and lists and ends
+sessions. A session is now a sign-in, carried in the access token as `sid`. Not built: an
+institution requiring two-step verification, passkeys, changing the email address and
+security mail, and deleting your own account.
+
+**Course discussion (B58, ADR 0040)** shipped on 2026-10-18: a _Discussion_ tab on each
+course page, moderated by its teachers. Since 2026-10-19 an author edits their own posts
+(B60) and a post carries up to three files (B61).
+
+**Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
+SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
+
+**Notification mail (B59, ADR 0041)** shipped on 2026-10-19: e-mail copies of the
+notification types a person turns on in `/account/settings`, sent only for what is still
+unread after five minutes.
+
+**Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
+and a `studviro.ics` download on the calendar page.
+
+**Malware scanning (B62, ADR 0042)** shipped on 2026-10-19: with `MALWARE_SCAN=clamav`
+every upload is scanned by ClamAV in the background, usable but marked as not yet checked until then; off by default.
+
+**Uploads from the browser (B54)** were blocked by the client's CSP until 2026-10-18. The
+client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deployment.md`).
+
+## What to do next
+
+**Next task: B33 — links land on the offering's Overview, never on the thing.** B31 (time
+zones) shipped on 2026-10-18, and B32's missing course name with it; B33 is what is left of
+"notifications that land nowhere useful".
+
+After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
+2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
+B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
+the product feel like separate screens rather than one tool. **B35 needs a product answer
+first** — ask what a registrar should be able to do before building it.
+
+Noticed while walking, not fixed:
+
+- **The API never sees a client's address.** The BFF calls it from its own host, so every
+  session records the BFF's IP and the credential throttle counts all sign-ins through one
+  BFF instance together. Forwarding `X-Forwarded-For` as-is would let a caller pick their
+  throttle key; it needs the API to trust the BFF as a proxy hop (ADR 0037).
+- **This machine's disk is full** (5.8 GB free of 687 GB). MinIO answers every upload
+  `507`, so the storage, submissions, materials and personal-data e2e suites fail locally.
+  They pass against a MinIO with room (`STORAGE_ENDPOINT=…`).
+- **StudViro's Postgres container cannot start here**: another project's `db` holds port 5432. The 2026-10-04 walk ran against a throwaway Postgres on 5440 and Redis on 6390.
+- The account menu has _Account_ and _Account settings_ as two entries. A single account
+  page with tabs may read better once there is more to put there.
+
+- The demo student `ada@studviro.local` is a second-year student since 2026-10-18: a
+  student's past-year enrolments now follow the study year they were in then, so nobody
+  repeats a course and first-years have no history.
+- On this machine, the demo seed owns **Mock University of Košice**. "Demo University"
+  was created by hand and has almost no data, so walk the seeded one. The walk left behind a
+  course _AUDX-01_, a pending invitation to `audit.walkthrough.registrar@example.com` and a
+  few marks on Algorithms; `pnpm db:seed` puts it back.
+- `backend/.env` here had no `STORAGE_*` block, so every upload was signed for AWS and
+  failed. The MinIO defaults from `.env.example` were added on 2026-09-25.
+- The global `agent-browser` link points into a deleted worktree. Call
+  `~/.nvm/versions/node/v22.22.2/lib/node_modules/agent-browser/bin/agent-browser-linux-x64`.
+- `agent-browser click` by ref can land under the sticky header once a button is
+  scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
+  not an app bug.
+
+## Standing decisions — do not re-ask these
+
+- **Object storage**: Cloudflare R2 or AWS S3, both S3-compatible. MinIO runs in
+  `docker compose` for development and CI. **No credentials are needed until deploy; do not
+  create a bucket.** Four env vars switch targets — see `docs/Deployment.md`.
+- **Local only.** Do not deploy, do not create hosted resources, do not spend money. Record
+  what a release needs in `docs/Deployment.md` instead.
+- **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
+  in a table at the top of each document. Do not invent them.
+- **No quizzes** (ADR 0028).
+- **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
+
+## Traps that have cost time here
+
+- **A response that drifts from its own OpenAPI schema is refused by the client**, and reads
+  as "could not be loaded" on a 200. The e2e harness now validates every 2xx body against
+  `openapi.json` (`test/setup/openapi-contract.ts`), so the drift fails the server's suite.
+  MSW fixtures in the client are hand-written and do not catch it. A nullable enum must
+  list `null` in its values (`enum: [...VALUES, null]`) or the client refuses null;
+  `src/openapi-document.spec.ts` enforces it.
+
+- **A generic `CursorPageDto<T>` in an `@ApiOkResponse` breaks the generated client.**
+  Its `items` carries no type, so the client validates it as an array of arrays and
+  rejects every real response — "could not be loaded" on a 200, which reads as a
+  server fault. Write a concrete page DTO: `AuditEventPageDto`,
+  `PersonDirectoryPageDto`.
+- **A server-only read imported through a slice barrel that also re-exports
+  `'use client'` modules drags them into the client graph** — measured at 19 kB
+  gzipped. It is why `captchaEnabled` lives in `shared/auth` rather than
+  `entities/captcha`.
+- **The first `useQuery` on a route that had none pulls React Query's observer
+  machinery into its chunk** — 13.6 kB across the three auth routes. A value fixed
+  at deploy belongs in a Server Component and a prop.
+- **Regenerate both halves of the contract together.** A server returning a permission the
+  client's generated Zod enum does not know makes every permissions response fail validation
+  and every `can()` answer false — the app renders as if the caller had no rights. It looks
+  exactly like a permissions bug. `pnpm openapi:generate` then `pnpm api:generate`.
+- `nest start --watch` **does not release port 3010 on this machine**: every reload after the
+  first fails `EADDRINUSE` and the previous build keeps serving, silently invalidating any
+  live check. Build and run `node dist/main.js` when probing behaviour.
+- `pnpm db:generate` wants a TTY when drizzle-kit disambiguates a rename:
+  `script -qec "pnpm db:generate" /dev/null`.
+- **Importing a `@Global` module registers its `APP_GUARD` a second time and the second
+  registration denies everything.** `FeatureFlagGuard` lives in `AppModule` for this reason.
+- The frontend dev server does not reliably reload `messages/*.json` under Turbopack. Restart
+  it when a key renders as its own identifier.
+- `test/setup/global-setup.ts` reuses `DATABASE_URL` when set and the harness truncates every
+  table — `pnpm test:e2e` against the dev database wipes it. Re-seed after.
+- **Do not bulk-edit with regex across many files.** It has silently eaten closing braces here.
+- **`node dist/main.js` serves the build, not the source.** Probing behaviour after a code
+  change without `pnpm build` first measures the previous build and reads as "my fix did
+  nothing". Check `stat dist/...` against the source when a live check disagrees with a
+  green test.
+
+## Caveats worth knowing
+
+- **The bundle guard went up, not down.** It was raised to 540 kB for Phases 1–2 and meant
+  to come back down; the app measured 506 kB. By the time that was taken it measured
+  **539.88 kB** — an interface pass across every screen had spent the whole margin. It is
+  now **595 kB** against a measured 585.08 kB: account security spent 15.71 kB, the calendar
+  subscription card 2.19 kB, the institution clock 0.83 kB and the course discussion 5.8 kB,
+  which is what raised it from 580 kB. `.size-limit.mjs` has the full reasoning.
+  Every reduction lever that file has ever named is spent; the next person needing room
+  will have to ship less.
+- A `waitlisted` enrolment holds no place and is not on the roster. A `requested` one
+  holds a place while it is answered, but is not on the roster either.
+- The seed's anchor is fixed at 2026-10-15 to stay deterministic; the seeded year is
+  2026/2027. **Move the anchor once real time leaves it.** It deletes only the institution it
+  owns, and never resets an existing user's password.
+- `shared/ui`'s `Select` wraps the native control in a `w-fit` container, so `w-full` on the
+  control does nothing. Every select in the app is natural width.

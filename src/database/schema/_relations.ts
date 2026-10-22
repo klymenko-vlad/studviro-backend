@@ -22,17 +22,20 @@ import {
   assessmentResults,
   assessments,
   learningActivities,
+  learningMaterials,
   learningSpaces,
-  submissionRefs,
+  submissionFiles,
+  submissions,
 } from './learning';
 import { refreshTokens } from './refresh-tokens';
 import { roleAssignments } from './role-assignments';
 import { examRegistrations, examTerms, rooms, timetableEvents } from './scheduling';
-import { syncDomainResults, syncRuns, syncWatermarks } from './synchronization';
+import { userEmails } from './user-emails';
 import { users } from './users';
 
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
+  emails: many(userEmails),
   externalIdentities: many(externalIdentities),
   roleAssignments: many(roleAssignments),
   programMemberships: many(programMemberships),
@@ -42,7 +45,15 @@ export const usersRelations = relations(users, ({ many }) => ({
   examRegistrations: many(examRegistrations),
   assessmentResults: many(assessmentResults, { relationName: 'assessmentResultSubject' }),
   activityCompletions: many(activityCompletions),
-  submissionRefs: many(submissionRefs),
+  submissions: many(submissions),
+}));
+
+export const userEmailsRelations = relations(userEmails, ({ one }) => ({
+  user: one(users, { fields: [userEmails.userId], references: [users.id] }),
+  institution: one(institutions, {
+    fields: [userEmails.institutionId],
+    references: [institutions.id],
+  }),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -227,7 +238,15 @@ export const learningSpacesRelations = relations(learningSpaces, ({ one, many })
     references: [courseOfferings.id],
   }),
   activities: many(learningActivities),
+  materials: many(learningMaterials),
   assessments: many(assessments),
+}));
+
+export const learningMaterialsRelations = relations(learningMaterials, ({ one }) => ({
+  learningSpace: one(learningSpaces, {
+    fields: [learningMaterials.learningSpaceId],
+    references: [learningSpaces.id],
+  }),
 }));
 
 export const learningActivitiesRelations = relations(learningActivities, ({ one, many }) => ({
@@ -237,7 +256,7 @@ export const learningActivitiesRelations = relations(learningActivities, ({ one,
   }),
   assessments: many(assessments),
   completions: many(activityCompletions),
-  submissionRefs: many(submissionRefs),
+  submissions: many(submissions),
 }));
 
 export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
@@ -277,12 +296,20 @@ export const activityCompletionsRelations = relations(activityCompletions, ({ on
   user: one(users, { fields: [activityCompletions.userId], references: [users.id] }),
 }));
 
-export const submissionRefsRelations = relations(submissionRefs, ({ one }) => ({
+export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   learningActivity: one(learningActivities, {
-    fields: [submissionRefs.learningActivityId],
+    fields: [submissions.learningActivityId],
     references: [learningActivities.id],
   }),
-  user: one(users, { fields: [submissionRefs.userId], references: [users.id] }),
+  user: one(users, { fields: [submissions.userId], references: [users.id] }),
+  files: many(submissionFiles),
+}));
+
+export const submissionFilesRelations = relations(submissionFiles, ({ one }) => ({
+  submission: one(submissions, {
+    fields: [submissionFiles.submissionId],
+    references: [submissions.id],
+  }),
 }));
 
 export const officialCourseResultsRelations = relations(officialCourseResults, ({ one }) => ({
@@ -300,25 +327,4 @@ export const officialCourseResultsRelations = relations(officialCourseResults, (
     references: [users.id],
     relationName: 'officialCourseResultRecorder',
   }),
-}));
-
-export const syncRunsRelations = relations(syncRuns, ({ one, many }) => ({
-  institution: one(institutions, {
-    fields: [syncRuns.institutionId],
-    references: [institutions.id],
-  }),
-  requestedBy: one(users, { fields: [syncRuns.requestedById], references: [users.id] }),
-  domainResults: many(syncDomainResults),
-}));
-
-export const syncDomainResultsRelations = relations(syncDomainResults, ({ one }) => ({
-  run: one(syncRuns, { fields: [syncDomainResults.runId], references: [syncRuns.id] }),
-}));
-
-export const syncWatermarksRelations = relations(syncWatermarks, ({ one }) => ({
-  institution: one(institutions, {
-    fields: [syncWatermarks.institutionId],
-    references: [institutions.id],
-  }),
-  lastRun: one(syncRuns, { fields: [syncWatermarks.lastRunId], references: [syncRuns.id] }),
 }));

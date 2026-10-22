@@ -19,7 +19,8 @@ export function buildOpenApiDocument(
     .setVersion('1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
     .addTag('auth', 'Authentication and session lifecycle')
-    .addTag('users', 'User accounts');
+    .addTag('users', 'User accounts')
+    .addTag('marketing', 'Public marketing and lead capture');
 
   if (options.appUrl) {
     builder.addServer(options.appUrl);

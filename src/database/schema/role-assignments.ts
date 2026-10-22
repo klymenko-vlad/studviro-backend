@@ -1,7 +1,7 @@
 import { isNull, sql } from 'drizzle-orm';
 import { check, index, pgEnum, pgTable, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import { deletedAt, provenance, timestampColumn, timestamps } from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { institutionId } from './institutions';
 import { users } from './users';
 
@@ -41,7 +41,6 @@ export const roleAssignments = pgTable(
     validFrom: timestampColumn('valid_from'),
     validUntil: timestampColumn('valid_until'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [

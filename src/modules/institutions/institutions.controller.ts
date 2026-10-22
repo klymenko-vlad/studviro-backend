@@ -1,10 +1,18 @@
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 
+import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { InstitutionResponseDto } from './dto/institution-response.dto';
 import { InstitutionsService } from './institutions.service';
 
@@ -13,6 +21,19 @@ import { InstitutionsService } from './institutions.service';
 @Controller({ path: 'institutions', version: '1' })
 export class InstitutionsController {
   constructor(private readonly institutions: InstitutionsService) {}
+
+  @Post()
+  @Roles('admin')
+  @ApiOperation({
+    operationId: 'createInstitution',
+    summary:
+      'Create an institution and grant its first institution_admin, restricted to a platform operator',
+  })
+  @ApiCreatedResponse({ type: InstitutionResponseDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  create(@Body() dto: CreateInstitutionDto): Promise<InstitutionResponseDto> {
+    return this.institutions.create(dto);
+  }
 
   @Get()
   @ApiOperation({

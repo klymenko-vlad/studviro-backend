@@ -3,39 +3,30 @@ import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import type { JobsOptions } from 'bullmq';
 
-import { emailJobSchemas, type EmailJobName, type EmailJobPayload } from './jobs/email.jobs';
-import {
-  synchronizationJobSchemas,
-  type SynchronizationJobName,
-  type SynchronizationJobPayload,
-} from './jobs/synchronization.jobs';
+import { emailJobSchemas, type EmailJobInput, type EmailJobName } from './jobs/email.jobs';
+import { mediaJobSchemas } from './jobs/media.jobs';
 import { QUEUES } from './queue.constants';
 
 @Injectable()
 export class QueueProducer {
   constructor(
     @InjectQueue(QUEUES.EMAIL) private readonly emailQueue: Queue,
-    @InjectQueue(QUEUES.SYNCHRONIZATION) private readonly synchronizationQueue: Queue,
+    @InjectQueue(QUEUES.MEDIA) private readonly mediaQueue: Queue,
   ) {}
 
-  async enqueueSynchronization<TName extends SynchronizationJobName>(
-    name: TName,
-    payload: SynchronizationJobPayload<TName>,
-    options?: JobsOptions,
-  ): Promise<string> {
-    const data = synchronizationJobSchemas[name].parse(payload);
+  /** One waiting scan per object: a second request while one is queued is a no-op. */
+  async enqueueScan(storageKey: string, institutionId: string, delayMs = 0): Promise<void> {
+    const data = mediaJobSchemas.scanObject.parse({ storageKey, institutionId });
 
-    const job = await this.synchronizationQueue.add(name, data, {
-      deduplication: { id: `${name}:${data.runId}` },
-      ...options,
+    await this.mediaQueue.add('scanObject', data, {
+      delay: delayMs,
+      deduplication: { id: `scan:${storageKey}` },
     });
-
-    return job.id ?? '';
   }
 
   async enqueueEmail<TName extends EmailJobName>(
     name: TName,
-    payload: EmailJobPayload<TName>,
+    payload: EmailJobInput<TName>,
     options?: JobsOptions,
   ): Promise<string> {
     const data = emailJobSchemas[name].parse(payload);
@@ -47,7 +38,7 @@ export class QueueProducer {
 
   async enqueueEmailOnce<TName extends EmailJobName>(
     name: TName,
-    payload: EmailJobPayload<TName>,
+    payload: EmailJobInput<TName>,
     key: string,
     ttlMs = 60_000,
   ): Promise<string> {

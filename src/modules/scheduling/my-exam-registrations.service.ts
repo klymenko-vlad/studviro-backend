@@ -1,0 +1,174 @@
+import { Injectable } from '@nestjs/common';
+
+import {
+  ConflictError,
+  EntityNotFoundError,
+  InvalidInputError,
+} from '../../common/errors/domain.error';
+import type { ExamRegistration } from '../../database/schema';
+import { TransactionHost } from '../../database/transaction.host';
+import { ExamRegistrationNotificationsService } from '../notifications/exam-registration-notifications.service';
+
+import { attemptsRequiredFor, laddersTo } from './exam-attempt-ladder';
+import { registrationClosesAt } from './exam-registration-window';
+import {
+  MyExamRegistrationsRepository,
+  type LiveRegistrationRow,
+  type RegistrableExamTermRow,
+} from './my-exam-registrations.repository';
+
+@Injectable()
+export class MyExamRegistrationsService {
+  constructor(
+    private readonly repository: MyExamRegistrationsRepository,
+    private readonly txHost: TransactionHost,
+    private readonly notifications: ExamRegistrationNotificationsService,
+  ) {}
+
+  async register(
+    institutionId: string,
+    userId: string,
+    examTermId: string,
+    now = new Date(),
+  ): Promise<ExamRegistration> {
+    const registration = await this.txHost.runSerializable(async () => {
+      const term = await this.repository.findRegistrableTerm(institutionId, userId, examTermId);
+
+      if (!term) throw new EntityNotFoundError('exam term', examTermId);
+
+      this.assertEnrolled(term);
+      this.assertLaddered(term);
+      this.assertOpen(term, now);
+      await this.assertNotAlreadyRegistered(institutionId, userId, term);
+      this.assertSeatFree(term);
+
+      return this.repository.register(institutionId, userId, examTermId, now);
+    });
+
+    await this.notifications.confirmed(registration, now);
+
+    return registration;
+  }
+
+  async cancel(
+    institutionId: string,
+    userId: string,
+    registrationId: string,
+    now = new Date(),
+  ): Promise<ExamRegistration> {
+    const registration = await this.txHost.run(async () => {
+      const existing = await this.repository.findLiveRegistrationById(
+        institutionId,
+        userId,
+        registrationId,
+      );
+
+      if (!existing) throw new EntityNotFoundError('exam registration', registrationId);
+
+      this.assertCancellable(existing, now);
+
+      return this.repository.cancel(registrationId, now);
+    });
+
+    await this.notifications.cancelled(registration, now);
+
+    return registration;
+  }
+
+  private assertEnrolled(term: RegistrableExamTermRow): void {
+    if (term.enrolled) return;
+
+    throw new InvalidInputError(
+      'EXAM_TERM_NOT_ENROLLED',
+      'Only a student enrolled in the course can register for its exam',
+      { examTermId: term.examTermId },
+    );
+  }
+
+  private assertLaddered(term: RegistrableExamTermRow): void {
+    if (laddersTo(term.kind, term.attemptsSpent)) return;
+
+    throw new InvalidInputError(
+      'EXAM_ATTEMPT_NOT_EARNED',
+      'A retake is only open to a student who failed the attempt before it',
+      {
+        examTermId: term.examTermId,
+        kind: term.kind,
+        attemptsSpent: term.attemptsSpent,
+        attemptsRequired: attemptsRequiredFor(term.kind),
+      },
+    );
+  }
+
+  private assertOpen(term: RegistrableExamTermRow, now: Date): void {
+    if (term.cancelledAt !== null) {
+      throw new InvalidInputError('EXAM_TERM_CANCELLED', 'That exam term has been cancelled', {
+        examTermId: term.examTermId,
+      });
+    }
+
+    if (term.registrationOpensAt !== null && now < term.registrationOpensAt) {
+      throw new InvalidInputError(
+        'EXAM_REGISTRATION_NOT_OPEN',
+        'Registration for that exam term has not opened yet',
+        { registrationOpensAt: term.registrationOpensAt },
+      );
+    }
+
+    if (now >= registrationClosesAt(term)) {
+      throw new InvalidInputError(
+        'EXAM_REGISTRATION_CLOSED',
+        'Registration for that exam term has closed',
+        { registrationClosesAt: registrationClosesAt(term) },
+      );
+    }
+  }
+
+  private async assertNotAlreadyRegistered(
+    institutionId: string,
+    userId: string,
+    term: RegistrableExamTermRow,
+  ): Promise<void> {
+    const live = await this.repository.findLiveRegistrationForOffering(
+      institutionId,
+      userId,
+      term.offeringId,
+    );
+
+    if (!live) return;
+
+    if (live.examTermId === term.examTermId) {
+      throw new ConflictError(
+        'EXAM_ALREADY_REGISTERED',
+        'You are already registered for that exam term',
+        { registrationId: live.registration.id },
+      );
+    }
+
+    throw new ConflictError(
+      'EXAM_ALREADY_REGISTERED_FOR_COURSE',
+      'You already hold a registration for another term of this course',
+      { registrationId: live.registration.id, examTermId: live.examTermId },
+    );
+  }
+
+  private assertSeatFree(term: RegistrableExamTermRow): void {
+    if (term.capacity === null || term.registeredCount < term.capacity) return;
+
+    throw new ConflictError('EXAM_TERM_FULL', 'That exam term has no seats left', {
+      examTermId: term.examTermId,
+    });
+  }
+
+  private assertCancellable(registration: LiveRegistrationRow, now: Date): void {
+    if (registration.termCancelledAt !== null) return;
+
+    if (now >= registrationClosesAt(registration)) {
+      throw new InvalidInputError(
+        'EXAM_REGISTRATION_CLOSED',
+        'Registration for that exam term has closed and can no longer be cancelled',
+        { registrationClosesAt: registrationClosesAt(registration) },
+      );
+    }
+  }
+}

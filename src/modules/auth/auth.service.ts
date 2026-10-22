@@ -3,9 +3,9 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { PasswordService } from '../../common/crypto/password.service';
 import { UnauthenticatedError } from '../../common/errors/domain.error';
-import type { Transaction } from '../../database/database.tokens';
 import type { User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+import { QueueProducer } from '../../queue/queue.producer';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersRepository } from '../users/users.repository';
@@ -15,12 +15,13 @@ import type { AuthenticatedUser } from './auth.constants';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
+import { SessionIssuer, type SessionContext } from './sessions/session-issuer.service';
 import { TokenService } from './token.service';
+import { TwoFactorChallenges } from './two-factor/two-factor-challenges.service';
+import { TwoFactorCredentialsRepository } from './two-factor/two-factor-credentials.repository';
+import { TwoFactorRequiredError } from './two-factor/two-factor-required.error';
 
-export interface SessionContext {
-  readonly userAgent?: string | undefined;
-  readonly ipAddress?: string | undefined;
-}
+export type { SessionContext } from './sessions/session-issuer.service';
 
 /**
  * An argon2 digest of a value nobody knows, verified against whenever the email
@@ -34,6 +35,13 @@ const ABSENT_USER_DIGEST =
 /** Every refusal path returns this so the transaction still commits. */
 const REJECTED = Symbol('refresh.rejected');
 
+/**
+ * How long after its rotation a spent refresh token is refused without being read
+ * as a leak. Long enough to cover requests that raced the rotation, short enough
+ * that a thief replaying a copy later still trips the family revocation.
+ */
+export const REFRESH_REUSE_GRACE_MS = 15_000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -43,26 +51,50 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly passwords: PasswordService,
     private readonly txHost: TransactionHost,
+    private readonly sessions: SessionIssuer,
+    private readonly twoFactor: TwoFactorCredentialsRepository,
+    private readonly challenges: TwoFactorChallenges,
     private readonly logger: PinoLogger,
+    private readonly queue: QueueProducer,
   ) {
     this.logger.setContext(AuthService.name);
   }
 
   async register(dto: CreateUserDto, context: SessionContext): Promise<AuthTokensDto> {
-    return this.txHost.run(async (tx) => {
+    const { tokens, entity } = await this.txHost.run(async (tx) => {
       const user = await this.usersService.create(dto, tx);
-      const entity = await this.usersRepository.findByIdOrFail(
+      const created = await this.usersRepository.findByIdOrFail(
         user.id,
         { consistent: true },
         tx,
       );
 
-      return this.issueSession(entity, context, tx);
+      return { tokens: await this.sessions.start(created, context, tx), entity: created };
     });
+
+    await this.welcome(entity);
+
+    return tokens;
+  }
+
+  /** A lost welcome is not worth failing a sign-up over; a lost reset would be. */
+  private async welcome(user: User): Promise<void> {
+    try {
+      await this.queue.enqueueEmail('welcome', {
+        userId: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        locale: user.locale,
+      });
+    } catch (error) {
+      this.logger.warn({ err: error, userId: user.id }, 'welcome mail not queued');
+    }
   }
 
   async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensDto> {
-    const user = await this.usersRepository.findByEmail(dto.email, { consistent: true });
+    const user = await this.usersRepository.findSignInCandidate(dto.email, {
+      consistent: true,
+    });
 
     const passwordMatches = await this.passwords.verify(
       user?.passwordHash ?? ABSENT_USER_DIGEST,
@@ -71,7 +103,7 @@ export class AuthService {
 
     // One error for "no such email" and for "wrong password". Distinguishing
     // them tells an attacker which half of the guess was right.
-    if (!user || !passwordMatches) throw invalidCredentials();
+    if (!user?.passwordHash || !passwordMatches) throw invalidCredentials();
 
     const fresh = this.passwords.needsRehash(user.passwordHash)
       ? await this.usersRepository.update(user.id, {
@@ -79,7 +111,11 @@ export class AuthService {
         })
       : user;
 
-    return this.issueSession(fresh, context);
+    if (await this.twoFactor.isEnabledFor(fresh.id)) {
+      throw new TwoFactorRequiredError(await this.challenges.open(fresh.id));
+    }
+
+    return this.sessions.start(fresh, context);
   }
 
   /**
@@ -103,6 +139,17 @@ export class AuthService {
       // a plain rejection — cascading from it would let any user end all of
       // their own sessions by accident.
       if (stored.revokedAt && !stored.replacedByTokenHash) return REJECTED;
+
+      // Rotated a moment ago: the likeliest holder is a request that raced the
+      // rotation with the same cookie — a page fanning out, a second tab, another
+      // instance of the client's server. Refused, but not read as a leak; ending
+      // every session over it would sign the user out for loading a page.
+      if (
+        stored.revokedAt &&
+        Date.now() - stored.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS
+      ) {
+        return REJECTED;
+      }
 
       if (stored.revokedAt) {
         /**
@@ -137,6 +184,8 @@ export class AuthService {
       await this.refreshTokens.create(
         {
           userId: user.id,
+          sessionId: stored.sessionId,
+          sessionStartedAt: stored.sessionStartedAt,
           tokenHash: issuedHash,
           expiresAt: issued.expiresAt,
           userAgent: context.userAgent ?? null,
@@ -145,7 +194,7 @@ export class AuthService {
         tx,
       );
 
-      const access = await this.tokens.issueAccessToken(user);
+      const access = await this.tokens.issueAccessToken(user, stored.sessionId);
 
       return AuthTokensDto.of(
         access.token,
@@ -184,35 +233,6 @@ export class AuthService {
 
   async me(user: AuthenticatedUser): Promise<UserResponseDto> {
     return this.usersService.findOne(user.id);
-  }
-
-  private async issueSession(
-    user: User,
-    context: SessionContext,
-    tx?: Transaction,
-  ): Promise<AuthTokensDto> {
-    const [access, refresh] = await Promise.all([
-      this.tokens.issueAccessToken(user),
-      this.tokens.issueRefreshToken(user.id),
-    ]);
-
-    await this.refreshTokens.create(
-      {
-        userId: user.id,
-        tokenHash: this.tokens.hash(refresh.token),
-        expiresAt: refresh.expiresAt,
-        userAgent: context.userAgent ?? null,
-        ipAddress: context.ipAddress ?? null,
-      },
-      tx,
-    );
-
-    return AuthTokensDto.of(
-      access.token,
-      refresh.token,
-      access.expiresAt,
-      UserResponseDto.fromEntity(user),
-    );
   }
 }
 

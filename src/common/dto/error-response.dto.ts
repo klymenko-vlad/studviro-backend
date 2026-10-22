@@ -13,6 +13,12 @@ export class ErrorResponseDto {
   @ApiProperty({ example: 'Bad Request' })
   error!: string;
 
+  @ApiPropertyOptional({
+    example: 'CURRENT_PASSWORD_INCORRECT',
+    description: 'Stable, machine-readable reason. Branch on this, not on `message`.',
+  })
+  code?: string;
+
   /** A single message, or one entry per failed validation constraint. */
   @ApiProperty({
     oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],

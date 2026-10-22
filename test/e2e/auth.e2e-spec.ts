@@ -1,5 +1,8 @@
+import { isNotNull } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { refreshTokens, users } from '../../src/database/schema';
+import { REFRESH_REUSE_GRACE_MS } from '../../src/modules/auth/auth.service';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
 
 describe('Auth (e2e)', () => {
@@ -61,6 +64,14 @@ describe('Auth (e2e)', () => {
       expect(profile.statusCode).toBe(200);
     });
 
+    it('accepts a password at the eight-character floor', async () => {
+      expect((await register({ password: 'x'.repeat(8) })).statusCode).toBe(201);
+    });
+
+    it('rejects a password below it', async () => {
+      expect((await register({ password: 'x'.repeat(7) })).statusCode).toBe(400);
+    });
+
     it('rejects a duplicate email with a conflict, not a 500', async () => {
       await register();
 
@@ -90,6 +101,38 @@ describe('Auth (e2e)', () => {
       expect(unknown.statusCode).toBe(wrong.statusCode);
       expect(unknown.json().code).toBe(wrong.json().code);
     });
+
+    it('refuses an account that has been suspended', async () => {
+      await harness.db.update(users).set({ status: 'suspended' });
+
+      const response = await login();
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().code).toBe('INVALID_CREDENTIALS');
+    });
+
+    it('ignores an invited record sharing the address with a real account', async () => {
+      await harness.db.insert(users).values({
+        email: credentials.email,
+        displayName: 'Imported Ada',
+        status: 'invited',
+      });
+
+      expect((await login()).statusCode).toBe(200);
+    });
+  });
+
+  describe('suspension', () => {
+    it('stops an outstanding access token the moment the account is suspended', async () => {
+      const session = (await register()).json();
+
+      await harness.db.update(users).set({ status: 'suspended' });
+
+      const response = await me(session.accessToken);
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().code).toBe('TOKEN_REVOKED');
+    });
   });
 
   describe('refresh rotation', () => {
@@ -117,9 +160,23 @@ describe('Auth (e2e)', () => {
       expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 401]);
     });
 
+    it('keeps the session when a rotated token comes back moments later', async () => {
+      const { refreshToken } = (await register()).json();
+      const rotated = (await refresh(refreshToken)).json();
+
+      // A page load whose requests raced the rotation with the same cookie.
+      expect((await refresh(refreshToken)).statusCode).toBe(401);
+      expect((await refresh(rotated.refreshToken)).statusCode).toBe(200);
+    });
+
     it('revokes the whole family when a rotated token is replayed', async () => {
       const { refreshToken } = (await register()).json();
       const rotated = (await refresh(refreshToken)).json();
+      // Past the grace window a race no longer explains it.
+      await harness.db
+        .update(refreshTokens)
+        .set({ revokedAt: new Date(Date.now() - REFRESH_REUSE_GRACE_MS - 1_000) })
+        .where(isNotNull(refreshTokens.replacedByTokenHash));
 
       // Replaying the old token proves it leaked. Which holder is the attacker
       // is unknowable, so every session for the user has to end — including the

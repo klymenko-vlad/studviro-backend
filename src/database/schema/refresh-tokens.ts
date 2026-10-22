@@ -23,6 +23,8 @@ export const refreshTokens = pgTable(
      * the token leaked, and the whole family is revoked.
      */
     replacedByTokenHash: text('replaced_by_token_hash'),
+    sessionId: uuid('session_id').notNull().defaultRandom(),
+    sessionStartedAt: timestampColumn('session_started_at').notNull().defaultNow(),
     revokedAt: timestampColumn('revoked_at'),
     expiresAt: timestampColumn('expires_at').notNull(),
     userAgent: text('user_agent'),
@@ -32,6 +34,7 @@ export const refreshTokens = pgTable(
   },
   (table) => [
     index('refresh_tokens_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
+    index('refresh_tokens_session_id_idx').on(table.sessionId).where(isNull(table.revokedAt)),
     // Drives the expiry sweep; partial so it stays small as tokens are cleaned.
     index('refresh_tokens_expires_at_idx')
       .on(table.expiresAt)

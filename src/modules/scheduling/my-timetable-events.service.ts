@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { InvalidInputError } from '../../common/errors/domain.error';
-import type {
-  SourceSystem,
-  StudyGroupKind,
-  SynchronizationStatus,
-  TimetableEventType,
-} from '../../database/schema';
+import type { StudyGroupKind, TimetableEventType } from '../../database/schema';
 
 import {
   MyTimetableEventsRepository,
@@ -38,13 +33,6 @@ export interface MyTimetableEvent {
   offering: { id: string };
   course: { id: string; code: string; title: string };
   term: { id: string; code: string; name: string };
-  provenance: {
-    sourceSystem: SourceSystem;
-    externalId: string | null;
-    sourceUpdatedAt: Date | null;
-    lastSynchronizedAt: Date | null;
-    synchronizationStatus: SynchronizationStatus;
-  };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -96,13 +84,6 @@ export class MyTimetableEventsService {
       offering: { id: row.offeringId },
       course: { id: row.courseId, code: row.courseCode, title: row.courseTitle },
       term: { id: row.termId, code: row.termCode, name: row.termName },
-      provenance: {
-        sourceSystem: row.sourceSystem,
-        externalId: row.externalId,
-        sourceUpdatedAt: row.sourceUpdatedAt,
-        lastSynchronizedAt: row.lastSynchronizedAt,
-        synchronizationStatus: row.synchronizationStatus,
-      },
     };
   }
 }

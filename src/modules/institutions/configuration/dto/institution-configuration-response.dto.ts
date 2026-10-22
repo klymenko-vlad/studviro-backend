@@ -1,19 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
-import { FEATURE_FLAGS, TERMINOLOGY_KEYS } from '../../../../database/schema';
+import { FEATURE_FLAGS, TERMINOLOGY_KEYS, type FeatureFlag } from '../../../../database/schema';
+import { IMPLEMENTED_FEATURES } from '../institution-configuration.defaults';
 import type {
   InstitutionConfiguration,
-  ResolvedConnectors,
   ResolvedFeatures,
   ResolvedTerminology,
 } from '../institution-configuration.types';
-
-@Exclude()
-export class InstitutionConnectorsDto {
-  @Expose() @ApiProperty({ type: String, nullable: true }) academicSystem!: string | null;
-  @Expose() @ApiProperty({ type: String, nullable: true }) learningSystem!: string | null;
-}
 
 @Exclude()
 export class InstitutionConfigurationResponseDto {
@@ -39,7 +33,14 @@ export class InstitutionConfigurationResponseDto {
   })
   features!: ResolvedFeatures;
 
-  @Expose() @ApiProperty({ type: InstitutionConnectorsDto }) connectors!: ResolvedConnectors;
+  @Expose()
+  @ApiProperty({
+    enum: FEATURE_FLAGS,
+    isArray: true,
+    description:
+      'The flags this platform build actually enforces. A flag outside this list is stored and resolved but gates nothing, so the screen must not offer it as a live control.',
+  })
+  implementedFeatures!: readonly FeatureFlag[];
 
   static fromConfiguration(
     configuration: InstitutionConfiguration,
@@ -53,7 +54,7 @@ export class InstitutionConfigurationResponseDto {
     dto.timezone = configuration.timezone;
     dto.terminology = configuration.terminology;
     dto.features = configuration.features;
-    dto.connectors = configuration.connectors;
+    dto.implementedFeatures = IMPLEMENTED_FEATURES;
 
     return dto;
   }

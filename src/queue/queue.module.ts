@@ -3,10 +3,10 @@ import { Global, Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 
 import { AppConfigService } from '../config/app-config.service';
-import { SynchronizationModule } from '../modules/synchronization/synchronization.module';
+import { MailModule } from '../mail/mail.module';
 
 import { EmailProcessor } from './processors/email.processor';
-import { SynchronizationProcessor } from './processors/synchronization.processor';
+import { MalwareScanProcessor } from './processors/malware-scan.processor';
 import { QUEUES, type QueueName } from './queue.constants';
 import { QueueProducer } from './queue.producer';
 
@@ -48,9 +48,9 @@ export class QueueModule {
   static forWorkers(): DynamicModule {
     return {
       module: QueueModule,
-      imports: [SynchronizationModule],
-      providers: [EmailProcessor, SynchronizationProcessor],
-      exports: [EmailProcessor, SynchronizationProcessor],
+      imports: [MailModule],
+      providers: [EmailProcessor, MalwareScanProcessor],
+      exports: [EmailProcessor, MalwareScanProcessor],
     };
   }
 }

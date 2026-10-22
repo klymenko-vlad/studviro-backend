@@ -1,4 +1,4 @@
-import { isNull } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -11,13 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import {
-  deletedAt,
-  externalIdUnique,
-  provenance,
-  timestampColumn,
-  timestamps,
-} from './_shared';
+import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
 import { users } from './users';
@@ -32,23 +26,20 @@ export const learningSpaces = pgTable(
     }),
     name: text('name').notNull(),
     shortName: text('short_name'),
-    url: text('url'),
+    summary: text('summary'),
     visible: boolean('visible').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('learning_spaces_external_id_unique_idx', table),
     uniqueIndex('learning_spaces_offering_unique_idx')
-      .on(table.courseOfferingId, table.sourceSystem)
+      .on(table.courseOfferingId)
       .where(isNull(table.deletedAt)),
   ],
 );
 
 export const LEARNING_ACTIVITY_TYPES = [
   'assignment',
-  'quiz',
   'forum',
   'resource',
   'workshop',
@@ -67,23 +58,61 @@ export const learningActivities = pgTable(
       .references(() => learningSpaces.id, { onDelete: 'cascade' }),
     type: learningActivityType('type').notNull().default('other'),
     name: text('name').notNull(),
-    url: text('url'),
+    brief: text('brief'),
     position: integer('position'),
     opensAt: timestampColumn('opens_at'),
     dueAt: timestampColumn('due_at'),
     closesAt: timestampColumn('closes_at'),
+    maxAttempts: integer('max_attempts'),
+    allowsLateSubmission: boolean('allows_late_submission').notNull().default(false),
     visible: boolean('visible').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('learning_activities_external_id_unique_idx', table),
     index('learning_activities_space_idx')
       .on(table.learningSpaceId, table.position)
       .where(isNull(table.deletedAt)),
     index('learning_activities_due_at_idx')
       .on(table.institutionId, table.dueAt)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
+export const LEARNING_MATERIAL_KINDS = ['file', 'link', 'text'] as const;
+export type LearningMaterialKind = (typeof LEARNING_MATERIAL_KINDS)[number];
+export const learningMaterialKind = pgEnum('learning_material_kind', LEARNING_MATERIAL_KINDS);
+
+export const learningMaterials = pgTable(
+  'learning_materials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    learningSpaceId: uuid('learning_space_id')
+      .notNull()
+      .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    kind: learningMaterialKind('kind').notNull(),
+    title: text('title').notNull(),
+    description: text('description'),
+    body: text('body'),
+    url: text('url'),
+    storageKey: text('storage_key'),
+    filename: text('filename'),
+    contentType: text('content_type'),
+    sizeBytes: integer('size_bytes'),
+    scanStatus: scanStatusColumn(),
+    position: integer('position').notNull().default(0),
+    visible: boolean('visible').notNull().default(true),
+    createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('learning_materials_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
+    index('learning_materials_space_idx')
+      .on(table.learningSpaceId, table.position)
       .where(isNull(table.deletedAt)),
   ],
 );
@@ -104,11 +133,9 @@ export const assessments = pgTable(
     weight: numeric('weight', { precision: 10, scale: 4 }),
     countsTowardFinalGrade: boolean('counts_toward_final_grade').notNull().default(true),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    externalIdUnique('assessments_external_id_unique_idx', table),
     index('assessments_space_idx').on(table.learningSpaceId).where(isNull(table.deletedAt)),
   ],
 );
@@ -130,14 +157,12 @@ export const assessmentResults = pgTable(
     gradedAt: timestampColumn('graded_at'),
     gradedById: uuid('graded_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('assessment_results_unique_idx')
       .on(table.assessmentId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('assessment_results_external_id_unique_idx', table),
     index('assessment_results_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -168,14 +193,12 @@ export const activityCompletions = pgTable(
     state: activityCompletionState('state').notNull().default('incomplete'),
     completedAt: timestampColumn('completed_at'),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
     uniqueIndex('activity_completions_unique_idx')
       .on(table.learningActivityId, table.userId)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('activity_completions_external_id_unique_idx', table),
     index('activity_completions_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
   ],
 );
@@ -184,8 +207,8 @@ export const SUBMISSION_STATES = ['draft', 'submitted', 'returned', 'graded'] as
 export type SubmissionState = (typeof SUBMISSION_STATES)[number];
 export const submissionState = pgEnum('submission_state', SUBMISSION_STATES);
 
-export const submissionRefs = pgTable(
-  'submission_refs',
+export const submissions = pgTable(
+  'submissions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     institutionId: institutionId(),
@@ -199,18 +222,42 @@ export const submissionRefs = pgTable(
     attempt: integer('attempt').notNull().default(1),
     submittedAt: timestampColumn('submitted_at'),
     isLate: boolean('is_late').notNull().default(false),
-    url: text('url'),
-    fileCount: integer('file_count'),
+    notes: text('notes'),
+    fileCount: integer('file_count').notNull().default(0),
     deletedAt,
-    ...provenance,
     ...timestamps,
   },
   (table) => [
-    uniqueIndex('submission_refs_unique_idx')
+    uniqueIndex('submissions_unique_idx')
       .on(table.learningActivityId, table.userId, table.attempt)
       .where(isNull(table.deletedAt)),
-    externalIdUnique('submission_refs_external_id_unique_idx', table),
-    index('submission_refs_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
+    index('submissions_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
+  ],
+);
+
+export const submissionFiles = pgTable(
+  'submission_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    submissionId: uuid('submission_id')
+      .notNull()
+      .references(() => submissions.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    scanStatus: scanStatusColumn(),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('submission_files_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
+    index('submission_files_submission_idx')
+      .on(table.submissionId)
+      .where(isNull(table.deletedAt)),
   ],
 );
 
@@ -218,11 +265,15 @@ export type LearningSpace = typeof learningSpaces.$inferSelect;
 export type NewLearningSpace = typeof learningSpaces.$inferInsert;
 export type LearningActivity = typeof learningActivities.$inferSelect;
 export type NewLearningActivity = typeof learningActivities.$inferInsert;
+export type LearningMaterial = typeof learningMaterials.$inferSelect;
+export type NewLearningMaterial = typeof learningMaterials.$inferInsert;
 export type Assessment = typeof assessments.$inferSelect;
 export type NewAssessment = typeof assessments.$inferInsert;
 export type AssessmentResult = typeof assessmentResults.$inferSelect;
 export type NewAssessmentResult = typeof assessmentResults.$inferInsert;
 export type ActivityCompletion = typeof activityCompletions.$inferSelect;
 export type NewActivityCompletion = typeof activityCompletions.$inferInsert;
-export type SubmissionRef = typeof submissionRefs.$inferSelect;
-export type NewSubmissionRef = typeof submissionRefs.$inferInsert;
+export type Submission = typeof submissions.$inferSelect;
+export type NewSubmission = typeof submissions.$inferInsert;
+export type SubmissionFile = typeof submissionFiles.$inferSelect;
+export type NewSubmissionFile = typeof submissionFiles.$inferInsert;

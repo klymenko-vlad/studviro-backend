@@ -44,68 +44,6 @@ describe('Canonical academic schema (e2e)', () => {
     institutionId = institution.id;
   });
 
-  describe('provenance', () => {
-    it('rejects a second live row for the same source record', async () => {
-      await harness.db
-        .insert(courses)
-        .values(course({ sourceSystem: 'sis', externalId: 'SIS-1' }));
-
-      await expect(
-        harness.db
-          .insert(courses)
-          .values(course({ code: 'INF102', sourceSystem: 'sis', externalId: 'SIS-1' })),
-      ).rejects.toThrow();
-    });
-
-    it('lets two source systems use the same external id', async () => {
-      await harness.db
-        .insert(courses)
-        .values(course({ sourceSystem: 'sis', externalId: 'shared' }));
-
-      await expect(
-        harness.db
-          .insert(courses)
-          .values(course({ code: 'INF102', sourceSystem: 'lms', externalId: 'shared' })),
-      ).resolves.toBeDefined();
-    });
-
-    it('does not constrain platform-owned rows that have no external id', async () => {
-      await harness.db.insert(courses).values(course());
-
-      await expect(
-        harness.db.insert(courses).values(course({ code: 'INF102' })),
-      ).resolves.toBeDefined();
-    });
-
-    it('frees the source record once the canonical row is soft-deleted', async () => {
-      const created = only(
-        await harness.db
-          .insert(courses)
-          .values(course({ sourceSystem: 'sis', externalId: 'SIS-1' }))
-          .returning(),
-      );
-
-      await harness.db
-        .update(courses)
-        .set({ deletedAt: new Date() })
-        .where(eq(courses.id, created.id));
-
-      await expect(
-        harness.db
-          .insert(courses)
-          .values(course({ code: 'INF102', sourceSystem: 'sis', externalId: 'SIS-1' })),
-      ).resolves.toBeDefined();
-    });
-
-    it('defaults to platform ownership and an in-sync status', async () => {
-      const created = only(await harness.db.insert(courses).values(course()).returning());
-
-      expect(created.sourceSystem).toBe('platform');
-      expect(created.synchronizationStatus).toBe('in_sync');
-      expect(created.externalId).toBeNull();
-    });
-  });
-
   describe('institution scoping', () => {
     it('removes an institution’s academic rows with it', async () => {
       await harness.db.insert(courses).values(course());

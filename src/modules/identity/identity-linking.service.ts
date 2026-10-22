@@ -1,18 +1,16 @@
-import { randomUUID } from 'node:crypto';
-
 import { Injectable } from '@nestjs/common';
 
-import { PasswordService } from '../../common/crypto/password.service';
 import { ConflictError, UnauthenticatedError } from '../../common/errors/domain.error';
-import type { ExternalIdentity, SourceSystem, User } from '../../database/schema';
+import type { Transaction } from '../../database/database.tokens';
+import type { ExternalIdentity, User } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { UsersRepository } from '../users/users.repository';
 
 import { ExternalIdentitiesRepository } from './external-identities.repository';
+import { UserEmailsRepository } from './user-emails.repository';
 
 export interface ProviderIdentity {
   readonly institutionId: string;
-  readonly sourceSystem: SourceSystem;
   readonly issuer: string;
   readonly subject: string;
   readonly externalUsername?: string | null;
@@ -26,7 +24,7 @@ export class IdentityLinkingService {
   constructor(
     private readonly users: UsersRepository,
     private readonly identities: ExternalIdentitiesRepository,
-    private readonly passwords: PasswordService,
+    private readonly addresses: UserEmailsRepository,
     private readonly txHost: TransactionHost,
   ) {}
 
@@ -50,10 +48,10 @@ export class IdentityLinkingService {
 
         await this.identities.markAuthenticated(linked.id, tx);
 
-        return user;
+        return this.activate(user, identity, tx);
       }
 
-      const sharingEmail = await this.users.findByEmail(
+      const sharingEmail = await this.users.findSignInCandidate(
         identity.email,
         { consistent: true },
         tx,
@@ -70,13 +68,13 @@ export class IdentityLinkingService {
         {
           email: identity.email,
           displayName: identity.displayName,
-          passwordHash: await this.passwords.hash(`${randomUUID()}${randomUUID()}`),
           ...(identity.locale ? { locale: identity.locale } : {}),
         },
         tx,
       );
 
       await this.identities.create(this.identityRow(user.id, identity), tx);
+      await this.addresses.markVerified(user.id, identity.email, identity.institutionId, tx);
 
       return user;
     });
@@ -106,14 +104,47 @@ export class IdentityLinkingService {
     });
   }
 
+  /**
+   * Authenticating at the institution's own provider is the proof an imported
+   * person record was waiting for.
+   */
+  private async activate(
+    user: User,
+    identity: ProviderIdentity,
+    tx: Transaction,
+  ): Promise<User> {
+    if (user.status === 'active') {
+      await this.addresses.markVerified(user.id, user.email, identity.institutionId, tx);
+
+      return user;
+    }
+
+    const sharingEmail = await this.users.findSignInCandidate(
+      user.email,
+      { consistent: true },
+      tx,
+    );
+    if (sharingEmail) {
+      throw new ConflictError(
+        'IDENTITY_EMAIL_CONFLICT',
+        'An account already uses this email address and must be linked deliberately',
+        { email: user.email },
+      );
+    }
+
+    await this.addresses.markVerified(user.id, user.email, identity.institutionId, tx);
+
+    return this.users.update(user.id, { status: 'active' }, tx);
+  }
+
   private identityRow(userId: string, identity: ProviderIdentity) {
     return {
       institutionId: identity.institutionId,
       userId,
-      sourceSystem: identity.sourceSystem,
       issuer: identity.issuer,
       subject: identity.subject,
       externalUsername: identity.externalUsername ?? null,
+      assertedEmail: identity.email,
       lastAuthenticatedAt: new Date(),
     };
   }

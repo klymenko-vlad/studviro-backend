@@ -2,13 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
-  SOURCE_SYSTEMS,
   STUDY_GROUP_KINDS,
-  SYNCHRONIZATION_STATUSES,
   TIMETABLE_EVENT_TYPES,
-  type SourceSystem,
   type StudyGroupKind,
-  type SynchronizationStatus,
   type TimetableEventType,
 } from '../../../database/schema';
 import {
@@ -53,24 +49,6 @@ export class TimetableTermDto {
 }
 
 @Exclude()
-export class TimetableEventProvenanceDto {
-  @Expose() @ApiProperty({ enum: SOURCE_SYSTEMS }) sourceSystem!: SourceSystem;
-  @Expose() @ApiProperty({ type: String, nullable: true }) externalId!: string | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  sourceUpdatedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  lastSynchronizedAt!: Date | null;
-
-  @Expose()
-  @ApiProperty({ enum: SYNCHRONIZATION_STATUSES })
-  synchronizationStatus!: SynchronizationStatus;
-}
-
-@Exclude()
 export class MyTimetableEventResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: TIMETABLE_EVENT_TYPES }) type!: TimetableEventType;
@@ -105,11 +83,6 @@ export class MyTimetableEventResponseDto {
 
   @Expose() @Type(() => TimetableCourseDto) @ApiProperty() course!: TimetableCourseDto;
   @Expose() @Type(() => TimetableTermDto) @ApiProperty() term!: TimetableTermDto;
-
-  @Expose()
-  @Type(() => TimetableEventProvenanceDto)
-  @ApiProperty()
-  provenance!: TimetableEventProvenanceDto;
 
   static fromMyTimetableEvent(event: MyTimetableEvent): MyTimetableEventResponseDto {
     return Object.assign(new MyTimetableEventResponseDto(), event);

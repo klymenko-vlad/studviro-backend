@@ -14,12 +14,14 @@ export const PERMISSIONS = [
   'grade:publish',
   'schedule:read',
   'schedule:manage',
+  'notification:read',
+  'exam:register',
+  'course:enroll',
   'role:read',
   'role:assign',
   'institution:read',
   'institution:manage',
-  'sync:read',
-  'sync:run',
+  'audit:read',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -32,10 +34,17 @@ const READS = [
   'enrollment:read',
   'grade:read',
   'schedule:read',
+  'notification:read',
+] as const satisfies readonly Permission[];
+
+const SELF_SERVICE = [
+  'exam:register',
+  'course:enroll',
 ] as const satisfies readonly Permission[];
 
 const TEACHING = [
   ...READS,
+  ...SELF_SERVICE,
   'role:read',
   'grade:propose',
   'grade:publish',
@@ -50,13 +59,13 @@ const COURSE_ADMINISTRATION = [
 ] as const satisfies readonly Permission[];
 
 export const ROLE_PERMISSIONS: Readonly<Record<CanonicalRole, readonly Permission[]>> = {
-  student: READS,
-  teaching_assistant: [...READS, 'grade:propose'],
+  student: [...READS, ...SELF_SERVICE],
+  teaching_assistant: [...READS, ...SELF_SERVICE, 'grade:propose'],
   teacher: TEACHING,
   course_coordinator: COURSE_ADMINISTRATION,
   program_coordinator: [...COURSE_ADMINISTRATION, 'program:manage'],
-  registrar: [...READS, 'role:read', 'enrollment:manage', 'grade:publish', 'sync:read'],
-  org_unit_manager: [...COURSE_ADMINISTRATION, 'program:manage', 'role:assign', 'sync:read'],
+  registrar: [...READS, ...SELF_SERVICE, 'role:read', 'enrollment:manage', 'grade:publish'],
+  org_unit_manager: [...COURSE_ADMINISTRATION, 'program:manage', 'role:assign'],
   institution_admin: PERMISSIONS,
 };
 
@@ -72,4 +81,11 @@ export function permissionsForRoles(roles: Iterable<CanonicalRole>): ReadonlySet
   }
 
   return granted;
+}
+
+export function isGrantable(
+  granterPermissions: ReadonlySet<Permission>,
+  role: CanonicalRole,
+): boolean {
+  return ROLE_PERMISSIONS[role].every((permission) => granterPermissions.has(permission));
 }

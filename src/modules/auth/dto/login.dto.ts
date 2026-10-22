@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
+import { CaptchaField } from '../../captcha/dto/captcha-field.decorator';
+
 export class LoginDto {
   @ApiProperty({ example: 'ada@example.com' })
   @IsEmail()
@@ -20,4 +22,7 @@ export class LoginDto {
   @MinLength(1)
   @MaxLength(128)
   password!: string;
+
+  @CaptchaField()
+  captcha?: string;
 }

@@ -58,7 +58,6 @@ describe('Institution configuration (e2e)', () => {
         code: 'upjs',
         defaultLocale: 'en',
         timezone: 'Europe/Bratislava',
-        connectors: { academicSystem: null, learningSystem: null },
       });
       expect(response.json().terminology.faculty).toBeNull();
       expect(response.json().features.examRegistration).toBe(true);
@@ -91,7 +90,7 @@ describe('Institution configuration (e2e)', () => {
       expect(response.statusCode).toBe(403);
     });
 
-    it('stores terminology, flags, locale and connector for an administrator', async () => {
+    it('stores terminology, flags and locale for an administrator', async () => {
       const actor = await actingAs('institution_admin');
 
       const updated = await harness.inject({
@@ -99,11 +98,10 @@ describe('Institution configuration (e2e)', () => {
         url: `/api/v1/institutions/${institutionId}/configuration`,
         headers: actor.headers,
         payload: {
-          defaultLocale: 'uk',
+          defaultLocale: 'sk',
           timezone: 'Europe/Prague',
           terminology: { faculty: 'School', course: 'Module' },
           features: { fees: true, examRegistration: false },
-          academicSystemConnector: 'mock-sis',
         },
       });
 
@@ -116,9 +114,8 @@ describe('Institution configuration (e2e)', () => {
       });
 
       expect(read.json()).toMatchObject({
-        defaultLocale: 'uk',
+        defaultLocale: 'sk',
         timezone: 'Europe/Prague',
-        connectors: { academicSystem: 'mock-sis', learningSystem: null },
       });
       expect(read.json().terminology).toMatchObject({ faculty: 'School', course: 'Module' });
       expect(read.json().features).toMatchObject({ fees: true, examRegistration: false });
@@ -203,70 +200,68 @@ describe('Institution configuration (e2e)', () => {
     });
   });
 
-  describe('connectors', () => {
-    it('reports both kinds as not configured before anything is selected', async () => {
-      const actor = await actingAs('institution_admin');
-
-      const response = await harness.inject({
-        method: 'GET',
-        url: `/api/v1/institutions/${institutionId}/connectors`,
-        headers: actor.headers,
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject([
-        { kind: 'academic', name: null, installed: false },
-        { kind: 'learning', name: null, installed: false },
-      ]);
-    });
-
-    it('reports the mock SIS as healthy once the institution selects it', async () => {
-      const actor = await actingAs('institution_admin');
-
+  describe('a feature flag closes the door (B6)', () => {
+    const turnOff = async (feature: string) => {
+      const admin = await actingAs('institution_admin');
       await harness.inject({
         method: 'PATCH',
         url: `/api/v1/institutions/${institutionId}/configuration`,
-        headers: actor.headers,
-        payload: { academicSystemConnector: 'mock-sis' },
+        headers: admin.headers,
+        payload: { features: { [feature]: false } },
       });
-      const response = await harness.inject({
+    };
+
+    const listExamTerms = async () => {
+      const actor = await actingAs('student');
+
+      return harness.inject({
         method: 'GET',
-        url: `/api/v1/institutions/${institutionId}/connectors`,
+        url: `/api/v1/institutions/${institutionId}/me/exam-terms`,
         headers: actor.headers,
       });
+    };
 
-      const [academic] = response.json();
-
-      expect(academic).toMatchObject({ name: 'mock-sis', installed: true, healthy: true });
-      expect(academic.capabilities).toContain('courses.read');
-      expect(academic.capabilities).not.toContain('examRegistration.write');
+    it('serves the exam terms while the feature is on', async () => {
+      expect((await listExamTerms()).statusCode).toBe(200);
     });
 
-    it('offers the connectors the deployment ships with as alternatives', async () => {
+    it('refuses the exam terms once the institution turns it off', async () => {
+      await turnOff('examRegistration');
+
+      const response = await listExamTerms();
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().code).toBe('FEATURE_DISABLED');
+    });
+
+    it('leaves the other features alone', async () => {
+      await turnOff('examRegistration');
+      const actor = await actingAs('student');
+
+      const grades = await harness.inject({
+        method: 'GET',
+        url: `/api/v1/institutions/${institutionId}/me/course-results`,
+        headers: actor.headers,
+      });
+
+      expect(grades.statusCode).toBe(200);
+    });
+
+    it('names the flags it actually enforces, so the screen need not guess', async () => {
       const actor = await actingAs('institution_admin');
 
       const response = await harness.inject({
         method: 'GET',
-        url: `/api/v1/institutions/${institutionId}/connectors`,
+        url: `/api/v1/institutions/${institutionId}/configuration`,
         headers: actor.headers,
       });
 
-      const [academic, learning] = response.json();
-
-      expect(academic.alternatives).toEqual(['mock-sis']);
-      expect(learning.alternatives).toEqual([]);
-    });
-
-    it('refuses a member who cannot manage the institution', async () => {
-      const actor = await actingAs('teacher');
-
-      const response = await harness.inject({
-        method: 'GET',
-        url: `/api/v1/institutions/${institutionId}/connectors`,
-        headers: actor.headers,
-      });
-
-      expect(response.statusCode).toBe(403);
+      expect(response.json().implementedFeatures).toEqual([
+        'courseRegistration',
+        'examRegistration',
+        'timetable',
+        'grades',
+      ]);
     });
   });
 });

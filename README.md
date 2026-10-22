@@ -17,6 +17,35 @@ pnpm start:dev
 - OpenAPI JSON — http://localhost:3000/api/docs/json
 - Health — http://localhost:3000/health
 
+## Demo data
+
+`pnpm db:seed` writes a whole synthetic university, _Mock University of Košice_: 3
+faculties, 9 departments, 6 programmes, 72 courses, 2 academic years, 144 students, 27
+teachers, with enrolments, study groups, a timetable, exam terms, past results, and
+learning spaces holding materials, assignments, submissions and marks.
+
+Every account below signs in with the password `correct horse battery staple`.
+
+| Account                              | What it is for                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| `admin@studviro.local`               | Platform admin and institution admin — everything                      |
+| `registrar@studviro.local`           | Registrar of the whole institution: records, enrolment, results        |
+| `teacher@studviro.local`             | Lecturer on the first department's courses, with groups to mark        |
+| `ada@studviro.local`                 | Student in the first programme: timetable, exams, assignments, results |
+| `assistant@studviro.local`           | Teaching assistant on the same courses as the teacher — not a teacher  |
+| `program.coordinator@studviro.local` | Programme coordinator, scoped to the first programme                   |
+| `course.coordinator@studviro.local`  | Course coordinator, scoped to one current course offering              |
+| `faculty.manager@studviro.local`     | Org-unit manager, scoped to the first faculty                          |
+| `newcomer@studviro.local`            | Belongs to no institution — what a fresh sign-up sees                  |
+
+Every generated person (`…@mocku.example`, browsable from the admin's people screens) has
+the same password, so any other student or teacher can be signed into as well.
+
+Re-running replaces the demo university rather than doubling it. The named accounts are
+updated in place, and one whose password was changed keeps it. The seed refuses to run
+with `NODE_ENV=production`; to seed a hosted database, run it from a checkout with
+`DATABASE_URL` pointed there.
+
 ## Layout
 
 ```

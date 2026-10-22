@@ -16,6 +16,20 @@ export interface HttpConfig {
   readonly trustProxy: boolean | string | string[];
 }
 
+export interface MailConfig {
+  readonly transport: Env['MAIL_TRANSPORT'];
+  readonly from: string;
+  readonly webAppUrl: string;
+  readonly notificationDelaySeconds: number;
+  readonly smtp: {
+    readonly host: string | undefined;
+    readonly port: number;
+    readonly secure: boolean;
+    readonly user: string | undefined;
+    readonly password: string | undefined;
+  };
+}
+
 export interface DatabaseConfig {
   readonly url: string;
   readonly replicaUrl: string | undefined;
@@ -40,6 +54,31 @@ export interface QueueConfig {
   readonly uiEnabled: boolean;
 }
 
+export interface StorageConfig {
+  enabled: boolean;
+  bucket: string;
+  region: string;
+  endpoint: string | undefined;
+  forcePathStyle: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
+  maxUploadBytes: number;
+  signedUrlTtlSeconds: number;
+  reclaimAfterDays: number;
+}
+
+export interface MalwareScanConfig {
+  readonly enabled: boolean;
+  readonly clamd: { readonly host: string; readonly port: number; readonly timeoutMs: number };
+}
+
+export interface CaptchaConfig {
+  readonly enabled: boolean;
+  readonly secret: string;
+  readonly maxNumber: number;
+  readonly ttlSeconds: number;
+}
+
 export interface ThrottleConfig {
   readonly ttlMs: number;
   readonly limit: number;
@@ -52,6 +91,11 @@ export interface JwtConfig {
   readonly refreshTtl: string;
 }
 
+export interface TwoFactorConfig {
+  readonly secretKey: string;
+  readonly issuer: string;
+}
+
 @Injectable()
 export class AppConfigService {
   constructor(private readonly config: ConfigService<Env, true>) {}
@@ -62,6 +106,10 @@ export class AppConfigService {
 
   get role(): AppRole {
     return this.config.get<AppRole>('ROLE');
+  }
+
+  get commit(): string | undefined {
+    return this.config.get<string | undefined>('RENDER_GIT_COMMIT');
   }
 
   get servesHttp(): boolean {
@@ -135,11 +183,26 @@ export class AppConfigService {
     };
   }
 
+  get twoFactor(): TwoFactorConfig {
+    return {
+      secretKey: this.config.get<string>('TWO_FACTOR_SECRET_KEY'),
+      issuer: this.config.get<string>('TWO_FACTOR_ISSUER'),
+    };
+  }
+
   /** The far tighter budget applied to credential endpoints. */
   get authThrottle(): ThrottleConfig {
     return {
       ttlMs: this.config.get<number>('AUTH_THROTTLE_TTL_MS'),
       limit: this.config.get<number>('AUTH_THROTTLE_LIMIT'),
+    };
+  }
+
+  /** The site-wide budget applied to unauthenticated form submissions. */
+  get publicFormThrottle(): ThrottleConfig {
+    return {
+      ttlMs: this.config.get<number>('PUBLIC_FORM_THROTTLE_TTL_MS'),
+      limit: this.config.get<number>('PUBLIC_FORM_THROTTLE_LIMIT'),
     };
   }
 
@@ -149,6 +212,57 @@ export class AppConfigService {
       refreshSecret: this.config.get<string>('JWT_REFRESH_SECRET'),
       accessTtl: this.config.get<string>('JWT_ACCESS_TTL'),
       refreshTtl: this.config.get<string>('JWT_REFRESH_TTL'),
+    };
+  }
+
+  get storage(): StorageConfig {
+    return {
+      enabled: this.config.get<boolean>('STORAGE_ENABLED'),
+      bucket: this.config.get<string>('STORAGE_BUCKET'),
+      region: this.config.get<string>('STORAGE_REGION'),
+      endpoint: this.config.get<string | undefined>('STORAGE_ENDPOINT'),
+      forcePathStyle: this.config.get<boolean>('STORAGE_FORCE_PATH_STYLE'),
+      accessKeyId: this.config.get<string>('STORAGE_ACCESS_KEY_ID'),
+      secretAccessKey: this.config.get<string>('STORAGE_SECRET_ACCESS_KEY'),
+      maxUploadBytes: this.config.get<number>('STORAGE_MAX_UPLOAD_BYTES'),
+      signedUrlTtlSeconds: this.config.get<number>('STORAGE_SIGNED_URL_TTL_S'),
+      reclaimAfterDays: this.config.get<number>('STORAGE_RECLAIM_AFTER_DAYS'),
+    };
+  }
+
+  get malwareScan(): MalwareScanConfig {
+    return {
+      enabled: this.config.get<Env['MALWARE_SCAN']>('MALWARE_SCAN') === 'clamav',
+      clamd: {
+        host: this.config.get<string>('CLAMAV_HOST'),
+        port: this.config.get<number>('CLAMAV_PORT'),
+        timeoutMs: this.config.get<number>('CLAMAV_TIMEOUT_MS'),
+      },
+    };
+  }
+
+  get mail(): MailConfig {
+    return {
+      transport: this.config.get<Env['MAIL_TRANSPORT']>('MAIL_TRANSPORT'),
+      from: this.config.get<string>('MAIL_FROM'),
+      webAppUrl: this.config.get<string>('WEB_APP_URL'),
+      notificationDelaySeconds: this.config.get<number>('NOTIFICATION_MAIL_DELAY_S'),
+      smtp: {
+        host: this.config.get<string | undefined>('SMTP_HOST'),
+        port: this.config.get<number>('SMTP_PORT'),
+        secure: this.config.get<boolean>('SMTP_SECURE'),
+        user: this.config.get<string | undefined>('SMTP_USER'),
+        password: this.config.get<string | undefined>('SMTP_PASSWORD'),
+      },
+    };
+  }
+
+  get captcha(): CaptchaConfig {
+    return {
+      enabled: this.config.get<boolean>('CAPTCHA_ENABLED'),
+      secret: this.config.get<string>('CAPTCHA_SECRET'),
+      maxNumber: this.config.get<number>('CAPTCHA_MAX_NUMBER'),
+      ttlSeconds: this.config.get<number>('CAPTCHA_TTL_S'),
     };
   }
 
@@ -178,6 +292,17 @@ export class AppConfigService {
 
   get swaggerEnabled(): boolean {
     return this.config.get<boolean>('SWAGGER_ENABLED');
+  }
+
+  /**
+   * Present only when the docs are meant to be password-protected. Optional in
+   * development, mandatory in production — see `assertProductionHardening`.
+   */
+  get swaggerCredentials(): { readonly user: string; readonly password: string } | undefined {
+    const user = this.config.get<string | undefined>('SWAGGER_USER');
+    const password = this.config.get<string | undefined>('SWAGGER_PASSWORD');
+
+    return user && password ? { user, password } : undefined;
   }
 
   private parseOrigins(raw: string): true | string[] {

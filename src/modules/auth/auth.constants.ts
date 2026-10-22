@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
   readonly email: string;
   readonly locale: string;
   readonly role: UserRole;
+  readonly sessionId?: string | undefined;
 }
 
 export interface AccessTokenPayload {
@@ -19,6 +20,7 @@ export interface AccessTokenPayload {
   readonly role: UserRole;
   /** `users.token_version` at minting time. */
   readonly tv: number;
+  readonly sid?: string;
 }
 
 export interface RefreshTokenPayload {

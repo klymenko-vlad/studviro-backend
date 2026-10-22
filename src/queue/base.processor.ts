@@ -4,6 +4,8 @@ import type { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import type { z } from 'zod';
 
+import { QueueMetrics } from '../metrics/queue.metrics';
+
 export abstract class BaseProcessor<
   TSchemas extends Record<string, z.ZodType>,
 > extends WorkerHost {
@@ -13,7 +15,10 @@ export abstract class BaseProcessor<
     [K in keyof TSchemas]: (payload: z.infer<TSchemas[K]>, job: Job) => Promise<void>;
   };
 
-  constructor(protected readonly logger: PinoLogger) {
+  constructor(
+    protected readonly logger: PinoLogger,
+    protected readonly metrics: QueueMetrics,
+  ) {
     super();
     this.logger.setContext(this.constructor.name);
   }
@@ -38,6 +43,8 @@ export abstract class BaseProcessor<
     const startedAt = performance.now();
     await this.handlers[name](parsed.data as never, job);
 
+    this.metrics.recordCompleted(job.queueName, name);
+
     this.logger.info(
       {
         jobId: job.id,
@@ -51,6 +58,12 @@ export abstract class BaseProcessor<
 
   @OnWorkerEvent('failed')
   onFailed(job: Job | undefined, error: Error): void {
+    const terminal = error instanceof UnrecoverableError || !this.willRetry(job);
+
+    if (job) {
+      this.metrics.recordFailed(job.queueName, job.name, terminal);
+    }
+
     this.logger.error(
       {
         err: error,
@@ -58,7 +71,7 @@ export abstract class BaseProcessor<
         jobName: job?.name,
         attempt: (job?.attemptsMade ?? 0) + 1,
         maxAttempts: job?.opts.attempts,
-        terminal: error instanceof UnrecoverableError || !this.willRetry(job),
+        terminal,
       },
       'job failed',
     );

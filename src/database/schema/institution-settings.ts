@@ -1,5 +1,5 @@
 import { isNull } from 'drizzle-orm';
-import { jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { jsonb, pgTable, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { deletedAt, timestamps } from './_shared';
 import { institutionId } from './institutions';
@@ -39,8 +39,6 @@ export const institutionSettings = pgTable(
     institutionId: institutionId(),
     terminology: jsonb('terminology').$type<TerminologyOverrides>().notNull().default({}),
     features: jsonb('features').$type<FeatureOverrides>().notNull().default({}),
-    academicSystemConnector: text('academic_system_connector'),
-    learningSystemConnector: text('learning_system_connector'),
     deletedAt,
     ...timestamps,
   },

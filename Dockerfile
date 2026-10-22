@@ -64,4 +64,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/main.js"]
+# Migrations run on boot rather than as a Render Pre-Deploy Command, which the
+# free instance type does not offer. The migrator is idempotent and a failure
+# stops the boot, so an unmigrated schema never serves traffic. `exec` hands
+# the shell's process to the server so dumb-init's SIGTERM reaches it.
+CMD ["sh", "-c", "node dist/database/migrate.js && exec node dist/main.js"]

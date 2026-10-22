@@ -7,6 +7,9 @@ export const AppRole = z.enum(['api', 'worker', 'all']);
 export type AppRole = z.infer<typeof AppRole>;
 
 const DEV_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
+const DEV_CAPTCHA_SECRET = 'dev-only-insecure-captcha-secret-do-not-use-in-prod';
+const DEV_TWO_FACTOR_SECRET_KEY = 'dev-only-insecure-two-factor-key-do-not-use-in-prod';
+const DEV_MAIL_FROM = 'StudViro <no-reply@studviro.local>';
 
 const bool = (fallback: 'true' | 'false') =>
   z
@@ -19,6 +22,13 @@ export const envSchema = z.object({
   ROLE: AppRole.default('all'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().default('0.0.0.0'),
+
+  /**
+   * The commit this build was made from. Render sets it on every deploy; the
+   * post-deploy check reads it back from `/health/live` to know the new build
+   * is the one answering before it trusts `/health/ready`.
+   */
+  RENDER_GIT_COMMIT: z.string().min(1).optional(),
 
   APP_URL: z.url().default('http://localhost:3000'),
   API_PREFIX: z.string().default('api'),
@@ -49,6 +59,77 @@ export const envSchema = z.object({
   REDIS_DB: z.coerce.number().int().min(0).default(0),
   REDIS_TLS: bool('false'),
 
+  /**
+   * Object storage, S3-compatible. The production target is Cloudflare R2 or
+   * AWS S3; `docker compose` runs MinIO locally and in CI so neither an
+   * account nor a bill is needed to develop against it.
+   *
+   * `STORAGE_ENDPOINT` is what makes it portable: unset for AWS, set to the
+   * R2 or MinIO endpoint otherwise. Anything that is not AWS also needs
+   * path-style addressing, because virtual-host style requires DNS per bucket.
+   */
+  STORAGE_ENABLED: bool('true'),
+  STORAGE_BUCKET: z.string().default('studviro'),
+  STORAGE_REGION: z.string().default('auto'),
+  STORAGE_ENDPOINT: z.url().optional(),
+  STORAGE_FORCE_PATH_STYLE: bool('true'),
+  STORAGE_ACCESS_KEY_ID: z.string().default('studviro'),
+  STORAGE_SECRET_ACCESS_KEY: z.string().default('studviro'),
+
+  /**
+   * 64 MiB. Large enough for a slide deck or a recorded seminar's handout,
+   * small enough that one submission cannot fill a bucket. Enforced twice:
+   * pinned into the presigned upload so the store itself refuses a larger
+   * body, and checked again when the upload is confirmed.
+   */
+  STORAGE_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(67_108_864),
+
+  /**
+   * `clamav` streams every confirmed upload through clamd before any row
+   * names it; `off` trusts the files as they come (ADR 0042).
+   */
+  MALWARE_SCAN: z.enum(['off', 'clamav']).default('off'),
+  CLAMAV_HOST: z.string().min(1).default('localhost'),
+  CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
+  CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+
+  /** Short-lived by design: a read link that outlives the reader's session is a leak. */
+  STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(3_600).default(300),
+
+  /**
+   * How long a removed file's object outlives the row that named it. Removing
+   * a material tombstones the row; the object behind it is dropped by the
+   * nightly sweep once this has passed. It is an operational grace period, not
+   * a retention policy — nothing in the product restores a removed material,
+   * so the window exists to make an accidental delete recoverable by hand, and
+   * to let a failed delete be retried rather than lost.
+   */
+  STORAGE_RECLAIM_AFTER_DAYS: z.coerce.number().int().positive().max(365).default(30),
+
+  /**
+   * A proof-of-work captcha on the four forms open to the internet: sign-up,
+   * sign-in, the password-reset request and the demo request. ALTCHA's protocol
+   * (ADR 0033) — the client hashes until it finds a number, so there is no
+   * third-party script, no site key and nothing to pay.
+   *
+   * Off by default, which is what keeps development and the e2e suite
+   * unchallenged. An institution turns it on at deploy.
+   */
+  CAPTCHA_ENABLED: bool('false'),
+
+  /** Signs a challenge so the server need not remember one it has not seen back. */
+  CAPTCHA_SECRET: z.string().min(32).default(DEV_CAPTCHA_SECRET),
+
+  /**
+   * The search space. A browser hashes roughly a million times a second, so
+   * 100k averages well under a second of work for one visitor and makes a
+   * thousand forged sign-ups genuinely expensive.
+   */
+  CAPTCHA_MAX_NUMBER: z.coerce.number().int().positive().max(10_000_000).default(100_000),
+
+  /** How long a challenge stays solvable. Long enough to fill a form in, not to stockpile. */
+  CAPTCHA_TTL_S: z.coerce.number().int().positive().max(3_600).default(600),
+
   QUEUE_PREFIX: z.string().default('studviro'),
   QUEUE_DEFAULT_ATTEMPTS: z.coerce.number().int().positive().default(3),
   QUEUE_DEFAULT_BACKOFF_MS: z.coerce.number().int().positive().default(1_000),
@@ -63,6 +144,13 @@ export const envSchema = z.object({
   AUTH_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   AUTH_THROTTLE_LIMIT: z.coerce.number().int().positive().default(10),
 
+  // Unauthenticated form submissions. Reached through the BFF proxy they all
+  // arrive from one address, so this budget is effectively site-wide: small
+  // enough to blunt a script, large enough that one submitter cannot shut the
+  // form for everyone else.
+  PUBLIC_FORM_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
+  PUBLIC_FORM_THROTTLE_LIMIT: z.coerce.number().int().positive().default(60),
+
   CACHE_TTL_MS: z.coerce.number().int().positive().default(30_000),
   IDEMPOTENCY_TTL_MS: z.coerce.number().int().positive().default(86_400_000),
 
@@ -71,12 +159,41 @@ export const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
 
+  TWO_FACTOR_SECRET_KEY: z.string().min(32).default(DEV_TWO_FACTOR_SECRET_KEY),
+  TWO_FACTOR_ISSUER: z.string().min(1).default('StudViro'),
+
   METRICS_ENABLED: bool('true'),
   METRICS_TOKEN: z.string().min(32).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   SENTRY_DSN: z.string().optional(),
 
   SWAGGER_ENABLED: bool('false'),
+  // Serving the docs from a deployed box is only acceptable behind a lock, so
+  // these are what turn SWAGGER_ENABLED from a production error into a
+  // password-protected staging convenience.
+  SWAGGER_USER: z.string().min(1).optional(),
+  SWAGGER_PASSWORD: z.string().min(16).optional(),
+
+  /** The client's public origin, for links in mail: reset, invitation, sign-in. */
+  WEB_APP_URL: z.url().default('http://localhost:3001'),
+
+  /**
+   * `log` writes each message to the log and sends nothing, so development and
+   * CI need no mail server. `smtp` sends through any provider that speaks it;
+   * locally that is the Mailpit in `docker compose` (ADR 0039).
+   */
+  MAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+  MAIL_FROM: z.string().min(3).default(DEV_MAIL_FROM),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: bool('false'),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASSWORD: z.string().min(1).optional(),
+  /**
+   * How long a notification waits unread in the application before its e-mail
+   * copy goes out. Whoever saw it in the meantime gets no mail about it (F15).
+   */
+  NOTIFICATION_MAIL_DELAY_S: z.coerce.number().int().min(0).default(300),
 
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(5_000),
@@ -90,6 +207,25 @@ export type Env = z.infer<typeof envSchema>;
  * every default hostile to work with, the risky combinations are rejected only
  * where they matter.
  */
+function assertMailTransport(env: Env, ctx: z.RefinementCtx): void {
+  if (env.MAIL_TRANSPORT !== 'smtp') return;
+
+  if (!env.SMTP_HOST) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SMTP_HOST'],
+      message: 'is required when MAIL_TRANSPORT=smtp',
+    });
+  }
+  if (env.SMTP_PASSWORD && !env.SMTP_USER) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SMTP_USER'],
+      message: 'must be set together with SMTP_PASSWORD',
+    });
+  }
+}
+
 function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
   if (env.NODE_ENV !== 'production') return;
 
@@ -104,10 +240,10 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     );
   }
 
-  if (env.SWAGGER_ENABLED) {
+  if (env.SWAGGER_ENABLED && !(env.SWAGGER_USER && env.SWAGGER_PASSWORD)) {
     reject(
       'SWAGGER_ENABLED',
-      'must be false in production; it publishes the full API surface and disables the Helmet CSP',
+      'must be false in production unless SWAGGER_USER and SWAGGER_PASSWORD are both set; unprotected it publishes the full API surface and disables the Helmet CSP',
     );
   }
 
@@ -124,10 +260,41 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     }
   }
 
+  if (env.TWO_FACTOR_SECRET_KEY === DEV_TWO_FACTOR_SECRET_KEY) {
+    reject(
+      'TWO_FACTOR_SECRET_KEY',
+      'must be set to a unique secret in production; with the shipped one a database dump yields every authenticator secret',
+    );
+  }
+
+  // The shipped secret would let anyone sign their own challenge, which is the
+  // whole of the check — so it is only rejected where the captcha is actually on.
+  if (env.CAPTCHA_ENABLED && env.CAPTCHA_SECRET === DEV_CAPTCHA_SECRET) {
+    reject(
+      'CAPTCHA_SECRET',
+      'must be set to a unique secret when the captcha is enabled; with the shipped one a caller can sign their own solved challenge',
+    );
+  }
+
   if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
     reject(
       'JWT_REFRESH_SECRET',
       'must differ from JWT_ACCESS_SECRET, or a stolen access token can be replayed as a refresh token',
+    );
+  }
+
+  if (env.STORAGE_ENABLED) {
+    for (const key of ['STORAGE_ACCESS_KEY_ID', 'STORAGE_SECRET_ACCESS_KEY'] as const) {
+      if (env[key] === 'studviro') {
+        reject(key, 'must be set to the real object-store credential in production');
+      }
+    }
+  }
+
+  if (env.MAIL_TRANSPORT === 'smtp' && env.MAIL_FROM === DEV_MAIL_FROM) {
+    reject(
+      'MAIL_FROM',
+      'must be an address the institution sends from; mail from a .local address is refused or junked by every receiving server',
     );
   }
 
@@ -136,7 +303,9 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
   }
 }
 
-const validatedEnvSchema = envSchema.superRefine(assertProductionHardening);
+const validatedEnvSchema = envSchema
+  .superRefine(assertMailTransport)
+  .superRefine(assertProductionHardening);
 
 export function validateEnv(raw: Record<string, unknown>): Env {
   const result = validatedEnvSchema.safeParse(raw);

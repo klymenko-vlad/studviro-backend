@@ -32,7 +32,6 @@ describe('My timetable events (e2e)', () => {
   let institutionId: string;
   let algorithmsOfferingId: string;
   let databasesOfferingId: string;
-  let roomId: string;
   let seminarGroupId: string;
 
   const actingAs = async (role: CanonicalRole) => {
@@ -150,11 +149,10 @@ describe('My timetable events (e2e)', () => {
     algorithmsOfferingId = algorithmsOffering!.id;
     databasesOfferingId = databasesOffering!.id;
 
-    const [room] = await harness.db
+    await harness.db
       .insert(rooms)
       .values({ institutionId, code: 'P1', name: 'Lecture hall', building: 'Jesenná 5' })
       .returning();
-    roomId = room!.id;
 
     const [seminarGroup] = await harness.db
       .insert(studyGroups)
@@ -167,31 +165,6 @@ describe('My timetable events (e2e)', () => {
       })
       .returning();
     seminarGroupId = seminarGroup!.id;
-  });
-
-  it('returns the caller’s events with their room, course and provenance', async () => {
-    const actor = await actingAs('student');
-    await enrol(actor.user.id, algorithmsOfferingId);
-    await event({ roomId, sourceSystem: 'sis', externalId: 'TTE-1' });
-
-    const response = await listMine(actor);
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toHaveLength(1);
-    expect(response.json()[0]).toMatchObject({
-      type: 'lecture',
-      title: 'Algorithms',
-      startsAt: '2026-03-02T08:00:00.000Z',
-      endsAt: '2026-03-02T10:00:00.000Z',
-      isCancelled: false,
-      attendance: 'enrolled',
-      room: { code: 'P1', name: 'Lecture hall', building: 'Jesenná 5' },
-      studyGroup: null,
-      course: { code: 'INF/ALG/22', title: 'Algorithms' },
-      term: { code: '2026-SS' },
-      offering: { id: algorithmsOfferingId },
-      provenance: { sourceSystem: 'sis', externalId: 'TTE-1' },
-    });
   });
 
   it('never returns an event of a course the caller has nothing to do with', async () => {

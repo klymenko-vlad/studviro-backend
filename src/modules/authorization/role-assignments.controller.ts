@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 import { RequirePermission } from './decorators/require-permission.decorator';
 import { GrantRoleDto } from './dto/grant-role.dto';
@@ -52,27 +53,33 @@ export class RoleAssignmentsController {
   }
 
   @Post()
-  @RequirePermission('role:assign', INSTITUTION_SCOPE)
-  @ApiOperation({ operationId: 'grantRole', summary: 'Grant a role in a scope' })
+  @ApiOperation({
+    operationId: 'grantRole',
+    summary: 'Grant a role in a scope, checked against the scope granted on',
+  })
   @ApiCreatedResponse({ type: RoleAssignmentResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   grant(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Body() dto: GrantRoleDto,
+    @CurrentUser('id') granterId: string,
   ): Promise<RoleAssignmentResponseDto> {
-    return this.assignments.grant(institutionId, dto);
+    return this.assignments.grant(institutionId, dto, granterId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission('role:assign', INSTITUTION_SCOPE)
-  @ApiOperation({ operationId: 'revokeRole', summary: 'Revoke a role assignment' })
+  @ApiOperation({
+    operationId: 'revokeRole',
+    summary: 'Revoke a role assignment, checked against the assignment scope',
+  })
   @ApiNoContentResponse({ description: 'The assignment was revoked.' })
   @ApiErrorResponses({ notFound: true })
   revoke(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') revokerId: string,
   ): Promise<void> {
-    return this.assignments.revoke(institutionId, id);
+    return this.assignments.revoke(institutionId, id, revokerId);
   }
 }

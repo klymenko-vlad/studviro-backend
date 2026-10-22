@@ -4,6 +4,7 @@ import { HealthCheck, HealthCheckService, MemoryHealthIndicator } from '@nestjs/
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { ShutdownService } from '../common/lifecycle/shutdown.service';
+import { AppConfigService } from '../config/app-config.service';
 import { Public } from '../modules/auth/decorators/public.decorator';
 
 import { DatabaseHealthIndicator } from './database.health';
@@ -24,11 +25,13 @@ export class HealthController {
     private readonly queue: QueueHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
     private readonly shutdown: ShutdownService,
+    private readonly config: AppConfigService,
   ) {}
 
+  /** `commit` lets the post-deploy check tell the new build from the old one. */
   @Get('live')
   live() {
-    return { status: 'ok' };
+    return { status: 'ok', commit: this.config.commit ?? null };
   }
 
   @Get('ready')

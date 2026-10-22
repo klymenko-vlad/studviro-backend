@@ -1,9 +1,16 @@
 import { isNull } from 'drizzle-orm';
 import { index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import { deletedAt, sourceSystemEnum, timestampColumn, timestamps } from './_shared';
+import { deletedAt, timestampColumn, timestamps } from './_shared';
 import { institutionId } from './institutions';
 import { users } from './users';
+
+/**
+ * Which identity provider issued the subject. Open-ended text rather than an
+ * enum: the set of providers an institution uses is theirs, not ours. This is
+ * not provenance on a canonical row — StudViro is the system of record
+ * (ADR 0024) — it exists so a person can sign in through an external IdP.
+ */
 
 export const externalIdentities = pgTable(
   'external_identities',
@@ -13,10 +20,11 @@ export const externalIdentities = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    sourceSystem: sourceSystemEnum('source_system').notNull(),
+    provider: text('provider').notNull().default('oidc'),
     issuer: text('issuer').notNull(),
     subject: text('subject').notNull(),
     externalUsername: text('external_username'),
+    assertedEmail: text('asserted_email'),
     lastAuthenticatedAt: timestampColumn('last_authenticated_at'),
     lastSynchronizedAt: timestampColumn('last_synchronized_at'),
     deletedAt,

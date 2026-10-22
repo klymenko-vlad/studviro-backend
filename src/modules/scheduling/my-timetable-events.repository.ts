@@ -1,19 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, exists, gt, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, exists, gt, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   rooms,
   studyGroupMemberships,
   studyGroups,
   teachingAssignments,
   timetableEvents,
-  type SourceSystem,
   type StudyGroupKind,
-  type SynchronizationStatus,
   type TimetableEventType,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -41,11 +40,6 @@ export interface MyTimetableEventRow {
   termId: string;
   termCode: string;
   termName: string;
-  sourceSystem: SourceSystem;
-  externalId: string | null;
-  sourceUpdatedAt: Date | null;
-  lastSynchronizedAt: Date | null;
-  synchronizationStatus: SynchronizationStatus;
 }
 
 export interface MyTimetableEventFilter {
@@ -103,11 +97,6 @@ export class MyTimetableEventsRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
-        sourceSystem: timetableEvents.sourceSystem,
-        externalId: timetableEvents.externalId,
-        sourceUpdatedAt: timetableEvents.sourceUpdatedAt,
-        lastSynchronizedAt: timetableEvents.lastSynchronizedAt,
-        synchronizationStatus: timetableEvents.synchronizationStatus,
       })
       .from(timetableEvents)
       .innerJoin(courseOfferings, eq(courseOfferings.id, timetableEvents.courseOfferingId))
@@ -131,6 +120,7 @@ export class MyTimetableEventsRepository {
           and(
             eq(enrollments.courseOfferingId, courseOfferings.id),
             eq(enrollments.userId, userId),
+            inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
             isNull(enrollments.deletedAt),
           ),
         ),

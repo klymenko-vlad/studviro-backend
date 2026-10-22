@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
+import { RequireFeature } from '../institutions/configuration/decorators/require-feature.decorator';
 
 import { ListMyTimetableEventsQueryDto } from './dto/list-my-timetable-events-query.dto';
 import { MyTimetableEventResponseDto } from './dto/my-timetable-event-response.dto';
@@ -11,6 +12,7 @@ import { MyTimetableEventsService } from './my-timetable-events.service';
 
 @ApiTags('schedule')
 @ApiBearerAuth('access-token')
+@RequireFeature('timetable')
 @Controller({ path: 'institutions/:institutionId/me/timetable-events', version: '1' })
 export class MyTimetableEventsController {
   constructor(private readonly myTimetableEvents: MyTimetableEventsService) {}

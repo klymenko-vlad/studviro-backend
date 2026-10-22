@@ -81,7 +81,7 @@ export class UsersService {
     return UserResponseDto.fromEntity(await this.usersRepository.findByIdOrFail(id));
   }
 
-  async remove(id: string): Promise<void> {
+  async deactivate(id: string): Promise<void> {
     await this.usersRepository.softDelete(id);
   }
 }

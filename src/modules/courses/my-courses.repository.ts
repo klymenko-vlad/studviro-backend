@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
   courseOfferings,
   courses,
+  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   type CourseOfferingStatus,
   type EnrollmentRequirementType,
@@ -59,7 +60,13 @@ export class MyCoursesRepository {
     ];
 
     if (filter.termId) conditions.push(eq(courseOfferings.academicTermId, filter.termId));
-    if (filter.status) conditions.push(eq(enrollments.status, filter.status));
+    // An explicit status still wins, so a student can ask for their withdrawn courses on
+    // purpose; unasked, the list is their record, never their abandoned attempts.
+    conditions.push(
+      filter.status
+        ? eq(enrollments.status, filter.status)
+        : inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
+    );
 
     return this.reader
       .select({

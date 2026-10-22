@@ -3,7 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { PermissionDeniedError } from '../../common/errors/domain.error';
 import type { CanonicalRole } from '../../database/schema';
 
-import { assignmentScopeKey, type ScopeRef } from './authorization.constants';
+import { assignmentScopeKey, scopeKey, type ScopeRef } from './authorization.constants';
+import { DerivedRolesRepository } from './derived-roles.repository';
 import { grants, permissionsForRoles, type Permission } from './permissions';
 import { RoleAssignmentsRepository } from './role-assignments.repository';
 import { ScopeHierarchyService } from './scope-hierarchy.service';
@@ -19,6 +20,7 @@ export class AuthorizationService {
   constructor(
     private readonly assignments: RoleAssignmentsRepository,
     private readonly hierarchy: ScopeHierarchyService,
+    private readonly derivedRoles: DerivedRolesRepository,
   ) {}
 
   async can(request: AuthorizationRequest): Promise<boolean> {
@@ -39,10 +41,19 @@ export class AuthorizationService {
     const resolved = await this.hierarchy.resolve(scope);
     if (!resolved) return [];
 
-    const active = await this.assignments.findActiveForUser(resolved.institutionId, userId);
+    const [active, derived] = await Promise.all([
+      this.assignments.findActiveForUser(resolved.institutionId, userId),
+      this.derivedRoles.findFor(resolved.institutionId, userId),
+    ]);
 
-    return active
+    const granted = active
       .filter((assignment) => resolved.keys.has(assignmentScopeKey(assignment)))
       .map((assignment) => assignment.role);
+
+    const derivedMatching = derived
+      .filter((entry) => resolved.keys.has(scopeKey(entry.scope)))
+      .map((entry) => entry.role);
+
+    return [...granted, ...derivedMatching];
   }
 }

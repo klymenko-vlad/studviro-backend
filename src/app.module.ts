@@ -11,21 +11,34 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { LifecycleModule } from './common/lifecycle/lifecycle.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { RedisModule } from './common/redis/redis.module';
+import { IS_PUBLIC_FORM_ROUTE, PUBLIC_FORM_THROTTLER } from './common/throttling';
 import { AppConfigService } from './config/app-config.service';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { CREDENTIAL_THROTTLER, IS_CREDENTIAL_ROUTE } from './modules/auth/auth.constants';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
-import { ConnectorsModule } from './modules/connectors/connectors.module';
+import { CalendarExportModule } from './modules/calendar-export/calendar-export.module';
+import { CaptchaModule } from './modules/captcha/captcha.module';
+import { CatalogueModule } from './modules/catalogue/catalogue.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { DiscussionsModule } from './modules/discussions/discussions.module';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { GradesModule } from './modules/grades/grades.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { FeatureFlagGuard } from './modules/institutions/configuration/guards/feature-flag.guard';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
+import { LearningModule } from './modules/learning/learning.module';
+import { MarketingModule } from './modules/marketing/marketing.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
-import { SynchronizationModule } from './modules/synchronization/synchronization.module';
+import { SearchModule } from './modules/search/search.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -40,16 +53,29 @@ import { QueueModule } from './queue/queue.module';
  */
 const reflector = new Reflector();
 
-function isCredentialRoute(context: ExecutionContext): boolean {
+function hasMarker(context: ExecutionContext, marker: string): boolean {
   if (context.getType() !== 'http') return false;
 
   // Undefined on every route that is not decorated, despite the declared type.
   return (
-    reflector.getAllAndOverride<boolean | undefined>(IS_CREDENTIAL_ROUTE, [
+    reflector.getAllAndOverride<boolean | undefined>(marker, [
       context.getHandler(),
       context.getClass(),
     ]) ?? false
   );
+}
+
+function isCredentialRoute(context: ExecutionContext): boolean {
+  return hasMarker(context, IS_CREDENTIAL_ROUTE);
+}
+
+function isPublicFormRoute(context: ExecutionContext): boolean {
+  return hasMarker(context, IS_PUBLIC_FORM_ROUTE);
+}
+
+/** The permissive global budget governs whatever the two markers do not. */
+function isSpeciallyThrottled(context: ExecutionContext): boolean {
+  return isCredentialRoute(context) || isPublicFormRoute(context);
 }
 
 /**
@@ -83,7 +109,7 @@ function workerModules(): DynamicModule[] {
             name: 'default',
             ttl: config.throttle.ttlMs,
             limit: config.throttle.limit,
-            skipIf: isCredentialRoute,
+            skipIf: isSpeciallyThrottled,
           },
           {
             // The global limit exists for ordinary reads; applying it to a
@@ -93,6 +119,12 @@ function workerModules(): DynamicModule[] {
             ttl: config.authThrottle.ttlMs,
             limit: config.authThrottle.limit,
             skipIf: (context: ExecutionContext) => !isCredentialRoute(context),
+          },
+          {
+            name: PUBLIC_FORM_THROTTLER,
+            ttl: config.publicFormThrottle.ttlMs,
+            limit: config.publicFormThrottle.limit,
+            skipIf: (context: ExecutionContext) => !isPublicFormRoute(context),
           },
         ],
         // Without shared storage the counters live in each process's memory, so
@@ -113,18 +145,33 @@ function workerModules(): DynamicModule[] {
     MetricsModule,
     HealthModule,
     AuthModule,
+    AuditModule,
     AuthorizationModule,
-    ConnectorsModule,
     CoursesModule,
     GradesModule,
     IdentityModule,
     InstitutionsModule,
+    InvitationsModule,
+    LearningModule,
+    MarketingModule,
+    NotificationsModule,
+    PrivacyModule,
     SchedulingModule,
+    CalendarExportModule,
+    DiscussionsModule,
+    SearchModule,
+    StorageModule,
+    CaptchaModule,
+    EnrollmentModule,
+    CatalogueModule,
     UsersModule,
-    SynchronizationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Registered here rather than in InstitutionsModule: a guard provided by a
+    // module that other modules import is registered once per import, and the
+    // second registration denies everything.
+    { provide: APP_GUARD, useClass: FeatureFlagGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     {

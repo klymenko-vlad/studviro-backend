@@ -10,5 +10,6 @@ import { QueueHealthIndicator } from './queue.health';
   imports: [TerminusModule],
   controllers: [HealthController],
   providers: [DatabaseHealthIndicator, MigrationsHealthIndicator, QueueHealthIndicator],
+  exports: [MigrationsHealthIndicator],
 })
 export class HealthModule {}
