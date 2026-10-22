@@ -68,6 +68,54 @@ These are the rules the audit kept finding broken. A step is not done if it brea
 9. **Focus goes somewhere.** When a control swaps for a form, focus the form; on cancel or
    save, return focus to the control that started it.
 
+## Phase N — Information architecture (taken first, 2026-10-22)
+
+_Asked for by the product owner on 2026-10-22: "it is easy to get lost in all those pages
+and tabs". Taken **before U1**, in the order below. The owner left the scope to us, with
+one decision: **Exams stays its own menu entry.**_
+
+What was wrong: _Catalogue_ held terms, programmes, courses and every offering; _Org units_
+held rooms; inviting a person lived under _Roles_; a student had eight menu entries for
+four jobs; on the course page assignments to hand in sat under _Materials_ and results
+under _Assessment_.
+
+### N1. The shell: five student entries, search and notifications in the header — **M**
+
+- Header: a search trigger (⌘K / Ctrl K, opens `/search?q=`) and a notification bell with
+  the unread count (`notificationQueries.unreadCount`), linking to `/notifications`.
+  _Search_ and _Notifications_ leave the sidebar.
+- Student menu: **Home** (the dashboard), **Courses** (tabs _My courses_ · _Find
+  courses_, the latter what `/enroll` was), **Calendar**, **Exams**, **Grades**.
+- Teacher: Home, **Teaching**, Calendar (+ student entries if they also study).
+- Phone tab bar: exactly the person's first five entries; _More_ only when there are more.
+- `/enroll` redirects to `/courses?tab=find`; every link to it updated.
+
+### N2. Course page tabs named for what you do there — **M**
+
+- Overview · Materials · **Assignments** · Schedule · **Grades** · Discussion · People
+  (teachers only). Assignments leave _Materials_; _Assessment_ becomes _Grades_.
+- Overview leads with what is next: the next class, the next deadline, the latest post.
+- `?section=materials#activity-…` links (U0) move to `section=assignments`; old
+  `section=work` maps to `grades`.
+
+### N3. Administration in four hubs — **L**
+
+| Hub            | Tabs (`?tab=`)                              | Was                                        |
+| -------------- | ------------------------------------------- | ------------------------------------------ |
+| Structure      | Org units · Rooms · Terms                   | `/org-units` (+ rooms), terms on Catalogue |
+| Teaching offer | Programmes · Courses · Offerings · Learning | `/catalogue`, `/learning`                  |
+| People         | Directory · Invitations · Roles             | `/people`, `/roles`                        |
+| Institution    | Settings · Bulk entry · Audit trail         | `/settings`, `/bulk`, `/audit`             |
+
+Each tab is gated like the page it replaces; a hub with no visible tab is not offered.
+Old routes redirect to `hub?tab=`. The setup checklist (U11) later walks the hubs in order.
+
+### N4. Breadcrumbs — **S**
+
+_Takes U24's breadcrumb half._ A `Breadcrumb` slot on `PageHeader`; _Teaching offer /
+Courses / Algoritmy_ on a course page reached from administration, _Courses / Algoritmy_
+otherwise; _Teaching offer / Programmes / &lt;name&gt;_ on a programme.
+
 ## Phase 0 — In flight
 
 ### U0. Links land on the thing, and opening a notification reads it — **M**
@@ -398,6 +446,10 @@ Each has a recommended default; use it unless told otherwise.
 
 Phases are ordered; inside a phase, the listed order. U0 first because it is already next.
 
+- [ ] N1 Shell: five student entries, search and bell in the header — M
+- [ ] N2 Course page tabs — M
+- [ ] N3 Administration hubs — L
+- [ ] N4 Breadcrumbs — S
 - [x] U0 Notification and card links land on the thing (B33) — M · 2026-10-22
 - [ ] U1 `ConfirmAction` everywhere (B41) — M
 - [ ] U2 Failure, refusal and loading states (B40) — M
