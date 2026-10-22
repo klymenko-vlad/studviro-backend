@@ -1,0 +1,51 @@
+name: Sync main → dev
+
+# Anything that lands on main without coming from dev (a hotfix, a Dependabot
+# merge) opens a PR back into dev, so the next release does not undo it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Open sync PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # The PR's head is main itself, so it picks up later pushes on its own.
+      # Merge it with a merge commit — a squash leaves dev without main's
+      # commits and this would fire again. On a conflict, merge main into dev
+      # locally; GitHub's web resolver would commit dev into main.
+      - name: Open PR if dev is behind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A release merge leaves main ahead of dev by its merge commit only.
+          behind=$(git rev-list --count --no-merges origin/dev..origin/main)
+          if [ "$behind" -eq 0 ]; then
+            echo "dev already has everything on main."
+            exit 0
+          fi
+
+          existing=$(gh pr list --base dev --head main --state open --json url --jq '.[0].url')
+          if [ -n "$existing" ]; then
+            echo "Sync PR already open: $existing"
+            exit 0
+          fi
+
+          gh pr create --base dev --head main \
+            --title "chore(ci): sync main into dev" \
+            --body "main has $behind commit(s) that dev does not. Merge with a **merge commit** (not squash). On a conflict, resolve locally: \`git switch dev && git merge origin/main && git push\` — never with GitHub's web resolver, which would commit into main."
