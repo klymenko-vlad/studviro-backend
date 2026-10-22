@@ -446,7 +446,7 @@ Each has a recommended default; use it unless told otherwise.
 
 Phases are ordered; inside a phase, the listed order. U0 first because it is already next.
 
-- [ ] N1 Shell: five student entries, search and bell in the header — M
+- [x] N1 Shell: five student entries, search and bell in the header — M · 2026-10-22
 - [ ] N2 Course page tabs — M
 - [ ] N3 Administration hubs — L
 - [ ] N4 Breadcrumbs — S
