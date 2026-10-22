@@ -37,8 +37,8 @@ the learning half, with one assignment already marked and one still open. Sign i
 | Teacher       | `teacher@studviro.local`   |
 | Student       | `ada@studviro.local`       |
 
-Password `correct horse battery staple` — **except** any account that already existed on this
-machine, which keeps the password it had. `admin@studviro.local` here is `newpassword123`.
+Password `correct horse battery staple` for all four — checked on 2026-10-22; an account that
+already existed on a machine keeps the password it had there.
 
 ## Where the backlog stands
 
@@ -88,9 +88,9 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: N3 of `docs/UI Work Plan.md`** (Phase N, information architecture — the
-product owner asked for it on 2026-10-22 and it goes before U1). N1 and N2 shipped the same day.
-Then N4, then U1.
+**Next task: N4 of `docs/UI Work Plan.md`** (Phase N, information architecture — the
+product owner asked for it on 2026-10-22 and it goes before U1). N1–N3 shipped the same day.
+Then U1.
 
 **After Phase N: U1 — `ConfirmAction` and every destructive action behind it** (tracker B41). B33 shipped on 2026-10-22 as the plan's U0: notifications and
 calendar, exam and result cards now open the course on the right tab, at the item.

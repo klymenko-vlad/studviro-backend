@@ -448,7 +448,7 @@ Phases are ordered; inside a phase, the listed order. U0 first because it is alr
 
 - [x] N1 Shell: five student entries, search and bell in the header — M · 2026-10-22
 - [x] N2 Course page tabs — M · 2026-10-22
-- [ ] N3 Administration hubs — L
+- [x] N3 Administration hubs — L · 2026-10-22
 - [ ] N4 Breadcrumbs — S
 - [x] U0 Notification and card links land on the thing (B33) — M · 2026-10-22
 - [ ] U1 `ConfirmAction` everywhere (B41) — M
