@@ -38,10 +38,12 @@ export class ProgramMembershipsController {
   constructor(private readonly memberships: ProgramMembershipsService) {}
 
   @Get()
-  @RequirePermission('program:read', INSTITUTION_SCOPE)
+  @RequirePermission('role:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'listProgramMembers',
     summary: 'Who is on this programme, and where they stand',
+    description:
+      'A list of named students with their addresses, so it needs the people-directory permission rather than `program:read`, which every student holds.',
   })
   @ApiOkResponse({ type: ProgramMemberResponseDto, isArray: true })
   @ApiErrorResponses({ notFound: true })

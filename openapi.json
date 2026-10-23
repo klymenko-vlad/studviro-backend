@@ -9137,6 +9137,7 @@
     },
     "/api/v1/institutions/{institutionId}/programs/{programId}/members": {
       "get": {
+        "description": "A list of named students with their addresses, so it needs the people-directory permission rather than `program:read`, which every student holds.",
         "operationId": "listProgramMembers",
         "parameters": [
           {
