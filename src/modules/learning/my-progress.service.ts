@@ -50,9 +50,14 @@ export class MyProgressService {
     now = new Date(),
   ): Promise<Progress> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
+
+    return this.forContext(context, now);
+  }
+
+  async forContext(context: LearningSpaceContext, now = new Date()): Promise<Progress> {
     const items = await this.openItems(context, now);
     const recorded = new Map(
-      (await this.completion.recorded([userId], items)).map((row) => [
+      (await this.completion.recorded([context.userId], items)).map((row) => [
         completionKey(row.item),
         row,
       ]),

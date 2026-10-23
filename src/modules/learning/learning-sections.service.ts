@@ -11,7 +11,7 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 
 import { AssignmentAnnouncementsService } from './assignment-announcements.service';
-import { LearningAccessService } from './learning-access.service';
+import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
 import {
   assertAvailabilityWindow,
   availabilityChanges,
@@ -57,6 +57,10 @@ export class LearningSectionsService {
   ): Promise<Gated<LearningSection>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
+    return this.listFor(context, now);
+  }
+
+  listFor(context: LearningSpaceContext, now = new Date()): Promise<Gated<LearningSection>[]> {
     return this.availability.siftSections(context, (row) => teaserOf(row, ['summary']), now);
   }
 

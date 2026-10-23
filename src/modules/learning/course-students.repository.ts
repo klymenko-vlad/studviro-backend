@@ -54,6 +54,24 @@ export class CourseStudentsRepository {
     return { students, total: counted?.total ?? 0 };
   }
 
+  async find(offeringId: string, userId: string): Promise<CourseStudent | null> {
+    const [student] = await this.reader
+      .select({ userId: users.id, displayName: users.displayName, email: users.email })
+      .from(enrollments)
+      .innerJoin(users, eq(users.id, enrollments.userId))
+      .where(
+        and(
+          eq(enrollments.courseOfferingId, offeringId),
+          eq(enrollments.userId, userId),
+          inArray(enrollments.status, [...ENROLLMENT_PARTICIPATING_STATUSES]),
+          isNull(enrollments.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return student ?? null;
+  }
+
   private get reader() {
     return this.txHost.reader();
   }

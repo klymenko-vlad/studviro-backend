@@ -167,11 +167,18 @@ copied in the store, not shared), assignments, quizzes and their questions — i
 with every date shifted by the gap between the two terms. Nothing student-owned is copied.
 Moodle's _import_; the thing that makes the second year cheap.
 
-### CB11 — View as a student · S
+### CB11 — View as a student · S · **Done 2026-10-23**
 
 A switch on the course page that renders the outline as an enrolled student would see it
 today: hidden, scheduled and locked items as the student sees them. Read-only, no
 impersonation — the server answers the student view for the author on request.
+
+Shipped as **ADR 0048**: `GET …/student-view` answers sections, materials, assignments and
+progress through the very methods the student's own reads call, for one enrolled student
+(`?asStudent=`) or for a student with no progress and no group; authors only, 404 for
+someone not enrolled. A _View as a student_ switch on the Content tab opens a paged,
+filtered picker; the outline then renders read-only under a _Viewing as …_ banner with
+_Back to editing_.
 
 ## Checklist
 
@@ -185,7 +192,7 @@ impersonation — the server answers the student view for the author on request.
 - [ ] CB8 — Quiz review and marking
 - [x] CB9 — Content for one group
 - [ ] CB10 — Reuse last year's course
-- [ ] CB11 — View as a student
+- [x] CB11 — View as a student
 
 ## Noticed
 
@@ -225,3 +232,9 @@ impersonation — the server answers the student view for the author on request.
 - On a phone the _Who can see_ table scrolls sideways, like the completion table.
 - Each outline row now carries _Access_, _Groups_ and _Who can see_ beside the other
   actions; a row's actions are crowded on a phone and would read better behind one menu.
+- CB11 was taken before CB5–CB8 and CB10, at the coordinator's request.
+- The Assignments tab has no student view; only the Content outline does (ADR 0048).
+- In the student view, _Your progress_ keeps the student's own wording; "Their progress"
+  would read better to the author but needs the meter to take its label from outside.
+- The student view of an unpublished page shows it as it will be once published, with no
+  note saying a student cannot reach it yet.

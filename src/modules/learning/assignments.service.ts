@@ -84,6 +84,10 @@ export class AssignmentsService {
   ): Promise<Gated<AssignmentEntry>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
+    return this.listFor(context);
+  }
+
+  async listFor(context: LearningSpaceContext): Promise<Gated<AssignmentEntry>[]> {
     const rows = await this.reader
       .select({ activity: learningActivities, assessment: assessments })
       .from(learningActivities)
@@ -96,7 +100,7 @@ export class AssignmentsService {
       )
       .where(
         and(
-          eq(learningActivities.learningSpaceId, spaceId),
+          eq(learningActivities.learningSpaceId, context.space.id),
           eq(learningActivities.type, 'assignment'),
           isNull(learningActivities.deletedAt),
         ),

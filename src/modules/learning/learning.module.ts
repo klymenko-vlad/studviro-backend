@@ -37,6 +37,8 @@ import { MyProgressService } from './my-progress.service';
 import { RestrictionFactsRepository } from './restriction-facts.repository';
 import { RestrictionRulesService } from './restriction-rules.service';
 import { SightReportService } from './sight-report.service';
+import { StudentViewController } from './student-view.controller';
+import { StudentViewService } from './student-view.service';
 import { StudyGroupContentController } from './study-group-content.controller';
 import { SubmissionMarkingController } from './submission-marking.controller';
 import { SubmissionMarkingService } from './submission-marking.service';
@@ -58,6 +60,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     MyAssessmentResultsController,
     CompletionController,
     LearningSightController,
+    StudentViewController,
     StudyGroupContentController,
   ],
   providers: [
@@ -85,6 +88,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     CompletionService,
     TrackedItemsRepository,
     SightReportService,
+    StudentViewService,
     GroupContentService,
     CourseStudentsRepository,
     MyProgressService,
