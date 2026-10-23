@@ -57,6 +57,12 @@ export interface PlannedRestriction {
     | { readonly type: 'mark'; readonly assignmentKey: string; readonly atLeast: number };
 }
 
+export interface PlannedGroupAudience {
+  readonly materialKey: string;
+  readonly groupKey: string;
+  readonly hideFromOthers: boolean;
+}
+
 export interface PlannedSubmission {
   readonly assignmentKey: string;
   readonly studentKey: string;
@@ -170,6 +176,18 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       availableFrom: null,
       completionRule: 'none' as const,
     },
+    ...SEMINAR_GROUPS.map((group) => ({
+      key: materialKey(space, `worksheet-${group.number}`),
+      spaceKey: space.key,
+      sectionKey: sectionKey(space, 0),
+      kind: 'text' as const,
+      title: `Seminar S${group.number} worksheet`,
+      body: `Exercises for seminar group S${group.number} this week. Work through them before you come; we go over them together.`,
+      url: null,
+      position: MATERIALS_PER_SPACE + group.number,
+      availableFrom: null,
+      completionRule: 'none' as const,
+    })),
     {
       key: materialKey(space, 'template'),
       spaceKey: space.key,
@@ -198,6 +216,21 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
 }
 
 export const EXTENSION_MARK = 90;
+
+const SEMINAR_GROUPS = [
+  { number: 1, hideFromOthers: true },
+  { number: 2, hideFromOthers: false },
+] as const;
+
+export function planGroupAudiences(spaces: readonly PlannedSpace[]): PlannedGroupAudience[] {
+  return spaces.flatMap((space) =>
+    SEMINAR_GROUPS.map((group) => ({
+      materialKey: materialKey(space, `worksheet-${group.number}`),
+      groupKey: `GRP-${space.offering.key}-${group.number}`,
+      hideFromOthers: group.hideFromOthers,
+    })),
+  );
+}
 
 /**
  * Step by step: the second block opens once Assignment 1 is complete (passed),

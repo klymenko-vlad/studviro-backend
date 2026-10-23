@@ -29,11 +29,23 @@ export interface ConditionView extends LeafConditionView {
   readonly conditions: LeafConditionView[] | null;
 }
 
+export interface AudienceGroupView {
+  readonly groupId: string;
+  readonly groupName: string | null;
+  readonly missing: boolean;
+}
+
+export interface AudienceView {
+  readonly hideFromOthers: boolean;
+  readonly groups: AudienceGroupView[];
+}
+
 export interface RestrictionView {
   readonly match: RestrictionMatch;
   readonly hideWhenLocked: boolean;
   readonly locked: boolean;
   readonly conditions: ConditionView[];
+  readonly audience: AudienceView | null;
 }
 
 export const NO_NAMES: RestrictionNames = { items: new Map(), groups: new Map() };
@@ -43,12 +55,26 @@ export function viewOf(
   conditions: readonly Condition[],
   names: RestrictionNames,
   locked: boolean,
+  withAudience: boolean,
 ): RestrictionView {
+  const { audience } = restriction;
+
   return {
     match: restriction.match,
     hideWhenLocked: restriction.hideWhenLocked,
     locked,
     conditions: conditions.map((condition) => conditionView(condition, names)),
+    audience:
+      withAudience && audience
+        ? {
+            hideFromOthers: audience.hideFromOthers,
+            groups: audience.groupIds.map((groupId) => {
+              const groupName = names.groups.get(groupId) ?? null;
+
+              return { groupId, groupName, missing: groupName === null };
+            }),
+          }
+        : null,
   };
 }
 

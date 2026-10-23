@@ -42,8 +42,14 @@ export interface ConditionSet {
 
 export type Condition = LeafCondition | ConditionSet;
 
+export interface Audience {
+  readonly groupIds: readonly string[];
+  readonly hideFromOthers: boolean;
+}
+
 export interface Restriction {
   readonly match: RestrictionMatch;
   readonly hideWhenLocked: boolean;
   readonly conditions: readonly Condition[];
+  readonly audience?: Audience;
 }

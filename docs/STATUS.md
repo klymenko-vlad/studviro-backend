@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-23 (CB4)
+Last updated: 2026-10-23 (CB9)
 
 ## What this is
 
@@ -104,7 +104,10 @@ students × items table (ADR 0045). **CB4** (2026-10-23) locks a section, materi
 assignment until conditions hold — another item complete, a mark of at least N, a date, a
 study group — combined with all/any and one level of grouping; a locked student sees the
 title and what unlocks it, or nothing. One `AvailabilityService` decides every read path
-(ADR 0046). Split `learning-materials.service.ts` before CB5 adds kinds. The client half is on branch
+(ADR 0046). **CB9** (2026-10-23, ahead of CB5) adds a _Groups_ control that makes a section
+or item only for some study groups — hidden from or shown locked to the rest, ANDed with the
+conditions — a _Who can see_ table per item and each group's content on the People tab
+(ADR 0047). Split `learning-materials.service.ts` before CB5 adds kinds. The client half is on branch
 `feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
 uncommitted interface work in `../frontend`; merge it to `dev` first.
 
@@ -130,8 +133,8 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 625 kB and measures 624.42 kB after CB4** (`.size-limit.mjs`; CB4 cost 6.4 kB and raised
-it from 620 kB). The quiz steps will need room of their own.
+is 632 kB and measures 630.48 kB after CB9** (`.size-limit.mjs`; CB9 cost 6.08 kB and raised
+it from 625 kB). The quiz steps will need room of their own.
 
 Noticed while walking, not fixed:
 

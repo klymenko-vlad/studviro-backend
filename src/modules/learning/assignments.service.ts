@@ -25,6 +25,7 @@ import {
 import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningOutlineService } from './learning-outline.service';
 import type { RestrictionInput } from './restriction';
+import type { AudienceInput } from './restriction-audience';
 import { RestrictionRulesService } from './restriction-rules.service';
 
 export interface NewAssignment {
@@ -45,6 +46,7 @@ export interface NewAssignment {
   readonly completionRule?: CompletionRule;
   readonly completionPassPoints?: number | null;
   readonly restriction?: RestrictionInput | null;
+  readonly audience?: AudienceInput | null;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -140,7 +142,7 @@ export class AssignmentsService {
     const sectionId = input.sectionId ?? null;
     const { restriction = null } = await this.restrictions.settle(
       { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
-      { input: input.restriction },
+      { input: input.restriction, audience: input.audience },
     );
 
     return this.txHost.run(async () => {
@@ -224,7 +226,11 @@ export class AssignmentsService {
           placement.sectionId === undefined ? existing.activity.sectionId : placement.sectionId,
         restriction: existing.activity.restriction,
       },
-      { input: changes.restriction, moved: placement.sectionId !== undefined },
+      {
+        input: changes.restriction,
+        audience: changes.audience,
+        moved: placement.sectionId !== undefined,
+      },
     );
 
     const activityChanges = {

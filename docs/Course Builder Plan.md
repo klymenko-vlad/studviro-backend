@@ -146,11 +146,19 @@ after the quiz closes, never): their answers, right/wrong, the correct answer, f
 Teachers mark essay questions and override any automatic mark; changing an answer key
 offers a regrade. A per-question results view (how many got each question right).
 
-### CB9 — Content for one group · S
+### CB9 — Content for one group · S · **Done 2026-10-23**
 
 Restrict a section or an item to one or more study groups (they exist, from the registry).
 Lands on the CB4 condition engine as a condition type; this step is its interface and the
 roster-side view of "who can see this".
+
+Shipped as **ADR 0047**: the _Groups_ control writes an `audience` (groups, and whether
+others see nothing or the lock) beside the conditions in the same `restriction`, ANDed with
+them and checked first; each control keeps the other's half. Authors see a _Group S1, S2_
+badge, a _Who can see_ table per section and item (every enrolled student, can open / title
+/ nothing and why, batched, paged and filtered), and on the People tab what each group's
+content is, linked to its place in the outline. A removed group fails closed and is flagged.
+The demo seed gives each seminar group a worksheet: S1's hidden from S2, S2's shown locked.
 
 ### CB10 — Reuse last year's course · M
 
@@ -175,7 +183,7 @@ impersonation — the server answers the student view for the author on request.
 - [ ] CB6 — Quiz authoring and the question bank
 - [ ] CB7 — Taking a quiz
 - [ ] CB8 — Quiz review and marking
-- [ ] CB9 — Content for one group
+- [x] CB9 — Content for one group
 - [ ] CB10 — Reuse last year's course
 - [ ] CB11 — View as a student
 
@@ -209,3 +217,11 @@ impersonation — the server answers the student view for the author on request.
   (ADR 0046); per-student announcements need their own table.
 - The restriction editor sits on the Content tab only; the Assignments tab shows the badge
   but has no _Access_ button.
+- CB9 was taken before CB5–CB8, out of order, at the coordinator's request.
+- The group picker in the _Groups_ control and the People tab's groups card read the whole
+  `listStudyGroups` response; the study-group list is not paged or filtered (pre-existing).
+- A teacher (not an administrator) sees a group's content on the People tab but cannot
+  manage groups; `offering:manage` still gates opening and filling groups.
+- On a phone the _Who can see_ table scrolls sideways, like the completion table.
+- Each outline row now carries _Access_, _Groups_ and _Who can see_ beside the other
+  actions; a row's actions are crowded on a phone and would read better behind one menu.

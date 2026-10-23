@@ -29,6 +29,7 @@ import { AvailabilityService, type Gated } from './learning-availability.service
 import { assertPayloadMatchesKind } from './learning-material-payload';
 import { LearningOutlineService, type Placement } from './learning-outline.service';
 import type { RestrictionInput } from './restriction';
+import type { AudienceInput } from './restriction-audience';
 import { RestrictionRulesService } from './restriction-rules.service';
 
 export const MATERIAL_PURPOSE = 'materials';
@@ -58,6 +59,7 @@ export interface NewLearningMaterial {
   readonly hiddenUntilAvailable?: boolean;
   readonly completionRule?: CompletionRule;
   readonly restriction?: RestrictionInput | null;
+  readonly audience?: AudienceInput | null;
 }
 
 export type LearningMaterialChanges = Partial<Omit<NewLearningMaterial, 'kind'>> & {
@@ -133,7 +135,7 @@ export class LearningMaterialsService {
     const sectionId = input.sectionId ?? null;
     const { restriction = null } = await this.restrictions.settle(
       { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
-      { input: input.restriction },
+      { input: input.restriction, audience: input.audience },
     );
     const stored =
       input.kind === 'file' && input.storageKey
@@ -201,7 +203,11 @@ export class LearningMaterialsService {
         sectionId: placement.sectionId === undefined ? existing.sectionId : placement.sectionId,
         restriction: existing.restriction,
       },
-      { input: changes.restriction, moved: placement.sectionId !== undefined },
+      {
+        input: changes.restriction,
+        audience: changes.audience,
+        moved: placement.sectionId !== undefined,
+      },
     );
     const ruleChanged =
       changes.completionRule !== undefined &&

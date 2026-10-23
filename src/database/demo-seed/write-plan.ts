@@ -43,6 +43,7 @@ import type { PlannedOffering } from './derive';
 import { planCompletions } from './derive-completion';
 import {
   planAssignments,
+  planGroupAudiences,
   planMaterials,
   planRestrictions,
   planSections,
@@ -689,6 +690,22 @@ export async function writePlan(
           .where(
             eq(learningMaterials.id, required(materialIds, planned.target.key, 'material')),
           ));
+  }
+
+  for (const planned of planGroupAudiences(plannedSpaces)) {
+    const groupId = groupIds.get(planned.groupKey);
+    if (!groupId) continue;
+
+    const restriction: Restriction = {
+      match: 'all',
+      hideWhenLocked: false,
+      conditions: [],
+      audience: { groupIds: [groupId], hideFromOthers: planned.hideFromOthers },
+    };
+    await db
+      .update(learningMaterials)
+      .set({ restriction })
+      .where(eq(learningMaterials.id, required(materialIds, planned.materialKey, 'material')));
   }
 
   const plannedSubmissions = planSubmissions(plannedAssignments, plannedEnrollments, options);

@@ -1,8 +1,9 @@
 import type { Restriction } from '../../database/schema';
 
+import { explainOwn, withinSection, type Access } from './access-explanation';
 import type { LearningStance } from './learning-access.service';
-import { ownSight, type Schedulable, type Sight } from './learning-availability';
-import { verdictOf, type StudentFacts } from './restriction-verdict';
+import type { Schedulable, Sight } from './learning-availability';
+import type { StudentFacts } from './restriction-verdict';
 import { viewOf, type RestrictionNames, type RestrictionView } from './restriction-view';
 
 export interface Restricted extends Schedulable {
@@ -57,20 +58,27 @@ export class AvailabilityLens {
       return {
         sight: 'full',
         restriction:
-          restriction && viewOf(restriction, restriction.conditions, this.names, false),
+          restriction && viewOf(restriction, restriction.conditions, this.names, false, true),
       };
     }
 
-    const sight = ownSight(subject, this.now);
-    if (sight === 'none' || !restriction) return { sight, restriction: null };
-
-    const verdict = verdictOf(restriction, this.facts, this.now);
-    if (verdict.open) return { sight, restriction: null };
-    if (restriction.hideWhenLocked) return CLOSED;
+    const access = explainOwn(subject, this.facts, this.names, this.now);
 
     return {
-      sight: 'title',
-      restriction: viewOf(restriction, verdict.unmet, this.names, true),
+      sight: access.sight,
+      restriction:
+        access.reason === 'locked' && access.sight === 'title' ? access.restriction : null,
     };
+  }
+
+  explainItem(item: OutlineItem, section: GatedSection | null): Access {
+    const own = explainOwn(item, this.facts, this.names, this.now);
+    if (section === null) return own;
+
+    return withinSection(this.explainSection(section), own);
+  }
+
+  explainSection(section: GatedSection): Access {
+    return explainOwn(section, this.facts, this.names, this.now);
   }
 }

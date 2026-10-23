@@ -124,6 +124,7 @@ export function referencesOf(
       }
       if (leaf.type === 'group') groupIds.add(leaf.groupId);
     }
+    for (const groupId of restriction.audience?.groupIds ?? []) groupIds.add(groupId);
   }
 
   return { items: [...items.values()], groupIds: [...groupIds] };

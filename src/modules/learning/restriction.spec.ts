@@ -123,11 +123,12 @@ describe('verdictOf', () => {
   it('opens on a completed item and stays shut without it', () => {
     expect(verdictOf(all(completedA), facts(), NOW)).toEqual({
       open: false,
+      outside: false,
       unmet: [completedA],
     });
     expect(
       verdictOf(all(completedA), facts({ completed: new Set([`assignment:${A}`]) }), NOW),
-    ).toEqual({ open: true, unmet: [] });
+    ).toEqual({ open: true, outside: false, unmet: [] });
   });
 
   it('does not count completing a material as completing an assignment with the same id', () => {
@@ -157,7 +158,7 @@ describe('verdictOf', () => {
   it('needs every condition with all, and names only the ones still unmet', () => {
     const verdict = verdictOf(all(inGroup, markA50), facts({ groupIds: new Set([G]) }), NOW);
 
-    expect(verdict).toEqual({ open: false, unmet: [markA50] });
+    expect(verdict).toEqual({ open: false, outside: false, unmet: [markA50] });
   });
 
   it('needs one condition with any, and names all of them while none holds', () => {
@@ -166,6 +167,7 @@ describe('verdictOf', () => {
     );
     expect(verdictOf(any(inGroup, markA50), facts(), NOW)).toEqual({
       open: false,
+      outside: false,
       unmet: [inGroup, markA50],
     });
   });
@@ -181,10 +183,11 @@ describe('verdictOf', () => {
         facts({ completed: new Set([`assignment:${A}`]) }),
         NOW,
       ),
-    ).toEqual({ open: false, unmet: [either] });
+    ).toEqual({ open: false, outside: false, unmet: [either] });
     expect(verdictOf(all(either), inG, NOW).open).toBe(true);
     expect(verdictOf(all(both), inG, NOW)).toEqual({
       open: false,
+      outside: false,
       unmet: [{ ...both, conditions: [markA50] }],
     });
   });
@@ -201,6 +204,7 @@ describe('viewOf', () => {
       all(markA50, inGroup, fromTomorrow),
       all(markA50, inGroup, fromTomorrow).conditions,
       names,
+      true,
       true,
     );
 
@@ -226,7 +230,7 @@ describe('viewOf', () => {
   it('describes a group of conditions with its own match', () => {
     const set = { type: 'set', match: 'any', conditions: [completedA] } as const;
 
-    expect(viewOf(all(set), [set], NO_NAMES, false).conditions[0]).toMatchObject({
+    expect(viewOf(all(set), [set], NO_NAMES, false, true).conditions[0]).toMatchObject({
       type: 'set',
       match: 'any',
       conditions: [{ type: 'completed', itemId: A, missing: true }],

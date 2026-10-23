@@ -14,6 +14,7 @@ import {
   ASSIGNMENT_PASS_POINTS,
   EXTENSION_MARK,
   planAssignments,
+  planGroupAudiences,
   planMaterials,
   planRestrictions,
   planSections,
@@ -163,7 +164,7 @@ describe('the learning half it seeds', () => {
   });
 
   it('gives every space materials and two assignments', () => {
-    expect(planMaterials(spaces)).toHaveLength(spaces.length * 6);
+    expect(planMaterials(spaces)).toHaveLength(spaces.length * 8);
     expect(assignments).toHaveLength(spaces.length * 2);
   });
 
@@ -184,7 +185,14 @@ describe('the learning half it seeds', () => {
     ]);
     expect(
       outline.filter((item) => item.sectionKey === first!.key).map((i) => i.title),
-    ).toEqual(['Lecture slides', 'Recommended reading', 'Assignment 1', 'Extension exercises']);
+    ).toEqual([
+      'Lecture slides',
+      'Recommended reading',
+      'Assignment 1',
+      'Extension exercises',
+      'Seminar S1 worksheet',
+      'Seminar S2 worksheet',
+    ]);
     expect(
       outline.filter((item) => item.sectionKey === second!.key).map((i) => i.title),
     ).toEqual(['Assignment 2', 'Report template']);
@@ -222,6 +230,26 @@ describe('the learning half it seeds', () => {
       },
     ]);
     expect(EXTENSION_MARK).toBeLessThanOrEqual(firstAssignment!.maxPoints);
+  });
+
+  it('gives each seminar group a worksheet of its own, one hidden from the other group and one shown locked', () => {
+    const space = spaces[0]!;
+    const groups = planStudyGroups(enrollments).filter(
+      (group) => group.offering.key === space.offering.key,
+    );
+    const worksheets = planMaterials(spaces).filter(
+      (material) => material.spaceKey === space.key && material.title.endsWith('worksheet'),
+    );
+
+    expect(planGroupAudiences(spaces)).toHaveLength(spaces.length * 2);
+    expect(
+      planGroupAudiences(spaces).filter((planned) =>
+        worksheets.some((worksheet) => worksheet.key === planned.materialKey),
+      ),
+    ).toEqual([
+      { materialKey: worksheets[0]!.key, groupKey: groups[0]!.key, hideFromOthers: true },
+      { materialKey: worksheets[1]!.key, groupKey: groups[1]!.key, hideFromOthers: false },
+    ]);
   });
 
   it('schedules a section and an item to open after the anchor, so both states show', () => {

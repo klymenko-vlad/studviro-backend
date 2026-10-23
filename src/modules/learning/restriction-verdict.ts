@@ -8,6 +8,7 @@ export interface StudentFacts {
 
 export interface Verdict {
   readonly open: boolean;
+  readonly outside: boolean;
   readonly unmet: readonly Condition[];
 }
 
@@ -18,13 +19,18 @@ export const NO_FACTS: StudentFacts = {
 };
 
 export function verdictOf(restriction: Restriction, facts: StudentFacts, now: Date): Verdict {
+  const { audience } = restriction;
+  if (audience && !audience.groupIds.some((groupId) => facts.groupIds.has(groupId))) {
+    return { open: false, outside: true, unmet: [] };
+  }
+
   const unmet = restriction.conditions.flatMap((condition) => unmetOf(condition, facts, now));
   const open =
-    restriction.match === 'all'
+    restriction.match === 'all' || restriction.conditions.length === 0
       ? unmet.length === 0
       : unmet.length < restriction.conditions.length;
 
-  return { open, unmet: open ? [] : unmet };
+  return { open, outside: false, unmet: open ? [] : unmet };
 }
 
 function unmetOf(condition: Condition, facts: StudentFacts, now: Date): Condition[] {

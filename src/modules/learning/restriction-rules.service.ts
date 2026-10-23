@@ -14,6 +14,12 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 
 import { leavesOf, parseRestriction, referencesOf, type RestrictionInput } from './restriction';
+import {
+  composeRestriction,
+  conditionsOf,
+  parseAudience,
+  type AudienceInput,
+} from './restriction-audience';
 import { findCycle, type RestrictionNode } from './restriction-cycles';
 import type { RestrictionScope } from './restriction-facts.repository';
 
@@ -25,7 +31,13 @@ export interface RestrictionSubject extends RestrictionScope {
 
 export interface RestrictionChange {
   readonly input: RestrictionInput | null | undefined;
+  readonly audience?: AudienceInput | null;
   readonly moved?: boolean;
+}
+
+interface Checks {
+  readonly conditions: boolean;
+  readonly audience: boolean;
 }
 
 interface Target extends RestrictionNode {
@@ -41,23 +53,31 @@ export class RestrictionRulesService {
     subject: RestrictionSubject,
     change: RestrictionChange,
   ): Promise<{ restriction?: Restriction | null }> {
-    const restriction = parseRestriction(change.input);
+    const conditions = parseRestriction(change.input);
+    const audience = parseAudience(change.audience);
+    const restriction = composeRestriction(subject.restriction, conditions, audience);
     if (restriction === undefined && !change.moved) return {};
 
-    await this.assertFits({
-      ...subject,
-      restriction: restriction === undefined ? subject.restriction : restriction,
-    });
+    await this.assertFits(
+      {
+        ...subject,
+        restriction: restriction === undefined ? subject.restriction : restriction,
+      },
+      { conditions: conditions !== undefined || change.moved === true, audience: !!audience },
+    );
 
     return restriction === undefined ? {} : { restriction };
   }
 
-  private async assertFits(subject: RestrictionSubject): Promise<void> {
+  private async assertFits(subject: RestrictionSubject, checks: Checks): Promise<void> {
     const targets = await this.targetsOf(subject.spaceId);
-    if (subject.restriction) {
-      this.assertTargets(subject.restriction, targets);
-      await this.assertGroups(subject);
-    }
+    const conditions = conditionsOf(subject.restriction);
+    const groupIds = [
+      ...(checks.conditions && conditions ? referencesOf([conditions]).groupIds : []),
+      ...(checks.audience ? (subject.restriction?.audience?.groupIds ?? []) : []),
+    ];
+    if (checks.conditions && conditions) this.assertTargets(conditions, targets);
+    await this.assertGroups(subject.offeringId, [...new Set(groupIds)]);
     if (subject.key === null) return;
 
     const nodes = [...targets.values()].map((node) =>
@@ -109,20 +129,19 @@ export class RestrictionRulesService {
     }
   }
 
-  private async assertGroups(subject: RestrictionSubject): Promise<void> {
-    const { groupIds } = referencesOf([subject.restriction]);
+  private async assertGroups(offeringId: string | null, groupIds: string[]): Promise<void> {
     if (groupIds.length === 0) return;
 
     const found =
-      subject.offeringId === null
+      offeringId === null
         ? []
         : await this.client
             .select({ id: studyGroups.id })
             .from(studyGroups)
             .where(
               and(
-                inArray(studyGroups.id, [...groupIds]),
-                eq(studyGroups.courseOfferingId, subject.offeringId),
+                inArray(studyGroups.id, groupIds),
+                eq(studyGroups.courseOfferingId, offeringId),
                 isNull(studyGroups.deletedAt),
               ),
             );

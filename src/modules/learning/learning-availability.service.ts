@@ -8,6 +8,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import type { Access } from './access-explanation';
 import { AvailabilityLens, type OutlineItem, type Restricted } from './availability-lens';
 import type { LearningSpaceContext, LearningStance } from './learning-access.service';
 import { referencesOf } from './restriction';
@@ -24,6 +25,10 @@ export interface OutlineView<T> {
   readonly itemOf: (row: T) => OutlineItem;
   readonly teaser: (row: T) => T;
 }
+
+export type ExplainSubject =
+  | { readonly kind: 'section'; readonly section: LearningSection }
+  | { readonly kind: 'item'; readonly item: OutlineItem };
 
 export interface Viewer extends RestrictionScope {
   readonly stance: LearningStance;
@@ -129,6 +134,48 @@ export class AvailabilityService {
 
       return lens.itemGate(item).sight === 'full';
     });
+  }
+
+  async explain(
+    scope: RestrictionScope,
+    subject: ExplainSubject,
+    userIds: readonly string[],
+    now = new Date(),
+  ): Promise<Map<string, Access>> {
+    const sections = await this.sectionsOf(scope.spaceId);
+    const section =
+      subject.kind === 'section'
+        ? subject.section
+        : (sections.find((row) => row.id === subject.item.sectionId) ?? null);
+    const restrictions = [
+      section?.restriction ?? null,
+      subject.kind === 'item' ? subject.item.restriction : null,
+    ];
+    const restricted = restrictions.some((restriction) => restriction !== null);
+    const [facts, names] = restricted
+      ? await Promise.all([
+          this.facts.factsOf(scope, userIds),
+          this.facts.namesOf(scope, referencesOf(restrictions)),
+        ])
+      : [new Map<string, StudentFacts>(), NO_NAMES];
+
+    return new Map(
+      userIds.map((userId) => {
+        const lens = new AvailabilityLens(
+          'participant',
+          [],
+          facts.get(userId) ?? NO_FACTS,
+          names,
+          now,
+        );
+        const access =
+          subject.kind === 'section'
+            ? lens.explainSection(subject.section)
+            : lens.explainItem(subject.item, section);
+
+        return [userId, access];
+      }),
+    );
   }
 
   private async lensFor(

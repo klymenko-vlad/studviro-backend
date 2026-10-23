@@ -221,6 +221,7 @@ describe('Restrict access (e2e)', () => {
               conditions: null,
             },
           ],
+          audience: null,
         });
       }
     });

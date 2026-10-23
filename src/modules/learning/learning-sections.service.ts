@@ -20,6 +20,7 @@ import {
 import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningOutlineService } from './learning-outline.service';
 import type { RestrictionInput } from './restriction';
+import type { AudienceInput } from './restriction-audience';
 import { RestrictionRulesService } from './restriction-rules.service';
 
 export interface NewLearningSection {
@@ -30,6 +31,7 @@ export interface NewLearningSection {
   readonly availableUntil?: Date | null;
   readonly hiddenUntilAvailable?: boolean;
   readonly restriction?: RestrictionInput | null;
+  readonly audience?: AudienceInput | null;
 }
 
 export type LearningSectionChanges = Partial<NewLearningSection> & {
@@ -75,7 +77,7 @@ export class LearningSectionsService {
         sectionId: null,
         restriction: null,
       },
-      { input: input.restriction },
+      { input: input.restriction, audience: input.audience },
     );
 
     return this.txHost.run(async () => {
@@ -123,7 +125,7 @@ export class LearningSectionsService {
         sectionId: null,
         restriction: existing.restriction,
       },
-      { input: changes.restriction },
+      { input: changes.restriction, audience: changes.audience },
     );
 
     const set = {

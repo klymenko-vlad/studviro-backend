@@ -7815,6 +7815,267 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/sight/{kind}/{itemId}": {
+      "get": {
+        "description": "For whoever authors the course. Evaluated on the server clock for every enrolled student; a page of students at a time, with counts over all of them.",
+        "operationId": "listLearningItemSight",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "section",
+                "material",
+                "assignment"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to students whose name or email contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SightReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Which students can see a section or an item now, and why not the rest",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/study-groups/{groupId}/content": {
+      "get": {
+        "description": "For whoever authors the course: everything only for this group, and everything with a condition naming it, in outline order, a page at a time, narrowed by title.",
+        "operationId": "listStudyGroupContent",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to students whose name or email contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupContentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The sections and items of the course page restricted to this group",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/demo-requests": {
       "post": {
         "operationId": "createDemoRequest",
@@ -18073,6 +18334,46 @@
           "conditions"
         ]
       },
+      "AudienceGroupViewDto": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "missing": {
+            "type": "boolean",
+            "description": "The group has been removed, so nobody is in it."
+          }
+        },
+        "required": [
+          "groupId",
+          "groupName",
+          "missing"
+        ]
+      },
+      "AudienceViewDto": {
+        "type": "object",
+        "properties": {
+          "hideFromOthers": {
+            "type": "boolean"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AudienceGroupViewDto"
+            }
+          }
+        },
+        "required": [
+          "hideFromOthers",
+          "groups"
+        ]
+      },
       "RestrictionViewDto": {
         "type": "object",
         "properties": {
@@ -18091,17 +18392,29 @@
             "description": "For a student: it is locked, and conditions are only those still unmet. For an author: always false, with every condition."
           },
           "conditions": {
+            "description": "Empty when the item is only for some groups and has no other conditions.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ConditionViewDto"
             }
+          },
+          "audience": {
+            "nullable": true,
+            "description": "The study groups it is for. A student sees it only while being in none of them is what keeps it locked.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceViewDto"
+              }
+            ]
           }
         },
         "required": [
           "match",
           "hideWhenLocked",
           "locked",
-          "conditions"
+          "conditions",
+          "audience"
         ]
       },
       "LearningSectionResponseDto": {
@@ -18314,16 +18627,48 @@
           "conditions"
         ]
       },
+      "AudienceDto": {
+        "type": "object",
+        "properties": {
+          "groupIds": {
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "Study groups of the offering. A student in any one of them may open it.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "hideFromOthers": {
+            "type": "boolean",
+            "description": "Students in none of the groups see nothing at all, rather than the title and the groups it is for."
+          }
+        },
+        "required": [
+          "groupIds"
+        ]
+      },
       "CreateLearningSectionDto": {
         "type": "object",
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -18368,11 +18713,21 @@
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -18600,11 +18955,21 @@
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -18695,11 +19060,21 @@
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -18930,11 +19305,21 @@
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -19036,11 +19421,21 @@
         "properties": {
           "restriction": {
             "nullable": true,
-            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
               }
             ]
           },
@@ -20008,6 +20403,233 @@
         },
         "required": [
           "columns",
+          "items",
+          "meta"
+        ]
+      },
+      "StudentSightDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "sight": {
+            "enum": [
+              "full",
+              "title",
+              "none"
+            ],
+            "type": "string",
+            "description": "full: can open it now; title: sees only its title; none: does not see it."
+          },
+          "reason": {
+            "nullable": true,
+            "enum": [
+              "hidden",
+              "scheduled",
+              "ended",
+              "locked",
+              null
+            ],
+            "type": "string",
+            "description": "Why not full: hidden by the author, scheduled (not open yet), ended, or locked by a restriction. Null when it is open."
+          },
+          "source": {
+            "nullable": true,
+            "enum": [
+              "item",
+              "section",
+              null
+            ],
+            "type": "string",
+            "description": "Whether the item itself or the section it sits in is what keeps it closed."
+          },
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "restriction": {
+            "nullable": true,
+            "description": "When locked: the conditions this student has not met, or the groups they are not in. Given even when the student is shown nothing.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionViewDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "email",
+          "sight",
+          "reason",
+          "source",
+          "availableFrom",
+          "restriction"
+        ]
+      },
+      "SightReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "section",
+              "material",
+              "assignment"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "students": {
+            "type": "number",
+            "description": "Students on the course, whatever the search narrows to."
+          },
+          "canOpen": {
+            "type": "number"
+          },
+          "seeTitle": {
+            "type": "number"
+          },
+          "seeNothing": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentSightDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "students",
+          "canOpen",
+          "seeTitle",
+          "seeNothing",
+          "items",
+          "meta"
+        ]
+      },
+      "GroupContentGroupDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
+      "GroupContentItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "section",
+              "material",
+              "assignment"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "spaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The section it sits in; for a section, the section itself. Null: the general area."
+          },
+          "sectionTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "via": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "audience",
+                "condition"
+              ]
+            },
+            "description": "audience: it is only for this group (and any others named with it); condition: a condition of its restriction asks for this group."
+          },
+          "hideFromOthers": {
+            "type": "boolean",
+            "description": "Students outside its groups see nothing of it."
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "spaceId",
+          "sectionId",
+          "sectionTitle",
+          "via",
+          "hideFromOthers"
+        ]
+      },
+      "GroupContentResponseDto": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/GroupContentGroupDto"
+          },
+          "items": {
+            "description": "A page of them, in outline order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupContentItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "group",
           "items",
           "meta"
         ]

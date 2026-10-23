@@ -135,17 +135,54 @@ export class RestrictionDto {
   conditions!: ConditionDto[];
 }
 
+export class AudienceDto {
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    isArray: true,
+    minItems: 1,
+    maxItems: MAX_CONDITIONS,
+    description: 'Study groups of the offering. A student in any one of them may open it.',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_CONDITIONS)
+  @IsUUID('all', { each: true })
+  groupIds!: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Students in none of the groups see nothing at all, rather than the title and the groups it is for.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  hideFromOthers?: boolean;
+}
+
 export class RestrictedDto {
   @ApiPropertyOptional({
     type: () => RestrictionDto,
     nullable: true,
-    description: 'Locked until these conditions hold. Null removes the restriction.',
+    description:
+      'Locked until these conditions hold. Null removes the conditions; the groups it is for stay.',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @ValidateNested()
   @Type(() => RestrictionDto)
   restriction?: RestrictionDto | null;
+
+  @ApiPropertyOptional({
+    type: () => AudienceDto,
+    nullable: true,
+    description:
+      'Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @ValidateNested()
+  @Type(() => AudienceDto)
+  audience?: AudienceDto | null;
 }
 
 @Exclude()
@@ -188,6 +225,25 @@ export class ConditionViewDto extends LeafConditionViewDto {
 }
 
 @Exclude()
+export class AudienceGroupViewDto {
+  @Expose() @ApiProperty({ format: 'uuid' }) groupId!: string;
+  @Expose() @ApiProperty({ type: String, nullable: true }) groupName!: string | null;
+
+  @Expose()
+  @ApiProperty({ description: 'The group has been removed, so nobody is in it.' })
+  missing!: boolean;
+}
+
+@Exclude()
+export class AudienceViewDto {
+  @Expose() @ApiProperty() hideFromOthers!: boolean;
+
+  @Expose()
+  @ApiProperty({ type: () => AudienceGroupViewDto, isArray: true })
+  groups!: AudienceGroupViewDto[];
+}
+
+@Exclude()
 export class RestrictionViewDto {
   @Expose() @ApiProperty({ enum: RESTRICTION_MATCHES }) match!: RestrictionMatch;
   @Expose() @ApiProperty() hideWhenLocked!: boolean;
@@ -200,8 +256,21 @@ export class RestrictionViewDto {
   locked!: boolean;
 
   @Expose()
-  @ApiProperty({ type: () => ConditionViewDto, isArray: true })
+  @ApiProperty({
+    type: () => ConditionViewDto,
+    isArray: true,
+    description: 'Empty when the item is only for some groups and has no other conditions.',
+  })
   conditions!: ConditionViewDto[];
+
+  @Expose()
+  @ApiProperty({
+    type: () => AudienceViewDto,
+    nullable: true,
+    description:
+      'The study groups it is for. A student sees it only while being in none of them is what keeps it locked.',
+  })
+  audience!: AudienceViewDto | null;
 }
 
 @Exclude()
