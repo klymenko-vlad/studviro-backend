@@ -6066,6 +6066,92 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials/{materialId}/views": {
+      "post": {
+        "description": "Completes a material whose rule is to open it, for a student on the course. Downloading a file records this on its own; call it for a link or a note when the student opens it.",
+        "operationId": "recordLearningMaterialView",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Say that the caller opened a material",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials/{materialId}/download": {
       "get": {
         "operationId": "getLearningMaterialDownloadUrl",
@@ -7398,6 +7484,332 @@
           }
         ],
         "summary": "List the current user’s marks from the learning management system",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/my-progress": {
+      "get": {
+        "description": "Counts only items that have a completion rule and that the caller can open now, for the whole page and per section.",
+        "operationId": "getMyLearningProgress",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "How far the caller is through a course page",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/my-completions/{kind}/{itemId}": {
+      "put": {
+        "description": "Only for a student on the course, and only on an item whose rule is the student’s own tick and which the student can open.",
+        "operationId": "markLearningItemDone",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "material",
+                "assignment"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkDoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemProgressDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Tick an item as done, or untick it",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/completions": {
+      "get": {
+        "description": "For whoever teaches the course or administers its offerings. Columns are every item with a completion rule, hidden ones included.",
+        "operationId": "listLearningCompletions",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to students whose name or email contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Which students have completed which items, a page of students at a time",
         "tags": [
           "learning"
         ]
@@ -17729,6 +18141,17 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -17748,7 +18171,8 @@
           "scanStatus",
           "position",
           "visible",
-          "sectionId"
+          "sectionId",
+          "completionRule"
         ]
       },
       "RequestUploadTicketDto": {
@@ -17873,6 +18297,15 @@
             "nullable": true,
             "format": "uuid",
             "description": "The section it sits in; null for the general area at the top."
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed"
+            ],
+            "type": "string",
+            "description": "When a student has completed it: never tracked, when they tick it, or when they open it."
           }
         },
         "required": [
@@ -17941,6 +18374,15 @@
             "nullable": true,
             "format": "uuid",
             "description": "The section it sits in; null for the general area at the top."
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed"
+            ],
+            "type": "string",
+            "description": "When a student has completed it: never tracked, when they tick it, or when they open it."
           },
           "position": {
             "type": "number",
@@ -18044,6 +18486,21 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true
           }
         },
         "required": [
@@ -18065,7 +18522,9 @@
           "countsTowardFinalGrade",
           "position",
           "visible",
-          "sectionId"
+          "sectionId",
+          "completionRule",
+          "completionPassPoints"
         ]
       },
       "CreateAssignmentDto": {
@@ -18140,6 +18599,24 @@
             "nullable": true,
             "format": "uuid",
             "description": "The section it sits in; null for the general area at the top."
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string",
+            "description": "When a student has completed it: never tracked, when they tick it, when they hand work in, when it is marked, or when the mark reaches the pass mark."
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "Points a student needs to pass. Required when the rule is passed."
           }
         },
         "required": [
@@ -18218,6 +18695,24 @@
             "nullable": true,
             "format": "uuid",
             "description": "The section it sits in; null for the general area at the top."
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string",
+            "description": "When a student has completed it: never tracked, when they tick it, when they hand work in, when it is marked, or when the mark reaches the pass mark."
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "Points a student needs to pass. Required when the rule is passed."
           },
           "position": {
             "type": "number",
@@ -18833,6 +19328,270 @@
           "activity",
           "learningSpace",
           "offering"
+        ]
+      },
+      "SectionProgressDto": {
+        "type": "object",
+        "properties": {
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Null for the general area at the top."
+          },
+          "done": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sectionId",
+          "done",
+          "total"
+        ]
+      },
+      "ItemProgressDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "material",
+              "assignment"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "rule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "incomplete",
+              "complete",
+              "complete_pass",
+              "complete_fail"
+            ],
+            "type": "string",
+            "description": "complete and complete_pass count as done; complete_fail is a mark below the pass mark."
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "sectionId",
+          "rule",
+          "state",
+          "completedAt"
+        ]
+      },
+      "ProgressResponseDto": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SectionProgressDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemProgressDto"
+            }
+          }
+        },
+        "required": [
+          "done",
+          "total",
+          "sections",
+          "items"
+        ]
+      },
+      "MarkDoneDto": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean",
+            "description": "True to tick the item as done, false to untick it."
+          }
+        },
+        "required": [
+          "done"
+        ]
+      },
+      "CompletionColumnDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "material",
+              "assignment"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "rule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "passPoints": {
+            "type": "number",
+            "nullable": true
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "sectionId",
+          "rule",
+          "passPoints",
+          "visible"
+        ]
+      },
+      "CompletionCellDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "material",
+              "assignment"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "enum": [
+              "incomplete",
+              "complete",
+              "complete_pass",
+              "complete_fail"
+            ],
+            "type": "string",
+            "description": "complete and complete_pass count as done; complete_fail is a mark below the pass mark."
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "state",
+          "completedAt"
+        ]
+      },
+      "StudentCompletionDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "done": {
+            "type": "number"
+          },
+          "cells": {
+            "description": "One cell per column, in the same order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompletionCellDto"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "email",
+          "done",
+          "cells"
+        ]
+      },
+      "CompletionReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "description": "Every item with a completion rule, in outline order, hidden ones included.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompletionColumnDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentCompletionDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "columns",
+          "items",
+          "meta"
         ]
       },
       "CreateDemoRequestDto": {
@@ -19531,6 +20290,12 @@
         "properties": {
           "learningActivityId": {
             "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "learningMaterialId": {
+            "type": "string",
+            "nullable": true,
             "format": "uuid"
           },
           "activityName": {
@@ -19549,13 +20314,26 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "viewedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "markedDoneAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           }
         },
         "required": [
           "learningActivityId",
+          "learningMaterialId",
           "activityName",
           "state",
-          "completedAt"
+          "completedAt",
+          "viewedAt",
+          "markedDoneAt"
         ]
       },
       "ExportedFileDto": {

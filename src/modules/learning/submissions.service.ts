@@ -23,6 +23,7 @@ import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
 import { assertSubmittable } from './assignment-policy';
+import { CompletionService } from './completion.service';
 import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
 import { LearningOutlineService } from './learning-outline.service';
 
@@ -67,6 +68,7 @@ export class SubmissionsService {
     private readonly access: LearningAccessService,
     private readonly storage: StorageService,
     private readonly outline: LearningOutlineService,
+    private readonly completion: CompletionService,
   ) {}
 
   async listMine(
@@ -175,6 +177,8 @@ export class SubmissionsService {
           })),
         );
       }
+
+      await this.completion.recompute({ kind: 'assignment', id: assignmentId }, [userId]);
 
       return submission;
     });

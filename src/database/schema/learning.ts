@@ -1,6 +1,7 @@
 import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   numeric,
@@ -63,6 +64,17 @@ export const learningSections = pgTable(
   ],
 );
 
+export const COMPLETION_RULES = [
+  'none',
+  'manual',
+  'viewed',
+  'submitted',
+  'marked',
+  'passed',
+] as const;
+export type CompletionRule = (typeof COMPLETION_RULES)[number];
+export const completionRule = pgEnum('completion_rule', COMPLETION_RULES);
+
 export const LEARNING_ACTIVITY_TYPES = [
   'assignment',
   'forum',
@@ -98,6 +110,8 @@ export const learningActivities = pgTable(
     availableUntil: timestampColumn('available_until'),
     hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
     announcedAt: timestampColumn('announced_at'),
+    completionRule: completionRule('completion_rule').notNull().default('none'),
+    completionPassPoints: numeric('completion_pass_points', { precision: 10, scale: 4 }),
     deletedAt,
     ...timestamps,
   },
@@ -144,6 +158,7 @@ export const learningMaterials = pgTable(
     availableFrom: timestampColumn('available_from'),
     availableUntil: timestampColumn('available_until'),
     hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    completionRule: completionRule('completion_rule').notNull().default('none'),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,
     ...timestamps,
@@ -225,14 +240,19 @@ export const activityCompletions = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     institutionId: institutionId(),
-    learningActivityId: uuid('learning_activity_id')
-      .notNull()
-      .references(() => learningActivities.id, { onDelete: 'cascade' }),
+    learningActivityId: uuid('learning_activity_id').references(() => learningActivities.id, {
+      onDelete: 'cascade',
+    }),
+    learningMaterialId: uuid('learning_material_id').references(() => learningMaterials.id, {
+      onDelete: 'cascade',
+    }),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     state: activityCompletionState('state').notNull().default('incomplete'),
     completedAt: timestampColumn('completed_at'),
+    viewedAt: timestampColumn('viewed_at'),
+    markedDoneAt: timestampColumn('marked_done_at'),
     deletedAt,
     ...timestamps,
   },
@@ -240,7 +260,14 @@ export const activityCompletions = pgTable(
     uniqueIndex('activity_completions_unique_idx')
       .on(table.learningActivityId, table.userId)
       .where(isNull(table.deletedAt)),
+    uniqueIndex('activity_completions_material_unique_idx')
+      .on(table.learningMaterialId, table.userId)
+      .where(isNull(table.deletedAt)),
     index('activity_completions_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
+    check(
+      'activity_completions_one_item',
+      sql`num_nonnulls(${table.learningActivityId}, ${table.learningMaterialId}) = 1`,
+    ),
   ],
 );
 

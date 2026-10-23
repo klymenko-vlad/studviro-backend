@@ -22,6 +22,7 @@ import type { ExportedFile } from '../personal-data.types';
 
 const uuid = { format: 'uuid' } as const;
 const dateTime = { type: String, format: 'date-time' } as const;
+const nullableUuid = { type: String, format: 'uuid', nullable: true } as const;
 const nullableDateTime = { type: String, format: 'date-time', nullable: true } as const;
 const nullableText = { type: String, nullable: true } as const;
 const nullableNumber = { type: Number, nullable: true } as const;
@@ -181,10 +182,13 @@ export class ExportedAssessmentResultDto {
 
 @Exclude()
 export class ExportedActivityCompletionDto {
-  @Expose() @ApiProperty(uuid) learningActivityId!: string;
+  @Expose() @ApiProperty(nullableUuid) learningActivityId!: string | null;
+  @Expose() @ApiProperty(nullableUuid) learningMaterialId!: string | null;
   @Expose() @ApiProperty() activityName!: string;
   @Expose() @ApiProperty({ enum: ACTIVITY_COMPLETION_STATES }) state!: string;
   @Expose() @ApiProperty(nullableDateTime) completedAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) viewedAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) markedDoneAt!: Date | null;
 }
 
 @Exclude()

@@ -144,10 +144,13 @@ export interface ExportedAssessmentResult {
 }
 
 export interface ExportedActivityCompletion {
-  learningActivityId: string;
+  learningActivityId: string | null;
+  learningMaterialId: string | null;
   activityName: string;
   state: ActivityCompletionState;
   completedAt: Date | null;
+  viewedAt: Date | null;
+  markedDoneAt: Date | null;
 }
 
 export interface ExportedFile {

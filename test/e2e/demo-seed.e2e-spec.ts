@@ -73,6 +73,7 @@ describe('the demo seed (e2e)', () => {
     expect(summary.counts.courseOfferings).toBeGreaterThan(0);
     expect(summary.counts.enrollments).toBeGreaterThan(0);
     expect(summary.counts.officialCourseResults).toBeGreaterThan(0);
+    expect(summary.counts.completions).toBeGreaterThan(0);
   });
 
   it('scopes every canonical row to the institution it created', async () => {

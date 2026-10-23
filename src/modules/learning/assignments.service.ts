@@ -6,13 +6,16 @@ import {
   assessments,
   learningActivities,
   type Assessment,
+  type CompletionRule,
   type LearningActivity,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
 import { AssignmentAnnouncementsService } from './assignment-announcements.service';
+import { assignmentCompletion, completionChanged } from './assignment-completion';
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
+import { CompletionService } from './completion.service';
 import { LearningAccessService } from './learning-access.service';
 import {
   assertAvailabilityWindow,
@@ -36,6 +39,8 @@ export interface NewAssignment {
   readonly availableFrom?: Date | null;
   readonly availableUntil?: Date | null;
   readonly hiddenUntilAvailable?: boolean;
+  readonly completionRule?: CompletionRule;
+  readonly completionPassPoints?: number | null;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -61,6 +66,7 @@ export class AssignmentsService {
     private readonly notifications: LearningActivityNotificationsService,
     private readonly outline: LearningOutlineService,
     private readonly announcements: AssignmentAnnouncementsService,
+    private readonly completion: CompletionService,
   ) {}
 
   async list(
@@ -123,6 +129,7 @@ export class AssignmentsService {
     assertWindow(input);
     assertAvailabilityWindow(input);
     assertAttemptPolicy(input.maxAttempts ?? null);
+    const completion = assignmentCompletion(input);
     await this.outline.assertSectionOf(spaceId, input.sectionId);
     const sectionId = input.sectionId ?? null;
 
@@ -146,6 +153,7 @@ export class AssignmentsService {
           availableFrom: input.availableFrom ?? null,
           availableUntil: input.availableUntil ?? null,
           hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
+          ...completion,
         })
         .returning();
 
@@ -190,6 +198,7 @@ export class AssignmentsService {
     assertWindow({ ...existing.activity, ...changes });
     assertAvailabilityWindow({ ...existing.activity, ...changes });
     if (changes.maxAttempts !== undefined) assertAttemptPolicy(changes.maxAttempts);
+    const completion = assignmentCompletion(changes, existing);
     const placement = await this.outline.placement(
       spaceId,
       existing.activity.sectionId,
@@ -209,6 +218,7 @@ export class AssignmentsService {
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
       ...availabilityChanges(changes),
       ...placement,
+      ...completion,
     };
 
     const assessmentChanges = {
@@ -239,6 +249,10 @@ export class AssignmentsService {
             .returning();
 
       if (!assessment) throw new EntityNotFoundError('assessment', existing.assessment.id);
+
+      if (completionChanged(existing, { activity, assessment })) {
+        await this.completion.recompute({ kind: 'assignment', id: assignmentId });
+      }
 
       await this.notifications.rescheduled(
         institutionId,

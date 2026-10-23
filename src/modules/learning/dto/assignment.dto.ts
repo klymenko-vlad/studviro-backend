@@ -3,6 +3,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -15,8 +16,10 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+import { COMPLETION_RULES, type CompletionRule } from '../../../database/schema';
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import type { AssignmentEntry } from '../assignments.service';
+import { ASSIGNMENT_COMPLETION_RULES } from '../completion-rule';
 
 import {
   AvailabilityDto,
@@ -110,6 +113,29 @@ export class CreateAssignmentDto extends AvailabilityDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   sectionId?: string | null;
+
+  @ApiPropertyOptional({
+    enum: ASSIGNMENT_COMPLETION_RULES,
+    description:
+      'When a student has completed it: never tracked, when they tick it, when they hand work in, when it is marked, or when the mark reaches the pass mark.',
+  })
+  @IsOptional()
+  @IsIn(ASSIGNMENT_COMPLETION_RULES)
+  completionRule?: (typeof ASSIGNMENT_COMPLETION_RULES)[number];
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: MAX_POINTS,
+    description: 'Points a student needs to pass. Required when the rule is passed.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber()
+  @Min(0)
+  @Max(MAX_POINTS)
+  completionPassPoints?: number | null;
 }
 
 export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {
@@ -151,6 +177,12 @@ export class AssignmentResponseDto extends AvailabilityResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   sectionId!: string | null;
 
+  @Expose() @ApiProperty({ enum: COMPLETION_RULES }) completionRule!: CompletionRule;
+
+  @Expose()
+  @ApiProperty({ type: Number, nullable: true })
+  completionPassPoints!: number | null;
+
   static from(entry: AssignmentEntry, now = new Date()): AssignmentResponseDto {
     const { activity, assessment } = entry;
 
@@ -170,6 +202,9 @@ export class AssignmentResponseDto extends AvailabilityResponseDto {
       position: activity.position,
       visible: activity.visible,
       sectionId: activity.sectionId,
+      completionRule: activity.completionRule,
+      completionPassPoints:
+        activity.completionPassPoints === null ? null : Number(activity.completionPassPoints),
       ...availabilityFields(activity, now),
     });
   }

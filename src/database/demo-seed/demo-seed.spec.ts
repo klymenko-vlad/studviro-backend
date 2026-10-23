@@ -9,7 +9,9 @@ import {
   planStudyGroups,
   planTimetableEvents,
 } from './derive';
+import { planCompletions } from './derive-completion';
 import {
+  ASSIGNMENT_PASS_POINTS,
   planAssignments,
   planMaterials,
   planSections,
@@ -247,5 +249,80 @@ describe('the learning half it seeds', () => {
     const twice = planSubmissions(assignments, enrollments, options);
 
     expect(JSON.stringify(once)).toBe(JSON.stringify(twice));
+  });
+
+  describe('completion', () => {
+    const materials = planMaterials(spaces);
+    const submissions = planSubmissions(assignments, enrollments, options);
+    const completions = planCompletions(
+      spaces,
+      materials,
+      assignments,
+      submissions,
+      enrollments,
+      options,
+    );
+
+    it('tracks most items, each in a way that suits it', () => {
+      const rules = new Set(materials.map((m) => m.completionRule));
+      expect(rules).toEqual(new Set(['none', 'manual', 'viewed']));
+      expect(new Set(assignments.map((a) => a.completionRule))).toEqual(
+        new Set(['passed', 'submitted']),
+      );
+      expect(
+        assignments
+          .filter((a) => a.completionRule === 'passed')
+          .every((a) => a.completionPassPoints === ASSIGNMENT_PASS_POINTS),
+      ).toBe(true);
+    });
+
+    it('gives the teacher’s table some of everything: ticked, opened, passed and failed', () => {
+      const states = new Set(completions.map((c) => c.state));
+
+      expect(states).toEqual(new Set(['complete', 'complete_pass', 'complete_fail']));
+      expect(completions.some((c) => c.markedDoneAt !== null)).toBe(true);
+      expect(completions.some((c) => c.viewedAt !== null)).toBe(true);
+    });
+
+    it('completes nothing that has not opened yet, or that is not tracked', () => {
+      const untracked = new Set(
+        materials
+          .filter((m) => m.completionRule === 'none' || m.availableFrom !== null)
+          .map((m) => m.key),
+      );
+      const pastPapers = new Set(
+        materials.filter((m) => m.title === 'Past exam papers').map((m) => m.key),
+      );
+
+      expect(
+        completions.some(
+          (c) =>
+            c.target.kind === 'material' &&
+            (untracked.has(c.target.key) || pastPapers.has(c.target.key)),
+        ),
+      ).toBe(false);
+    });
+
+    it('passes exactly the marks at or above the pass mark', () => {
+      const marked = submissions.filter((s) => s.points !== null);
+      const graded = completions.filter((c) => c.target.kind === 'assignment');
+
+      expect(graded).toHaveLength(marked.length);
+      for (const completion of graded) {
+        const source = marked.find(
+          (s) =>
+            completion.target.kind === 'assignment' &&
+            s.assignmentKey === completion.target.key &&
+            s.studentKey === completion.studentKey,
+        )!;
+        expect(completion.state).toBe(
+          source.points! >= ASSIGNMENT_PASS_POINTS ? 'complete_pass' : 'complete_fail',
+        );
+      }
+    });
+
+    it('dates every completion before the anchor', () => {
+      expect(completions.every((c) => c.completedAt! <= options.anchor)).toBe(true);
+    });
   });
 });

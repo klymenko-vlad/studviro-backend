@@ -78,7 +78,7 @@ its contents; deadlines and the calendar show an assignment once it is open. _As
 published_ is claimed once through `announced_at`, straight away on the change that shows
 it and by a one-minute sweep when a date passes.
 
-### CB3 — Completion and progress · M
+### CB3 — Completion and progress · M · **Done 2026-10-23**
 
 Write `activity_completions`, which has existed since the canonical schema and was never
 written. Per item, the author chooses a completion rule: none, _student marks it done_,
@@ -86,6 +86,15 @@ _viewed_ (a material opened or downloaded), _submitted_, _marked_ / _passed with
 student gets a tick on each item and a progress bar per course and per section; the teacher
 gets a completion table (students × items). Materials need a completion row of their own —
 decide in the ADR whether that is a second table or a nullable `learning_material_id`.
+
+Shipped as **ADR 0045**: one table with a nullable `learning_material_id` beside
+`learning_activity_id` (exactly one set). The row keeps the facts (`viewed_at`,
+`marked_done_at`) and the state the server derives from the rule, recomputed on a hand-in,
+a mark or its correction, a view, a tick, and for every student when a rule, pass mark or
+maximum changes. Materials take _none / tick / opened_, assignments _none / tick /
+handed in / marked / passed with ≥ N points_. Progress counts tracked items the student can
+open now; the teacher's table is a _Progress_ tab, a page of students at a time.
+`CompletionService.isComplete` / `completedItems` are CB4's entry points.
 
 ### CB4 — Step by step: restrict access · M
 
@@ -150,7 +159,7 @@ impersonation — the server answers the student view for the author on request.
 
 - [x] CB1 — Sections and one course outline
 - [x] CB2 — Available from, available until
-- [ ] CB3 — Completion and progress
+- [x] CB3 — Completion and progress
 - [ ] CB4 — Step by step: restrict access
 - [ ] CB5 — More things to put on a page
 - [ ] CB6 — Quiz authoring and the question bank
@@ -171,3 +180,13 @@ impersonation — the server answers the student view for the author on request.
   means removing and re-adding it.
 - The demo seed's dates sit at midnight UTC, so the demo shows deadlines and openings at
   01:00 or 02:00 local time.
+- `learning-materials.service.ts` is past 300 lines after CB3 (views and the completion rule
+  joined upload, create, update, remove and download); split it before CB5 adds more kinds.
+- The `ilike` escape is written out three times now (`people.repository.ts`,
+  `search.service.ts`, `course-students.repository.ts`); one shared helper would do.
+- The Assignments tab does not show a student their completion state; only the outline does.
+- On a phone, the completion table clips long item titles to three lines in its header.
+- `feat/course-sections` (frontend) is behind `dev`: regenerating the client in CB3 brought in
+  the teacher search kind from backend `c281c6b`. CB3 handles it minimally (a teacher hit goes
+  to People, a _Teachers_ label); when the branch merges, keep `dev`'s teacher profile route
+  (`cda3724`) instead.

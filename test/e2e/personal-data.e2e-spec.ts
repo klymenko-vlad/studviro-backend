@@ -17,6 +17,7 @@ import {
   institutions,
   invitations,
   learningActivities,
+  learningMaterials,
   learningSpaces,
   notificationDeliveries,
   notificationEvents,
@@ -254,13 +255,32 @@ describe('Personal data export and erasure (e2e)', () => {
       gradedAt: new Date(),
       gradedById: admin.user.id,
     });
-    await harness.db.insert(activityCompletions).values({
-      institutionId,
-      learningActivityId: activity!.id,
-      userId: student.user.id,
-      state: 'complete',
-      completedAt: new Date(),
-    });
+    const [material] = await harness.db
+      .insert(learningMaterials)
+      .values({
+        institutionId,
+        learningSpaceId: space!.id,
+        kind: 'text',
+        title: 'Week 1 notes',
+      })
+      .returning();
+    await harness.db.insert(activityCompletions).values([
+      {
+        institutionId,
+        learningActivityId: activity!.id,
+        userId: student.user.id,
+        state: 'complete',
+        completedAt: new Date(),
+      },
+      {
+        institutionId,
+        learningMaterialId: material!.id,
+        userId: student.user.id,
+        state: 'complete',
+        completedAt: new Date(),
+        viewedAt: new Date(),
+      },
+    ]);
 
     const [submission] = await harness.db
       .insert(submissions)
@@ -381,7 +401,15 @@ describe('Personal data export and erasure (e2e)', () => {
       expect(document.examRegistrations[0].status).toBe('registered');
       expect(document.studyGroupMemberships[0].code).toBe('S1');
       expect(document.assessmentResults[0]).toMatchObject({ points: 17, feedback: FEEDBACK });
-      expect(document.activityCompletions[0].state).toBe('complete');
+      expect(document.activityCompletions).toEqual([
+        expect.objectContaining({ activityName: 'Assignment 1', state: 'complete' }),
+        expect.objectContaining({
+          activityName: 'Week 1 notes',
+          learningActivityId: null,
+          learningMaterialId: expect.any(String),
+          viewedAt: expect.any(String),
+        }),
+      ]);
       expect(document.submissions[0]).toMatchObject({ notes: SUBMISSION_NOTES, isLate: true });
       expect(document.submissions[0].files[0].storageKey).toBe(storageKey);
       expect(document.notifications[0].payload).toMatchObject({ grade: 'C' });

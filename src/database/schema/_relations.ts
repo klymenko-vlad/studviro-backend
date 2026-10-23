@@ -242,11 +242,12 @@ export const learningSpacesRelations = relations(learningSpaces, ({ one, many })
   assessments: many(assessments),
 }));
 
-export const learningMaterialsRelations = relations(learningMaterials, ({ one }) => ({
+export const learningMaterialsRelations = relations(learningMaterials, ({ one, many }) => ({
   learningSpace: one(learningSpaces, {
     fields: [learningMaterials.learningSpaceId],
     references: [learningSpaces.id],
   }),
+  completions: many(activityCompletions),
 }));
 
 export const learningActivitiesRelations = relations(learningActivities, ({ one, many }) => ({
@@ -292,6 +293,10 @@ export const activityCompletionsRelations = relations(activityCompletions, ({ on
   learningActivity: one(learningActivities, {
     fields: [activityCompletions.learningActivityId],
     references: [learningActivities.id],
+  }),
+  learningMaterial: one(learningMaterials, {
+    fields: [activityCompletions.learningMaterialId],
+    references: [learningMaterials.id],
   }),
   user: one(users, { fields: [activityCompletions.userId], references: [users.id] }),
 }));

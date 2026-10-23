@@ -144,6 +144,26 @@ export class LearningMaterialsController {
     await this.materials.remove(institutionId, spaceId, materialId, userId);
   }
 
+  @Post(':materialId/views')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'recordLearningMaterialView',
+    summary: 'Say that the caller opened a material',
+    description:
+      'Completes a material whose rule is to open it, for a student on the course. Downloading a file records this on its own; call it for a link or a note when the student opens it.',
+  })
+  @ApiNoContentResponse()
+  @ApiErrorResponses({ notFound: true })
+  async view(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @Param('materialId', ParseUUIDPipe) materialId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<void> {
+    await this.materials.view(institutionId, spaceId, materialId, userId);
+  }
+
   @Get(':materialId/download')
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({

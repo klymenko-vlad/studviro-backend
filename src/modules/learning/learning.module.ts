@@ -8,6 +8,11 @@ import { AssignmentAnnouncementsRepository } from './assignment-announcements.re
 import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
+import { CompletionReportService } from './completion-report.service';
+import { CompletionController } from './completion.controller';
+import { CompletionRepository } from './completion.repository';
+import { CompletionService } from './completion.service';
+import { CourseStudentsRepository } from './course-students.repository';
 import { LearningAccessService } from './learning-access.service';
 import { LearningMaterialsController } from './learning-materials.controller';
 import { LearningMaterialsService } from './learning-materials.service';
@@ -25,10 +30,12 @@ import { MyAssessmentResultsService } from './my-assessment-results.service';
 import { MyDeadlinesController } from './my-deadlines.controller';
 import { MyDeadlinesRepository } from './my-deadlines.repository';
 import { MyDeadlinesService } from './my-deadlines.service';
+import { MyProgressService } from './my-progress.service';
 import { SubmissionMarkingController } from './submission-marking.controller';
 import { SubmissionMarkingService } from './submission-marking.service';
 import { SubmissionsController } from './submissions.controller';
 import { SubmissionsService } from './submissions.service';
+import { TrackedItemsRepository } from './tracked-items.repository';
 
 @Module({
   imports: [AuthorizationModule, NotificationsModule],
@@ -42,6 +49,7 @@ import { SubmissionsService } from './submissions.service';
     SubmissionMarkingController,
     MyDeadlinesController,
     MyAssessmentResultsController,
+    CompletionController,
   ],
   providers: [
     LearningAccessService,
@@ -61,12 +69,19 @@ import { SubmissionsService } from './submissions.service';
     MyDeadlinesRepository,
     MyAssessmentResultsService,
     MyAssessmentResultsRepository,
+    CompletionRepository,
+    CompletionService,
+    TrackedItemsRepository,
+    CourseStudentsRepository,
+    MyProgressService,
+    CompletionReportService,
   ],
   exports: [
     LearningSpacesService,
     MyDeadlinesService,
     MyAssessmentResultsService,
     LearningAccessService,
+    CompletionService,
   ],
 })
 export class LearningModule {}

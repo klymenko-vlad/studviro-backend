@@ -14,6 +14,8 @@ import {
 } from 'class-validator';
 
 import {
+  COMPLETION_RULES,
+  type CompletionRule,
   FILE_SCAN_STATUSES,
   type FileScanStatus,
   LEARNING_MATERIAL_KINDS,
@@ -21,6 +23,7 @@ import {
   type LearningMaterialKind,
 } from '../../../database/schema';
 import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
+import { MATERIAL_COMPLETION_RULES } from '../completion-rule';
 
 import {
   AvailabilityDto,
@@ -111,6 +114,15 @@ export class CreateLearningMaterialDto extends AvailabilityDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   sectionId?: string | null;
+
+  @ApiPropertyOptional({
+    enum: MATERIAL_COMPLETION_RULES,
+    description:
+      'When a student has completed it: never tracked, when they tick it, or when they open it.',
+  })
+  @IsOptional()
+  @IsIn(MATERIAL_COMPLETION_RULES)
+  completionRule?: (typeof MATERIAL_COMPLETION_RULES)[number];
 }
 
 export class UpdateLearningMaterialDto extends PartialType(
@@ -146,6 +158,8 @@ export class LearningMaterialResponseDto extends AvailabilityResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   sectionId!: string | null;
 
+  @Expose() @ApiProperty({ enum: COMPLETION_RULES }) completionRule!: CompletionRule;
+
   static from(material: LearningMaterial, now = new Date()): LearningMaterialResponseDto {
     return Object.assign(new LearningMaterialResponseDto(), {
       id: material.id,
@@ -161,6 +175,7 @@ export class LearningMaterialResponseDto extends AvailabilityResponseDto {
       position: material.position,
       visible: material.visible,
       sectionId: material.sectionId,
+      completionRule: material.completionRule,
       ...availabilityFields(material, now),
     });
   }

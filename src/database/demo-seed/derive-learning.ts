@@ -20,6 +20,7 @@ export interface PlannedSection {
 }
 
 export interface PlannedMaterial {
+  readonly key: string;
   readonly spaceKey: string;
   readonly sectionKey: string | null;
   readonly kind: 'link' | 'text';
@@ -28,6 +29,7 @@ export interface PlannedMaterial {
   readonly url: string | null;
   readonly position: number;
   readonly availableFrom: Date | null;
+  readonly completionRule: 'none' | 'manual' | 'viewed';
 }
 
 export interface PlannedAssignment {
@@ -44,6 +46,8 @@ export interface PlannedAssignment {
   readonly maxAttempts: number;
   readonly allowsLateSubmission: boolean;
   readonly maxPoints: number;
+  readonly completionRule: 'passed' | 'submitted';
+  readonly completionPassPoints: number | null;
 }
 
 export interface PlannedSubmission {
@@ -114,11 +118,16 @@ export function planSections(spaces: readonly PlannedSpace[]): PlannedSection[] 
   );
 }
 
+export const ASSIGNMENT_PASS_POINTS = 80;
+
+const materialKey = (space: PlannedSpace, slug: string) => `MAT-${space.key}-${slug}`;
+
 export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[] {
   return spaces.flatMap((space) => [
     ...Array.from({ length: MATERIALS_PER_SPACE }, (_, index) =>
       index === 0
         ? {
+            key: materialKey(space, 'rules'),
             spaceKey: space.key,
             sectionKey: null,
             kind: 'text' as const,
@@ -127,8 +136,10 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
             url: null,
             position: 0,
             availableFrom: null,
+            completionRule: 'manual' as const,
           }
         : {
+            key: materialKey(space, index === 1 ? 'slides' : 'reading'),
             spaceKey: space.key,
             sectionKey: sectionKey(space, 0),
             kind: 'link' as const,
@@ -137,9 +148,11 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
             url: `https://example.edu/${space.offering.course.code.toLowerCase().replaceAll('/', '-')}/${index}`,
             position: index - 1,
             availableFrom: null,
+            completionRule: 'viewed' as const,
           },
     ),
     {
+      key: materialKey(space, 'template'),
       spaceKey: space.key,
       sectionKey: sectionKey(space, 1),
       kind: 'text' as const,
@@ -148,8 +161,10 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       url: null,
       position: 1,
       availableFrom: opensAfter(space, REPORT_TEMPLATE_OPENS_AFTER_DAYS),
+      completionRule: 'none' as const,
     },
     {
+      key: materialKey(space, 'past-papers'),
       spaceKey: space.key,
       sectionKey: sectionKey(space, 2),
       kind: 'link' as const,
@@ -158,6 +173,7 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       url: `https://example.edu/${space.offering.course.code.toLowerCase().replaceAll('/', '-')}/past-papers`,
       position: 0,
       availableFrom: null,
+      completionRule: 'viewed' as const,
     },
   ]);
 }
@@ -195,6 +211,8 @@ export function planAssignments(spaces: readonly PlannedSpace[]): PlannedAssignm
         maxAttempts: 2,
         allowsLateSubmission: index === 0,
         maxPoints: 100,
+        completionRule: index === 0 ? ('passed' as const) : ('submitted' as const),
+        completionPassPoints: index === 0 ? ASSIGNMENT_PASS_POINTS : null,
       };
     });
   });

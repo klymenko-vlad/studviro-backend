@@ -3,6 +3,7 @@ import { eq, inArray, like } from 'drizzle-orm';
 import type { Database } from '../database.tokens';
 import {
   academicTerms,
+  activityCompletions,
   assessmentResults,
   assessments,
   courseOfferings,
@@ -38,6 +39,7 @@ import {
   planTimetableEvents,
 } from './derive';
 import type { PlannedOffering } from './derive';
+import { planCompletions } from './derive-completion';
 import {
   planAssignments,
   planMaterials,
@@ -566,18 +568,40 @@ export async function writePlan(
   const sectionOf = (key: string | null) =>
     key === null ? null : required(sectionIds, key, 'learning section');
 
-  const materials = planMaterials(plannedSpaces).map((material) => ({
-    institutionId,
-    learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
-    sectionId: sectionOf(material.sectionKey),
-    kind: material.kind,
-    title: material.title,
-    body: material.body,
-    url: material.url,
-    position: material.position,
-    availableFrom: material.availableFrom,
-  }));
-  await insertChunked(materials, (slice) => db.insert(learningMaterials).values(slice));
+  const plannedMaterials = planMaterials(plannedSpaces);
+  const materialIds = new Map<string, string>();
+  for (let offset = 0; offset < plannedMaterials.length; offset += CHUNK) {
+    const slice = plannedMaterials.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningMaterials)
+      .values(
+        slice.map((material) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
+          sectionId: sectionOf(material.sectionKey),
+          kind: material.kind,
+          title: material.title,
+          body: material.body,
+          url: material.url,
+          position: material.position,
+          availableFrom: material.availableFrom,
+          completionRule: material.completionRule,
+        })),
+      )
+      .returning({
+        id: learningMaterials.id,
+        learningSpaceId: learningMaterials.learningSpaceId,
+        title: learningMaterials.title,
+      });
+    for (const material of slice) {
+      const spaceId = required(spaceIds, material.spaceKey, 'learning space');
+      const row = inserted.find(
+        (candidate) =>
+          candidate.learningSpaceId === spaceId && candidate.title === material.title,
+      );
+      if (row) materialIds.set(material.key, row.id);
+    }
+  }
 
   const plannedAssignments = planAssignments(plannedSpaces);
   const assignmentIds = new Map<string, string>();
@@ -601,6 +625,8 @@ export async function writePlan(
           maxAttempts: assignment.maxAttempts,
           allowsLateSubmission: assignment.allowsLateSubmission,
           announcedAt: assignment.opensAt,
+          completionRule: assignment.completionRule,
+          completionPassPoints: assignment.completionPassPoints?.toFixed(4) ?? null,
         })),
       )
       .returning({
@@ -665,6 +691,26 @@ export async function writePlan(
     }));
   await insertChunked(marks, (slice) => db.insert(assessmentResults).values(slice));
 
+  const completions = planCompletions(
+    plannedSpaces,
+    plannedMaterials,
+    plannedAssignments,
+    plannedSubmissions,
+    plannedEnrollments,
+    options,
+  ).map((completion) => ({
+    institutionId,
+    userId: required(personIds, completion.studentKey, 'person'),
+    ...(completion.target.kind === 'material'
+      ? { learningMaterialId: required(materialIds, completion.target.key, 'material') }
+      : { learningActivityId: required(assignmentIds, completion.target.key, 'assignment') }),
+    state: completion.state,
+    completedAt: completion.completedAt,
+    viewedAt: completion.viewedAt,
+    markedDoneAt: completion.markedDoneAt,
+  }));
+  await insertChunked(completions, (slice) => db.insert(activityCompletions).values(slice));
+
   return {
     institutionId,
     counts: {
@@ -685,10 +731,11 @@ export async function writePlan(
       officialCourseResults: results.length,
       learningSpaces: spaceIds.size,
       learningSections: sectionIds.size,
-      learningMaterials: materials.length,
+      learningMaterials: materialIds.size,
       assignments: assignmentIds.size,
       submissions: submissionRows.length,
       marks: marks.length,
+      completions: completions.length,
     },
   };
 }

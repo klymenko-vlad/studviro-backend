@@ -12,6 +12,7 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
+import { CompletionService } from './completion.service';
 import { LearningAccessService } from './learning-access.service';
 import { SubmissionsService } from './submissions.service';
 
@@ -37,6 +38,7 @@ export class SubmissionMarkingService {
     private readonly access: LearningAccessService,
     private readonly submissionsService: SubmissionsService,
     private readonly notifications: LearningActivityNotificationsService,
+    private readonly completion: CompletionService,
   ) {}
 
   async mark(
@@ -88,6 +90,10 @@ export class SubmissionMarkingService {
         .returning();
 
       if (!marked) throw new EntityNotFoundError('submission', submissionId);
+
+      await this.completion.recompute({ kind: 'assignment', id: assignmentId }, [
+        submission.userId,
+      ]);
 
       await this.notifications.marked(
         institutionId,
