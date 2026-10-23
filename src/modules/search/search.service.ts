@@ -25,6 +25,7 @@ export const SEARCH_KINDS = [
   'offering',
   'program',
   'person',
+  'teacher',
   'orgUnit',
   'room',
 ] as const;
@@ -58,6 +59,7 @@ const REQUIRED: Readonly<Record<SearchKind, Permission>> = {
   // A directory of names is the most sensitive thing here: it is the one
   // result that is personal data about somebody other than the caller.
   person: 'role:read',
+  teacher: 'course:read',
   orgUnit: 'role:read',
   room: 'schedule:read',
 };
@@ -119,7 +121,9 @@ export class SearchService {
     const held = await this.authorization.permissionsIn(userId, scope);
     const permissions = new Set<string>(held);
 
-    return SEARCH_KINDS.filter((kind) => permissions.has(REQUIRED[kind]));
+    const visible = SEARCH_KINDS.filter((kind) => permissions.has(REQUIRED[kind]));
+
+    return visible.includes('person') ? visible.filter((kind) => kind !== 'teacher') : visible;
   }
 
   private searchOne(
@@ -137,6 +141,8 @@ export class SearchService {
         return this.programmes(institutionId, pattern);
       case 'person':
         return this.people(institutionId, pattern);
+      case 'teacher':
+        return this.teachers(institutionId, pattern);
       case 'orgUnit':
         return this.orgUnits(institutionId, pattern);
       case 'room':
@@ -269,6 +275,31 @@ export class SearchService {
 
     return rows.map((row) => ({
       kind: 'person' as const,
+      id: row.id,
+      title: row.displayName,
+      subtitle: row.email,
+      context: null,
+      offeringId: null,
+      programId: null,
+    }));
+  }
+
+  private async teachers(institutionId: string, pattern: string): Promise<SearchHit[]> {
+    const rows = await this.reader
+      .select({ id: users.id, displayName: users.displayName, email: users.email })
+      .from(users)
+      .where(
+        and(
+          isNull(users.deletedAt),
+          or(ilike(users.displayName, pattern), ilike(users.email, pattern)),
+          sql`exists (select 1 from ${teachingAssignments} where ${teachingAssignments.userId} = ${users.id} and ${teachingAssignments.institutionId} = ${institutionId} and ${teachingAssignments.deletedAt} is null)`,
+        ),
+      )
+      .orderBy(users.displayName)
+      .limit(PER_KIND);
+
+    return rows.map((row) => ({
+      kind: 'teacher' as const,
       id: row.id,
       title: row.displayName,
       subtitle: row.email,

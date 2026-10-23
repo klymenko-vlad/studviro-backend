@@ -217,6 +217,53 @@ describe('Search (e2e)', () => {
     ).toBe(false);
   });
 
+  const teacherHits = (body: { hits: { kind: string; id: string; subtitle: string }[] }) =>
+    body.hits.filter((hit) => hit.kind === 'teacher');
+
+  const teaching = async (email: string) => {
+    const teacher = await harness.actingAs({ email });
+    await harness.db.insert(teachingAssignments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: teacher.user.id,
+    });
+
+    return teacher;
+  };
+
+  it('lets a student find any teacher of the institution', async () => {
+    const student = await actingAs('student');
+    const peter = await teaching('peter.novak@example.com');
+
+    const body = (await find(student, 'peter')).json();
+
+    expect(body.searched).toContain('teacher');
+    expect(teacherHits(body)).toEqual([
+      expect.objectContaining({ id: peter.user.id, subtitle: 'peter.novak@example.com' }),
+    ]);
+  });
+
+  it('does not offer a student anybody who teaches nothing here', async () => {
+    const student = await actingAs('student');
+    await harness.actingAs({ email: 'peter.outsider@example.com' });
+    const registrar = await actingAs('registrar', 'peter.registrar@example.com');
+
+    const ids = teacherHits((await find(student, 'peter')).json()).map((hit) => hit.id);
+
+    expect(ids).not.toContain(registrar.user.id);
+    expect(ids).toEqual([]);
+  });
+
+  it('does not list a teacher twice for a reader who already searches people', async () => {
+    const admin = await actingAs('institution_admin');
+    await teaching('peter.novak@example.com');
+
+    const body = (await find(admin, 'peter')).json();
+
+    expect(body.searched).toContain('person');
+    expect(body.searched).not.toContain('teacher');
+  });
+
   it('answers a one-character query with nothing rather than everything', async () => {
     const admin = await actingAs('institution_admin');
 

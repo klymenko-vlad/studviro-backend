@@ -77,6 +77,10 @@ SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
 notification types a person turns on in `/account/settings`, sent only for what is still
 unread after five minutes.
 
+**Teacher directory (B63, ADR 0044)** shipped on 2026-10-23 at the user's request: a
+student's search finds any teacher of the institution, and the hit opens a teacher profile
+with an e-mail link and the courses they teach.
+
 **Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
 and a `studviro.ics` download on the calendar page.
 
