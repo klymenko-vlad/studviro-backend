@@ -183,6 +183,19 @@ describe('Learning materials (e2e)', () => {
     expect((await request(fixture.admin, 'GET')).json()).toEqual([]);
   });
 
+  it('answers an empty edit with the material unchanged', async () => {
+    const created = await request(fixture.admin, 'POST', '', {
+      kind: 'text',
+      title: 'Week 1',
+      body: 'Read chapter 4.',
+    });
+
+    const response = await request(fixture.admin, 'PATCH', `/${created.json().id}`, {});
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ title: 'Week 1', body: 'Read chapter 4.' });
+  });
+
   it('refuses a download of something that is not a file', async () => {
     const created = await request(fixture.admin, 'POST', '', {
       kind: 'link',

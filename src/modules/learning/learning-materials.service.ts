@@ -195,22 +195,23 @@ export class LearningMaterialsService {
       changes.completionRule !== undefined &&
       changes.completionRule !== existing.completionRule;
 
+    const set = {
+      ...(changes.title === undefined ? {} : { title: changes.title }),
+      ...(changes.description === undefined ? {} : { description: changes.description }),
+      ...(changes.body === undefined || existing.kind !== 'text' ? {} : { body: changes.body }),
+      ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
+      ...(changes.visible === undefined ? {} : { visible: changes.visible }),
+      ...(changes.completionRule === undefined
+        ? {}
+        : { completionRule: changes.completionRule }),
+      ...availabilityChanges(changes),
+      ...placement,
+      ...restriction,
+    };
+
     return this.txHost.run(async () => {
-      const updated = await this.materials.update(materialId, {
-        ...(changes.title === undefined ? {} : { title: changes.title }),
-        ...(changes.description === undefined ? {} : { description: changes.description }),
-        ...(changes.body === undefined || existing.kind !== 'text'
-          ? {}
-          : { body: changes.body }),
-        ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
-        ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-        ...(changes.completionRule === undefined
-          ? {}
-          : { completionRule: changes.completionRule }),
-        ...availabilityChanges(changes),
-        ...placement,
-        ...restriction,
-      });
+      const updated =
+        Object.keys(set).length === 0 ? existing : await this.materials.update(materialId, set);
       if (ruleChanged) await this.completion.recompute({ kind: 'material', id: materialId });
 
       return this.availability.gated(context, updated);
