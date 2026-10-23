@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-22
+Last updated: 2026-10-22 (CB1)
 
 ## What this is
 
@@ -88,10 +88,19 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
-behind it** (tracker B41). Phase N (information architecture, N1–N4) shipped on 2026-10-22:
+**Next task: CB2 of `docs/Course Builder Plan.md` — available from / until.** On
+2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
+tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1 shipped the
+same day**: a course page is an outline of sections, materials and assignments share one
+order inside a section, a hidden section hides everything in it on every read, and the
+_Materials_ tab is now _Content_ (ADR 0043). The client half is on branch
+`feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
+uncommitted interface work in `../frontend`; merge it to `dev` first.
+
+The UI Work Plan resumes after, or between, CB steps: its next step is **U1 —
+`ConfirmAction` and every destructive action behind it** (tracker B41). Phase N (information architecture, N1–N4) shipped on 2026-10-22:
 students have five menu entries, search and notifications live in the header, course tabs
-are Overview · Materials · Assignments · Schedule · Grades · Discussion · People, and
+are Overview · Content · Assignments · Schedule · Grades · Discussion · People, and
 administration is four hubs (Structure, Teaching offer, People, Institution) whose tabs
 live in `?tab=`; old addresses redirect.
 
@@ -110,7 +119,7 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-was raised to 605 kB and measures 604.47 kB** — U1 must make room before adding code.
+was raised to 615 kB for CB1 and measures 608.45 kB** (`.size-limit.mjs`). The quiz steps will need room of their own.
 
 Noticed while walking, not fixed:
 
@@ -134,8 +143,9 @@ Noticed while walking, not fixed:
   few marks on Algorithms; `pnpm db:seed` puts it back.
 - `backend/.env` here had no `STORAGE_*` block, so every upload was signed for AWS and
   failed. The MinIO defaults from `.env.example` were added on 2026-09-25.
-- The global `agent-browser` link points into a deleted worktree. Call
-  `~/.nvm/versions/node/v22.22.2/lib/node_modules/agent-browser/bin/agent-browser-linux-x64`.
+- `ada@studviro.local` has two-step verification on, on this machine, so she cannot be
+  walked. The CB1 walk used `marek.novak0017@mocku.example` (enrolled on Algorithms), given
+  the demo password by hand; the seed keeps it.
 - `agent-browser click` by ref can land under the sticky header once a button is
   scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
   not an app bug.
@@ -149,7 +159,8 @@ Noticed while walking, not fixed:
   what a release needs in `docs/Deployment.md` instead.
 - **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
   in a table at the top of each document. Do not invent them.
-- **No quizzes** (ADR 0028).
+- **Quizzes are in scope again** (user, 2026-10-22): `Course Builder Plan.md` CB6–CB8. ADR
+  0028's L7 stands until CB6 writes the ADR that supersedes it.
 - **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
 
 ## Traps that have cost time here

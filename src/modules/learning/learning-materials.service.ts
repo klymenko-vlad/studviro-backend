@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import {
   EntityNotFoundError,
@@ -18,6 +18,7 @@ import type { UploadTicket } from '../storage/storage.types';
 
 import { LearningAccessService } from './learning-access.service';
 import { assertPayloadMatchesKind } from './learning-material-payload';
+import { LearningOutlineService, shownTo } from './learning-outline.service';
 
 export const MATERIAL_PURPOSE = 'materials';
 
@@ -30,24 +31,20 @@ export interface NewLearningMaterial {
   readonly storageKey?: string | null;
   readonly filename?: string | null;
   readonly visible?: boolean;
+  readonly sectionId?: string | null;
 }
 
 export type LearningMaterialChanges = Partial<Omit<NewLearningMaterial, 'kind'>> & {
   readonly position?: number;
 };
 
-/**
- * Files, links and paragraphs pinned to a course page. A file is not streamed
- * through here: the client takes an upload ticket, PUTs to the store and comes
- * back with the key, and this asks the store what it actually received before
- * the row exists (ADR 0027).
- */
 @Injectable()
 export class LearningMaterialsService {
   constructor(
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly storage: StorageService,
+    private readonly outline: LearningOutlineService,
   ) {}
 
   async list(
@@ -68,7 +65,11 @@ export class LearningMaterialsService {
       )
       .orderBy(asc(learningMaterials.position), asc(learningMaterials.createdAt));
 
-    return context.stance === 'author' ? rows : rows.filter((row) => row.visible);
+    if (context.stance === 'author') return rows;
+
+    const hidden = await this.outline.hiddenSectionIds(spaceId);
+
+    return rows.filter((row) => shownTo(context.stance, row, hidden));
   }
 
   async createUploadTicket(
@@ -98,6 +99,8 @@ export class LearningMaterialsService {
     this.access.assertAuthor(context);
 
     assertPayloadMatchesKind(input);
+    await this.outline.assertSectionOf(spaceId, input.sectionId);
+    const sectionId = input.sectionId ?? null;
     const stored =
       input.kind === 'file' && input.storageKey
         ? await this.storage.confirm(input.storageKey, institutionId)
@@ -119,7 +122,8 @@ export class LearningMaterialsService {
           contentType: stored?.contentType ?? null,
           sizeBytes: stored?.sizeBytes ?? null,
           scanStatus: stored?.scanStatus ?? 'unscanned',
-          position: await this.nextPosition(spaceId),
+          sectionId,
+          position: await this.outline.nextPosition(spaceId, sectionId),
           visible: input.visible ?? true,
           createdById: userId,
         })
@@ -145,6 +149,7 @@ export class LearningMaterialsService {
 
     const existing = await this.materialOrFail(spaceId, materialId);
     assertPayloadMatchesKind({ ...existing, ...changes });
+    const placement = await this.outline.placement(spaceId, existing.sectionId, changes);
 
     const [updated] = await this.client
       .update(learningMaterials)
@@ -156,7 +161,7 @@ export class LearningMaterialsService {
           : { body: changes.body }),
         ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
         ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-        ...(changes.position === undefined ? {} : { position: changes.position }),
+        ...placement,
       })
       .where(eq(learningMaterials.id, materialId))
       .returning();
@@ -192,7 +197,7 @@ export class LearningMaterialsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const material = await this.materialOrFail(spaceId, materialId);
 
-    if (!material.visible && context.stance !== 'author') {
+    if (!(await this.outline.isShownTo(context.stance, spaceId, material))) {
       throw new EntityNotFoundError('learning_material', materialId);
     }
 
@@ -210,20 +215,6 @@ export class LearningMaterialsService {
       institutionId,
       material.filename ?? undefined,
     );
-  }
-
-  private async nextPosition(spaceId: string): Promise<number> {
-    const [row] = await this.client
-      .select({ highest: max(learningMaterials.position) })
-      .from(learningMaterials)
-      .where(
-        and(
-          eq(learningMaterials.learningSpaceId, spaceId),
-          isNull(learningMaterials.deletedAt),
-        ),
-      );
-
-    return (row?.highest ?? -1) + 1;
   }
 
   private async materialOrFail(spaceId: string, materialId: string): Promise<LearningMaterial> {

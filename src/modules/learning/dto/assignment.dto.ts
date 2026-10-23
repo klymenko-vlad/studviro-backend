@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -92,6 +93,17 @@ export class CreateAssignmentDto {
   @IsOptional()
   @IsBoolean()
   visible?: boolean;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'The section it sits in; null for the general area at the top.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  sectionId?: string | null;
 }
 
 export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {
@@ -129,6 +141,10 @@ export class AssignmentResponseDto {
   @Expose() @ApiProperty({ type: Number, nullable: true }) position!: number | null;
   @Expose() @ApiProperty() visible!: boolean;
 
+  @Expose()
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  sectionId!: string | null;
+
   static from(entry: AssignmentEntry): AssignmentResponseDto {
     const { activity, assessment } = entry;
 
@@ -147,6 +163,7 @@ export class AssignmentResponseDto {
       countsTowardFinalGrade: assessment.countsTowardFinalGrade,
       position: activity.position,
       visible: activity.visible,
+      sectionId: activity.sectionId,
     });
   }
 }

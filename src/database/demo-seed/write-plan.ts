@@ -13,6 +13,7 @@ import {
   institutionSettings,
   learningActivities,
   learningMaterials,
+  learningSections,
   learningSpaces,
   officialCourseResults,
   orgUnits,
@@ -37,7 +38,13 @@ import {
   planTimetableEvents,
 } from './derive';
 import type { PlannedOffering } from './derive';
-import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
+import {
+  planAssignments,
+  planMaterials,
+  planSections,
+  planSpaces,
+  planSubmissions,
+} from './derive-learning';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
@@ -526,9 +533,42 @@ export async function writePlan(
     }
   }
 
+  const sectionIds = new Map<string, string>();
+  const plannedSections = planSections(plannedSpaces);
+  for (let offset = 0; offset < plannedSections.length; offset += CHUNK) {
+    const slice = plannedSections.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningSections)
+      .values(
+        slice.map((section) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, section.spaceKey, 'learning space'),
+          title: section.title,
+          summary: section.summary,
+          position: section.position,
+        })),
+      )
+      .returning({
+        id: learningSections.id,
+        learningSpaceId: learningSections.learningSpaceId,
+        title: learningSections.title,
+      });
+    for (const section of slice) {
+      const spaceId = required(spaceIds, section.spaceKey, 'learning space');
+      const row = inserted.find(
+        (candidate) =>
+          candidate.learningSpaceId === spaceId && candidate.title === section.title,
+      );
+      if (row) sectionIds.set(section.key, row.id);
+    }
+  }
+  const sectionOf = (key: string | null) =>
+    key === null ? null : required(sectionIds, key, 'learning section');
+
   const materials = planMaterials(plannedSpaces).map((material) => ({
     institutionId,
     learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
+    sectionId: sectionOf(material.sectionKey),
     kind: material.kind,
     title: material.title,
     body: material.body,
@@ -545,13 +585,14 @@ export async function writePlan(
     const inserted = await db
       .insert(learningActivities)
       .values(
-        slice.map((assignment, index) => ({
+        slice.map((assignment) => ({
           institutionId,
           learningSpaceId: required(spaceIds, assignment.spaceKey, 'learning space'),
+          sectionId: sectionOf(assignment.sectionKey),
           type: 'assignment' as const,
           name: assignment.name,
           brief: assignment.brief,
-          position: index,
+          position: assignment.position,
           opensAt: assignment.opensAt,
           dueAt: assignment.dueAt,
           closesAt: assignment.closesAt,
@@ -640,6 +681,7 @@ export async function writePlan(
       examTerms: exams.length,
       officialCourseResults: results.length,
       learningSpaces: spaceIds.size,
+      learningSections: sectionIds.size,
       learningMaterials: materials.length,
       assignments: assignmentIds.size,
       submissions: submissionRows.length,

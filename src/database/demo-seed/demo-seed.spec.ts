@@ -9,7 +9,13 @@ import {
   planStudyGroups,
   planTimetableEvents,
 } from './derive';
-import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
+import {
+  planAssignments,
+  planMaterials,
+  planSections,
+  planSpaces,
+  planSubmissions,
+} from './derive-learning';
 import { DEFAULT_DEMO_SEED_OPTIONS } from './options';
 import { allCourses, allPersons, allPrograms, allRooms } from './plan';
 
@@ -155,6 +161,29 @@ describe('the learning half it seeds', () => {
   it('gives every space materials and two assignments', () => {
     expect(planMaterials(spaces)).toHaveLength(spaces.length * 3);
     expect(assignments).toHaveLength(spaces.length * 2);
+  });
+
+  it('lays every space out in two sections, with the course rules above them', () => {
+    const sections = planSections(spaces);
+    const space = spaces[0]!;
+    const [first, second] = sections.filter((section) => section.spaceKey === space.key);
+    const outline = [
+      ...planMaterials(spaces),
+      ...assignments.map((a) => ({ title: a.name, ...a })),
+    ]
+      .filter((item) => item.spaceKey === space.key)
+      .sort((a, b) => a.position - b.position);
+
+    expect(sections).toHaveLength(spaces.length * 2);
+    expect(outline.filter((item) => item.sectionKey === null).map((i) => i.title)).toEqual([
+      'How this course runs',
+    ]);
+    expect(
+      outline.filter((item) => item.sectionKey === first!.key).map((i) => i.title),
+    ).toEqual(['Lecture slides', 'Recommended reading', 'Assignment 1']);
+    expect(
+      outline.filter((item) => item.sectionKey === second!.key).map((i) => i.title),
+    ).toEqual(['Assignment 2']);
   });
 
   it('closes an assignment before the anchor and leaves one open, or the demo shows one state', () => {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import {
@@ -12,7 +12,8 @@ import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
-import { LearningAccessService, type LearningStance } from './learning-access.service';
+import { LearningAccessService } from './learning-access.service';
+import { LearningOutlineService, shownTo } from './learning-outline.service';
 
 export interface NewAssignment {
   readonly name: string;
@@ -25,6 +26,7 @@ export interface NewAssignment {
   readonly maxPoints?: number | null;
   readonly countsTowardFinalGrade?: boolean;
   readonly visible?: boolean;
+  readonly sectionId?: string | null;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -46,6 +48,7 @@ export class AssignmentsService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly notifications: LearningActivityNotificationsService,
+    private readonly outline: LearningOutlineService,
   ) {}
 
   async list(
@@ -74,7 +77,11 @@ export class AssignmentsService {
       )
       .orderBy(asc(learningActivities.position), asc(learningActivities.createdAt));
 
-    return visibleTo(context.stance, rows);
+    if (context.stance === 'author') return rows;
+
+    const hidden = await this.outline.hiddenSectionIds(spaceId);
+
+    return rows.filter((row) => shownTo(context.stance, row.activity, hidden));
   }
 
   async findOne(
@@ -86,7 +93,7 @@ export class AssignmentsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const entry = await this.entryOrFail(spaceId, assignmentId);
 
-    if (!entry.activity.visible && context.stance !== 'author') {
+    if (!(await this.outline.isShownTo(context.stance, spaceId, entry.activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 
@@ -104,6 +111,8 @@ export class AssignmentsService {
     this.access.assertAuthor(context);
     assertWindow(input);
     assertAttemptPolicy(input.maxAttempts ?? null);
+    await this.outline.assertSectionOf(spaceId, input.sectionId);
+    const sectionId = input.sectionId ?? null;
 
     return this.txHost.run(async () => {
       const [activity] = await this.client
@@ -114,7 +123,8 @@ export class AssignmentsService {
           type: 'assignment',
           name: input.name,
           brief: input.brief ?? null,
-          position: await this.nextPosition(spaceId),
+          sectionId,
+          position: await this.outline.nextPosition(spaceId, sectionId),
           opensAt: input.opensAt ?? null,
           dueAt: input.dueAt ?? null,
           closesAt: input.closesAt ?? null,
@@ -168,6 +178,11 @@ export class AssignmentsService {
     const existing = await this.entryOrFail(spaceId, assignmentId);
     assertWindow({ ...existing.activity, ...changes });
     if (changes.maxAttempts !== undefined) assertAttemptPolicy(changes.maxAttempts);
+    const placement = await this.outline.placement(
+      spaceId,
+      existing.activity.sectionId,
+      changes,
+    );
 
     // Drizzle refuses an `update` with no columns, so a change that touches
     // only one of the pair — moving a deadline, or re-pricing the column —
@@ -183,7 +198,7 @@ export class AssignmentsService {
         ? {}
         : { allowsLateSubmission: changes.allowsLateSubmission }),
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-      ...(changes.position === undefined ? {} : { position: changes.position }),
+      ...placement,
     };
 
     const assessmentChanges = {
@@ -275,20 +290,6 @@ export class AssignmentsService {
     return row;
   }
 
-  private async nextPosition(spaceId: string): Promise<number> {
-    const [row] = await this.client
-      .select({ highest: max(learningActivities.position) })
-      .from(learningActivities)
-      .where(
-        and(
-          eq(learningActivities.learningSpaceId, spaceId),
-          isNull(learningActivities.deletedAt),
-        ),
-      );
-
-    return (row?.highest ?? -1) + 1;
-  }
-
   private get client() {
     return this.txHost.client();
   }
@@ -296,10 +297,6 @@ export class AssignmentsService {
   private get reader() {
     return this.txHost.reader();
   }
-}
-
-function visibleTo(stance: LearningStance, rows: AssignmentEntry[]): AssignmentEntry[] {
-  return stance === 'author' ? rows : rows.filter((row) => row.activity.visible);
 }
 
 function isEmpty(changes: Record<string, unknown>): boolean {

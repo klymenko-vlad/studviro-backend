@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   MinLength,
@@ -93,6 +94,17 @@ export class CreateLearningMaterialDto {
   @IsOptional()
   @IsBoolean()
   visible?: boolean;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'The section it sits in; null for the general area at the top.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  sectionId?: string | null;
 }
 
 export class UpdateLearningMaterialDto extends PartialType(
@@ -124,6 +136,10 @@ export class LearningMaterialResponseDto {
   @Expose() @ApiProperty() position!: number;
   @Expose() @ApiProperty() visible!: boolean;
 
+  @Expose()
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  sectionId!: string | null;
+
   static from(material: LearningMaterial): LearningMaterialResponseDto {
     return Object.assign(new LearningMaterialResponseDto(), {
       id: material.id,
@@ -138,6 +154,7 @@ export class LearningMaterialResponseDto {
       scanStatus: material.scanStatus,
       position: material.position,
       visible: material.visible,
+      sectionId: material.sectionId,
     });
   }
 }

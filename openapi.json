@@ -5200,6 +5200,382 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/sections": {
+      "get": {
+        "description": "A hidden section is omitted for anybody who cannot unhide it, and so is everything placed in it.",
+        "operationId": "listLearningSections",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LearningSectionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The sections of a course page, in order",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "operationId": "createLearningSection",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningSectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningSectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add a section — a week or a topic — at the end of the page",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/sections/{sectionId}": {
+      "patch": {
+        "operationId": "updateLearningSection",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLearningSectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningSectionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Retitle a section, move it, hide or show it",
+        "tags": [
+          "learning"
+        ]
+      },
+      "delete": {
+        "description": "Its materials and assignments move to the end of the general area.",
+        "operationId": "removeLearningSection",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a section, keeping what was in it",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials": {
       "get": {
         "description": "A hidden material is omitted for anybody who cannot unhide it.",
@@ -17049,6 +17425,82 @@
           }
         }
       },
+      "LearningSectionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "number"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "position",
+          "visible"
+        ]
+      },
+      "CreateLearningSectionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Week 1 — sorting"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Shown unless said otherwise."
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateLearningSectionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Week 1 — sorting"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Shown unless said otherwise."
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
       "LearningMaterialResponseDto": {
         "type": "object",
         "properties": {
@@ -17106,6 +17558,11 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           }
         },
         "required": [
@@ -17120,7 +17577,8 @@
           "sizeBytes",
           "scanStatus",
           "position",
-          "visible"
+          "visible",
+          "sectionId"
         ]
       },
       "RequestUploadTicketDto": {
@@ -17223,6 +17681,12 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The section it sits in; null for the general area at the top."
           }
         },
         "required": [
@@ -17269,6 +17733,12 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The section it sits in; null for the general area at the top."
           },
           "position": {
             "type": "number",
@@ -17345,6 +17815,11 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           }
         },
         "required": [
@@ -17361,7 +17836,8 @@
           "maxPoints",
           "countsTowardFinalGrade",
           "position",
-          "visible"
+          "visible",
+          "sectionId"
         ]
       },
       "CreateAssignmentDto": {
@@ -17414,6 +17890,12 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The section it sits in; null for the general area at the top."
           }
         },
         "required": [
@@ -17470,6 +17952,12 @@
           },
           "visible": {
             "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The section it sits in; null for the general area at the top."
           },
           "position": {
             "type": "number",

@@ -8,6 +8,7 @@ import {
   ENROLLMENT_PARTICIPATING_STATUSES,
   enrollments,
   learningActivities,
+  learningSections,
   learningSpaces,
   submissions,
   teachingAssignments,
@@ -64,6 +65,7 @@ export class MyDeadlinesRepository {
       isNull(academicTerms.deletedAt),
       eq(learningActivities.visible, true),
       eq(learningSpaces.visible, true),
+      or(isNull(learningSections.id), eq(learningSections.visible, true)),
       gte(learningActivities.dueAt, filter.from),
       lt(learningActivities.dueAt, filter.to),
       or(this.attends(userId), teaches),
@@ -106,6 +108,13 @@ export class MyDeadlinesRepository {
         ),
       )
       .innerJoin(learningSpaces, eq(learningSpaces.id, learningActivities.learningSpaceId))
+      .leftJoin(
+        learningSections,
+        and(
+          eq(learningSections.id, learningActivities.sectionId),
+          isNull(learningSections.deletedAt),
+        ),
+      )
       .innerJoin(courseOfferings, eq(courseOfferings.id, learningSpaces.courseOfferingId))
       .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .innerJoin(academicTerms, eq(academicTerms.id, courseOfferings.academicTermId))

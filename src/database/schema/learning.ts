@@ -38,6 +38,28 @@ export const learningSpaces = pgTable(
   ],
 );
 
+export const learningSections = pgTable(
+  'learning_sections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    learningSpaceId: uuid('learning_space_id')
+      .notNull()
+      .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    summary: text('summary'),
+    position: integer('position').notNull().default(0),
+    visible: boolean('visible').notNull().default(true),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('learning_sections_space_idx')
+      .on(table.learningSpaceId, table.position)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
 export const LEARNING_ACTIVITY_TYPES = [
   'assignment',
   'forum',
@@ -56,6 +78,9 @@ export const learningActivities = pgTable(
     learningSpaceId: uuid('learning_space_id')
       .notNull()
       .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => learningSections.id, {
+      onDelete: 'set null',
+    }),
     type: learningActivityType('type').notNull().default('other'),
     name: text('name').notNull(),
     brief: text('brief'),
@@ -91,6 +116,9 @@ export const learningMaterials = pgTable(
     learningSpaceId: uuid('learning_space_id')
       .notNull()
       .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => learningSections.id, {
+      onDelete: 'set null',
+    }),
     kind: learningMaterialKind('kind').notNull(),
     title: text('title').notNull(),
     description: text('description'),
@@ -263,6 +291,7 @@ export const submissionFiles = pgTable(
 
 export type LearningSpace = typeof learningSpaces.$inferSelect;
 export type NewLearningSpace = typeof learningSpaces.$inferInsert;
+export type LearningSection = typeof learningSections.$inferSelect;
 export type LearningActivity = typeof learningActivities.$inferSelect;
 export type NewLearningActivity = typeof learningActivities.$inferInsert;
 export type LearningMaterial = typeof learningMaterials.$inferSelect;

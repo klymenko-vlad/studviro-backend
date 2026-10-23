@@ -8,6 +8,9 @@ import { AssignmentsService } from './assignments.service';
 import { LearningAccessService } from './learning-access.service';
 import { LearningMaterialsController } from './learning-materials.controller';
 import { LearningMaterialsService } from './learning-materials.service';
+import { LearningOutlineService } from './learning-outline.service';
+import { LearningSectionsController } from './learning-sections.controller';
+import { LearningSectionsService } from './learning-sections.service';
 import { LearningSpaceAuthoringController } from './learning-space-authoring.controller';
 import { LearningSpaceAuthoringService } from './learning-space-authoring.service';
 import { LearningSpacesController } from './learning-spaces.controller';
@@ -29,6 +32,7 @@ import { SubmissionsService } from './submissions.service';
   controllers: [
     LearningSpacesController,
     LearningSpaceAuthoringController,
+    LearningSectionsController,
     LearningMaterialsController,
     AssignmentsController,
     SubmissionsController,
@@ -41,6 +45,8 @@ import { SubmissionsService } from './submissions.service';
     LearningSpacesService,
     LearningSpacesRepository,
     LearningSpaceAuthoringService,
+    LearningOutlineService,
+    LearningSectionsService,
     LearningMaterialsService,
     AssignmentsService,
     SubmissionsService,

@@ -24,6 +24,7 @@ import type { UploadTicket } from '../storage/storage.types';
 
 import { assertSubmittable } from './assignment-policy';
 import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
+import { LearningOutlineService } from './learning-outline.service';
 
 export const SUBMISSION_PURPOSE = 'submissions';
 export const MAX_SUBMISSION_FILES = 10;
@@ -65,6 +66,7 @@ export class SubmissionsService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly storage: StorageService,
+    private readonly outline: LearningOutlineService,
   ) {}
 
   async listMine(
@@ -241,7 +243,7 @@ export class SubmissionsService {
       userId,
     );
 
-    if (!activity.visible && context.stance !== 'author') {
+    if (!(await this.outline.isShownTo(context.stance, activity.learningSpaceId, activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 

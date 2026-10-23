@@ -10,8 +10,17 @@ export interface PlannedSpace {
   readonly summary: string;
 }
 
+export interface PlannedSection {
+  readonly key: string;
+  readonly spaceKey: string;
+  readonly title: string;
+  readonly summary: string;
+  readonly position: number;
+}
+
 export interface PlannedMaterial {
   readonly spaceKey: string;
+  readonly sectionKey: string | null;
   readonly kind: 'link' | 'text';
   readonly title: string;
   readonly body: string | null;
@@ -22,6 +31,8 @@ export interface PlannedMaterial {
 export interface PlannedAssignment {
   readonly key: string;
   readonly spaceKey: string;
+  readonly sectionKey: string;
+  readonly position: number;
   readonly offering: PlannedOffering;
   readonly name: string;
   readonly brief: string;
@@ -63,25 +74,49 @@ export function planSpaces(offerings: readonly PlannedOffering[]): PlannedSpace[
     }));
 }
 
+const SECTIONS = [
+  {
+    title: 'Weeks 1–4 — foundations',
+    summary: 'The first block of lectures and the first assignment.',
+  },
+  { title: 'Weeks 5–8 — going further', summary: 'The second block, ending with the report.' },
+] as const;
+
+const sectionKey = (space: PlannedSpace, index: number) => `SEC-${space.key}-${index + 1}`;
+
+export function planSections(spaces: readonly PlannedSpace[]): PlannedSection[] {
+  return spaces.flatMap((space) =>
+    SECTIONS.map((section, index) => ({
+      key: sectionKey(space, index),
+      spaceKey: space.key,
+      title: section.title,
+      summary: section.summary,
+      position: index,
+    })),
+  );
+}
+
 export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[] {
   return spaces.flatMap((space) =>
     Array.from({ length: MATERIALS_PER_SPACE }, (_, index) =>
       index === 0
         ? {
             spaceKey: space.key,
+            sectionKey: null,
             kind: 'text' as const,
             title: 'How this course runs',
             body: `Lectures are weekly. Two assignments carry the coursework mark, and the exam is at the end of term. Ask in the seminar if anything here is unclear.`,
             url: null,
-            position: index,
+            position: 0,
           }
         : {
             spaceKey: space.key,
+            sectionKey: sectionKey(space, 0),
             kind: 'link' as const,
-            title: index === 1 ? 'Recommended reading' : 'Lecture slides',
+            title: index === 1 ? 'Lecture slides' : 'Recommended reading',
             body: null,
             url: `https://example.edu/${space.offering.course.code.toLowerCase().replaceAll('/', '-')}/${index}`,
-            position: index,
+            position: index - 1,
           },
     ),
   );
@@ -106,6 +141,8 @@ export function planAssignments(spaces: readonly PlannedSpace[]): PlannedAssignm
       return {
         key: `ASG-${space.key}-${index + 1}`,
         spaceKey: space.key,
+        sectionKey: sectionKey(space, index),
+        position: index === 0 ? MATERIALS_PER_SPACE - 1 : 0,
         offering: space.offering,
         name: `Assignment ${index + 1}`,
         brief:
