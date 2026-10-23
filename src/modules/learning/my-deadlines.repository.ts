@@ -17,6 +17,8 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { joinedSectionOpenAt, openAt } from './learning-availability.sql';
+
 export interface MyDeadlineRow {
   activityId: string;
   type: LearningActivityType;
@@ -53,6 +55,7 @@ export class MyDeadlinesRepository {
     institutionId: string,
     userId: string,
     filter: MyDeadlineFilter,
+    now: Date,
   ): Promise<MyDeadlineRow[]> {
     const teaches = this.teaches(userId);
     const submission = this.latestSubmission(userId);
@@ -68,7 +71,10 @@ export class MyDeadlinesRepository {
       or(isNull(learningSections.id), eq(learningSections.visible, true)),
       gte(learningActivities.dueAt, filter.from),
       lt(learningActivities.dueAt, filter.to),
-      or(this.attends(userId), teaches),
+      or(
+        and(this.attends(userId), openAt(learningActivities, now), joinedSectionOpenAt(now)),
+        teaches,
+      ),
     ];
 
     if (filter.offeringId) conditions.push(eq(courseOfferings.id, filter.offeringId));

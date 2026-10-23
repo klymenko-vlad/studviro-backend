@@ -47,7 +47,7 @@ export class LearningSectionsController {
     operationId: 'listLearningSections',
     summary: 'The sections of a course page, in order',
     description:
-      'A hidden section is omitted for anybody who cannot unhide it, and so is everything placed in it.',
+      'A hidden or ended section is omitted for anybody who cannot unhide it, and so is everything placed in it. One that has not opened yet shows only its title, unless it is hidden until then.',
   })
   @ApiOkResponse({ type: LearningSectionResponseDto, isArray: true })
   @ApiErrorResponses({ notFound: true })

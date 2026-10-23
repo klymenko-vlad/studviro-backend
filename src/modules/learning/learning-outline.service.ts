@@ -6,15 +6,20 @@ import { learningActivities, learningMaterials, learningSections } from '../../d
 import { TransactionHost } from '../../database/transaction.host';
 
 import type { LearningStance } from './learning-access.service';
+import { ownSight, type Schedulable, type Sight } from './learning-availability';
 
 export interface Placement {
   readonly sectionId?: string | null;
   readonly position?: number;
 }
 
-export interface OutlineItem {
+export interface OutlineItem extends Schedulable {
   readonly sectionId: string | null;
-  readonly visible: boolean;
+}
+
+export interface OutlineView<T> {
+  readonly itemOf: (row: T) => OutlineItem;
+  readonly teaser: (row: T) => T;
 }
 
 @Injectable()
@@ -90,41 +95,59 @@ export class LearningOutlineService {
     };
   }
 
-  async hiddenSectionIds(spaceId: string): Promise<ReadonlySet<string>> {
+  async closedSectionIds(spaceId: string, now: Date): Promise<ReadonlySet<string>> {
     const rows = await this.txHost
       .reader()
-      .select({ id: learningSections.id })
+      .select()
       .from(learningSections)
       .where(
-        and(
-          eq(learningSections.learningSpaceId, spaceId),
-          eq(learningSections.visible, false),
-          isNull(learningSections.deletedAt),
-        ),
+        and(eq(learningSections.learningSpaceId, spaceId), isNull(learningSections.deletedAt)),
       );
 
-    return new Set(rows.map((row) => row.id));
+    return new Set(rows.filter((row) => ownSight(row, now) !== 'full').map((row) => row.id));
   }
 
-  async isShownTo(
+  async sift<T>(
+    stance: LearningStance,
+    spaceId: string,
+    rows: readonly T[],
+    view: OutlineView<T>,
+    now = new Date(),
+  ): Promise<T[]> {
+    if (stance === 'author') return [...rows];
+
+    const closed = await this.closedSectionIds(spaceId, now);
+
+    return rows.flatMap((row) => {
+      const sight = sightOf(stance, view.itemOf(row), closed, now);
+      if (sight === 'none') return [];
+
+      return [sight === 'title' ? view.teaser(row) : row];
+    });
+  }
+
+  async isOpenTo(
     stance: LearningStance,
     spaceId: string,
     item: OutlineItem,
+    now = new Date(),
   ): Promise<boolean> {
     if (stance === 'author') return true;
 
-    return shownTo(stance, item, await this.hiddenSectionIds(spaceId));
+    return sightOf(stance, item, await this.closedSectionIds(spaceId, now), now) === 'full';
   }
 }
 
-export function shownTo(
+export function sightOf(
   stance: LearningStance,
   item: OutlineItem,
-  hiddenSections: ReadonlySet<string>,
-): boolean {
-  if (stance === 'author') return true;
+  closedSections: ReadonlySet<string>,
+  now: Date,
+): Sight {
+  if (stance === 'author') return 'full';
+  if (item.sectionId !== null && closedSections.has(item.sectionId)) return 'none';
 
-  return item.visible && (item.sectionId === null || !hiddenSections.has(item.sectionId));
+  return ownSight(item, now);
 }
 
 function inSection(

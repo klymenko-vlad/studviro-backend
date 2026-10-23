@@ -159,14 +159,14 @@ describe('the learning half it seeds', () => {
   });
 
   it('gives every space materials and two assignments', () => {
-    expect(planMaterials(spaces)).toHaveLength(spaces.length * 3);
+    expect(planMaterials(spaces)).toHaveLength(spaces.length * 5);
     expect(assignments).toHaveLength(spaces.length * 2);
   });
 
-  it('lays every space out in two sections, with the course rules above them', () => {
+  it('lays every space out in three sections, with the course rules above them', () => {
     const sections = planSections(spaces);
     const space = spaces[0]!;
-    const [first, second] = sections.filter((section) => section.spaceKey === space.key);
+    const [first, second, third] = sections.filter((section) => section.spaceKey === space.key);
     const outline = [
       ...planMaterials(spaces),
       ...assignments.map((a) => ({ title: a.name, ...a })),
@@ -174,7 +174,7 @@ describe('the learning half it seeds', () => {
       .filter((item) => item.spaceKey === space.key)
       .sort((a, b) => a.position - b.position);
 
-    expect(sections).toHaveLength(spaces.length * 2);
+    expect(sections).toHaveLength(spaces.length * 3);
     expect(outline.filter((item) => item.sectionKey === null).map((i) => i.title)).toEqual([
       'How this course runs',
     ]);
@@ -183,7 +183,22 @@ describe('the learning half it seeds', () => {
     ).toEqual(['Lecture slides', 'Recommended reading', 'Assignment 1']);
     expect(
       outline.filter((item) => item.sectionKey === second!.key).map((i) => i.title),
-    ).toEqual(['Assignment 2']);
+    ).toEqual(['Assignment 2', 'Report template']);
+    expect(
+      outline.filter((item) => item.sectionKey === third!.key).map((i) => i.title),
+    ).toEqual(['Past exam papers']);
+  });
+
+  it('schedules a section and an item to open after the anchor, so both states show', () => {
+    const space = spaces[0]!;
+    const third = planSections(spaces).filter((section) => section.spaceKey === space.key)[2]!;
+    const template = planMaterials(spaces).find(
+      (material) => material.spaceKey === space.key && material.title === 'Report template',
+    )!;
+
+    expect(third.availableFrom!.getTime()).toBeGreaterThan(options.anchor.getTime());
+    expect(template.availableFrom!.getTime()).toBeGreaterThan(options.anchor.getTime());
+    expect(template.availableFrom!.getTime()).toBeLessThan(third.availableFrom!.getTime());
   });
 
   it('closes an assignment before the anchor and leaves one open, or the demo shows one state', () => {

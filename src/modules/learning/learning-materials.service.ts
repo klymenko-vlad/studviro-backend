@@ -17,10 +17,25 @@ import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
 import { LearningAccessService } from './learning-access.service';
+import {
+  assertAvailabilityWindow,
+  availabilityChanges,
+  teaserOf,
+} from './learning-availability';
 import { assertPayloadMatchesKind } from './learning-material-payload';
-import { LearningOutlineService, shownTo } from './learning-outline.service';
+import { LearningOutlineService } from './learning-outline.service';
 
 export const MATERIAL_PURPOSE = 'materials';
+
+const MATERIAL_CONTENT = [
+  'description',
+  'body',
+  'url',
+  'storageKey',
+  'filename',
+  'contentType',
+  'sizeBytes',
+] as const;
 
 export interface NewLearningMaterial {
   readonly kind: LearningMaterialKind;
@@ -32,6 +47,9 @@ export interface NewLearningMaterial {
   readonly filename?: string | null;
   readonly visible?: boolean;
   readonly sectionId?: string | null;
+  readonly availableFrom?: Date | null;
+  readonly availableUntil?: Date | null;
+  readonly hiddenUntilAvailable?: boolean;
 }
 
 export type LearningMaterialChanges = Partial<Omit<NewLearningMaterial, 'kind'>> & {
@@ -65,11 +83,10 @@ export class LearningMaterialsService {
       )
       .orderBy(asc(learningMaterials.position), asc(learningMaterials.createdAt));
 
-    if (context.stance === 'author') return rows;
-
-    const hidden = await this.outline.hiddenSectionIds(spaceId);
-
-    return rows.filter((row) => shownTo(context.stance, row, hidden));
+    return this.outline.sift(context.stance, spaceId, rows, {
+      itemOf: (row) => row,
+      teaser: (row) => teaserOf(row, MATERIAL_CONTENT),
+    });
   }
 
   async createUploadTicket(
@@ -99,6 +116,7 @@ export class LearningMaterialsService {
     this.access.assertAuthor(context);
 
     assertPayloadMatchesKind(input);
+    assertAvailabilityWindow(input);
     await this.outline.assertSectionOf(spaceId, input.sectionId);
     const sectionId = input.sectionId ?? null;
     const stored =
@@ -125,6 +143,9 @@ export class LearningMaterialsService {
           sectionId,
           position: await this.outline.nextPosition(spaceId, sectionId),
           visible: input.visible ?? true,
+          availableFrom: input.availableFrom ?? null,
+          availableUntil: input.availableUntil ?? null,
+          hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
           createdById: userId,
         })
         .returning();
@@ -149,6 +170,7 @@ export class LearningMaterialsService {
 
     const existing = await this.materialOrFail(spaceId, materialId);
     assertPayloadMatchesKind({ ...existing, ...changes });
+    assertAvailabilityWindow({ ...existing, ...changes });
     const placement = await this.outline.placement(spaceId, existing.sectionId, changes);
 
     const [updated] = await this.client
@@ -161,6 +183,7 @@ export class LearningMaterialsService {
           : { body: changes.body }),
         ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
         ...(changes.visible === undefined ? {} : { visible: changes.visible }),
+        ...availabilityChanges(changes),
         ...placement,
       })
       .where(eq(learningMaterials.id, materialId))
@@ -197,7 +220,7 @@ export class LearningMaterialsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const material = await this.materialOrFail(spaceId, materialId);
 
-    if (!(await this.outline.isShownTo(context.stance, spaceId, material))) {
+    if (!(await this.outline.isOpenTo(context.stance, spaceId, material))) {
       throw new EntityNotFoundError('learning_material', materialId);
     }
 

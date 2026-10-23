@@ -51,7 +51,8 @@ export class LearningMaterialsController {
   @ApiOperation({
     operationId: 'listLearningMaterials',
     summary: 'The files, links and notes on a course page, in order',
-    description: 'A hidden material is omitted for anybody who cannot unhide it.',
+    description:
+      'A hidden or ended material is omitted for anybody who cannot unhide it. One that has not opened yet shows only its title, unless it is hidden until then.',
   })
   @ApiOkResponse({ type: LearningMaterialResponseDto, isArray: true })
   @ApiErrorResponses({ notFound: true })

@@ -3,6 +3,9 @@ import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { AssignmentAnnouncementSweepService } from './assignment-announcement-sweep.service';
+import { AssignmentAnnouncementsRepository } from './assignment-announcements.repository';
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
 import { LearningAccessService } from './learning-access.service';
@@ -49,6 +52,9 @@ import { SubmissionsService } from './submissions.service';
     LearningSectionsService,
     LearningMaterialsService,
     AssignmentsService,
+    AssignmentAnnouncementsRepository,
+    AssignmentAnnouncementsService,
+    AssignmentAnnouncementSweepService,
     SubmissionsService,
     SubmissionMarkingService,
     MyDeadlinesService,

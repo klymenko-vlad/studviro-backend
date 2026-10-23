@@ -10,13 +10,23 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { LearningAccessService } from './learning-access.service';
+import {
+  assertAvailabilityWindow,
+  availabilityChanges,
+  ownSight,
+  teaserOf,
+} from './learning-availability';
 import { LearningOutlineService } from './learning-outline.service';
 
 export interface NewLearningSection {
   readonly title: string;
   readonly summary?: string | null;
   readonly visible?: boolean;
+  readonly availableFrom?: Date | null;
+  readonly availableUntil?: Date | null;
+  readonly hiddenUntilAvailable?: boolean;
 }
 
 export type LearningSectionChanges = Partial<NewLearningSection> & {
@@ -29,12 +39,14 @@ export class LearningSectionsService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly outline: LearningOutlineService,
+    private readonly announcements: AssignmentAnnouncementsService,
   ) {}
 
   async list(
     institutionId: string,
     spaceId: string,
     userId: string,
+    now = new Date(),
   ): Promise<LearningSection[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
@@ -47,7 +59,14 @@ export class LearningSectionsService {
       )
       .orderBy(asc(learningSections.position), asc(learningSections.createdAt));
 
-    return context.stance === 'author' ? rows : rows.filter((row) => row.visible);
+    if (context.stance === 'author') return rows;
+
+    return rows.flatMap((row) => {
+      const sight = ownSight(row, now);
+      if (sight === 'none') return [];
+
+      return [sight === 'title' ? teaserOf(row, ['summary']) : row];
+    });
   }
 
   async create(
@@ -58,6 +77,7 @@ export class LearningSectionsService {
   ): Promise<LearningSection> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
+    assertAvailabilityWindow(input);
 
     return this.txHost.run(async () => {
       const [created] = await this.client
@@ -69,6 +89,9 @@ export class LearningSectionsService {
           summary: input.summary ?? null,
           position: await this.nextPosition(spaceId),
           visible: input.visible ?? true,
+          availableFrom: input.availableFrom ?? null,
+          availableUntil: input.availableUntil ?? null,
+          hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
         })
         .returning();
 
@@ -86,28 +109,35 @@ export class LearningSectionsService {
     sectionId: string,
     userId: string,
     changes: LearningSectionChanges,
+    now = new Date(),
   ): Promise<LearningSection> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     const existing = await this.sectionOrFail(spaceId, sectionId);
+    assertAvailabilityWindow({ ...existing, ...changes });
 
     const set = {
       ...(changes.title === undefined ? {} : { title: changes.title }),
       ...(changes.summary === undefined ? {} : { summary: changes.summary }),
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
       ...(changes.position === undefined ? {} : { position: changes.position }),
+      ...availabilityChanges(changes),
     };
     if (Object.keys(set).length === 0) return existing;
 
-    const [updated] = await this.client
-      .update(learningSections)
-      .set(set)
-      .where(eq(learningSections.id, sectionId))
-      .returning();
+    return this.txHost.run(async () => {
+      const [updated] = await this.client
+        .update(learningSections)
+        .set(set)
+        .where(eq(learningSections.id, sectionId))
+        .returning();
 
-    if (!updated) throw new EntityNotFoundError('learning_section', sectionId);
+      if (!updated) throw new EntityNotFoundError('learning_section', sectionId);
 
-    return updated;
+      await this.announcements.announceNewlySeen(now, spaceId);
+
+      return updated;
+    });
   }
 
   async remove(

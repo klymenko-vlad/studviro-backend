@@ -546,6 +546,7 @@ export async function writePlan(
           title: section.title,
           summary: section.summary,
           position: section.position,
+          availableFrom: section.availableFrom,
         })),
       )
       .returning({
@@ -574,6 +575,7 @@ export async function writePlan(
     body: material.body,
     url: material.url,
     position: material.position,
+    availableFrom: material.availableFrom,
   }));
   await insertChunked(materials, (slice) => db.insert(learningMaterials).values(slice));
 
@@ -598,6 +600,7 @@ export async function writePlan(
           closesAt: assignment.closesAt,
           maxAttempts: assignment.maxAttempts,
           allowsLateSubmission: assignment.allowsLateSubmission,
+          announcedAt: assignment.opensAt,
         })),
       )
       .returning({

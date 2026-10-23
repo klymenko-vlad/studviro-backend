@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { TransactionHost } from '../../database/transaction.host';
 
+import type { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import type { LearningAccessService, LearningStance } from './learning-access.service';
 import { LearningSpaceAuthoringService } from './learning-space-authoring.service';
 
@@ -44,8 +45,12 @@ const build = (stance: LearningStance) => {
     assertAuthor,
   } as unknown as LearningAccessService;
 
+  const announceNewlySeen = vi.fn().mockResolvedValue(0);
+  const announcements = { announceNewlySeen } as unknown as AssignmentAnnouncementsService;
+
   return {
-    service: new LearningSpaceAuthoringService(txHost, access),
+    service: new LearningSpaceAuthoringService(txHost, access, announcements),
+    announceNewlySeen,
     assertAuthorOfOffering,
     insert,
     update,
@@ -85,12 +90,13 @@ describe('LearningSpaceAuthoringService', () => {
 
   describe('changing a space', () => {
     it('lets an author rename and publish it', async () => {
-      const { service, update } = build('author');
+      const { service, update, announceNewlySeen } = build('author');
 
       await expect(
         service.update(INSTITUTION, 'space-1', { visible: true }, TEACHER),
       ).resolves.toMatchObject({ id: 'space-1' });
       expect(update).toHaveBeenCalled();
+      expect(announceNewlySeen).toHaveBeenCalledWith(expect.any(Date), 'space-1');
     });
 
     it('refuses a participant, who may read the space but not author it', async () => {

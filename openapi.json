@@ -5202,7 +5202,7 @@
     },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/sections": {
       "get": {
-        "description": "A hidden section is omitted for anybody who cannot unhide it, and so is everything placed in it.",
+        "description": "A hidden or ended section is omitted for anybody who cannot unhide it, and so is everything placed in it. One that has not opened yet shows only its title, unless it is hidden until then.",
         "operationId": "listLearningSections",
         "parameters": [
           {
@@ -5578,7 +5578,7 @@
     },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials": {
       "get": {
-        "description": "A hidden material is omitted for anybody who cannot unhide it.",
+        "description": "A hidden or ended material is omitted for anybody who cannot unhide it. One that has not opened yet shows only its title, unless it is hidden until then.",
         "operationId": "listLearningMaterials",
         "parameters": [
           {
@@ -17514,6 +17514,28 @@
       "LearningSectionResponseDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean"
+          },
+          "availability": {
+            "enum": [
+              "open",
+              "scheduled",
+              "ended"
+            ],
+            "type": "string",
+            "description": "Where its own window stands on the server clock: scheduled (not open yet), open, or ended."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -17533,6 +17555,10 @@
           }
         },
         "required": [
+          "availableFrom",
+          "availableUntil",
+          "hiddenUntilAvailable",
+          "availability",
           "id",
           "title",
           "summary",
@@ -17543,6 +17569,22 @@
       "CreateLearningSectionDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -17566,6 +17608,22 @@
       "UpdateLearningSectionDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -17590,6 +17648,28 @@
       "LearningMaterialResponseDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean"
+          },
+          "availability": {
+            "enum": [
+              "open",
+              "scheduled",
+              "ended"
+            ],
+            "type": "string",
+            "description": "Where its own window stands on the server clock: scheduled (not open yet), open, or ended."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -17652,6 +17732,10 @@
           }
         },
         "required": [
+          "availableFrom",
+          "availableUntil",
+          "hiddenUntilAvailable",
+          "availability",
           "id",
           "kind",
           "title",
@@ -17723,6 +17807,22 @@
       "CreateLearningMaterialDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "kind": {
             "enum": [
               "file",
@@ -17783,6 +17883,22 @@
       "UpdateLearningMaterialDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -17847,6 +17963,28 @@
       "AssignmentResponseDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean"
+          },
+          "availability": {
+            "enum": [
+              "open",
+              "scheduled",
+              "ended"
+            ],
+            "type": "string",
+            "description": "Where its own window stands on the server clock: scheduled (not open yet), open, or ended."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -17909,6 +18047,10 @@
           }
         },
         "required": [
+          "availableFrom",
+          "availableUntil",
+          "hiddenUntilAvailable",
+          "availability",
           "id",
           "learningSpaceId",
           "assessmentId",
@@ -17929,6 +18071,22 @@
       "CreateAssignmentDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "name": {
             "type": "string",
             "minLength": 1,
@@ -17991,6 +18149,22 @@
       "UpdateAssignmentDto": {
         "type": "object",
         "properties": {
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
           "name": {
             "type": "string",
             "minLength": 1,

@@ -16,6 +16,7 @@ export interface PlannedSection {
   readonly title: string;
   readonly summary: string;
   readonly position: number;
+  readonly availableFrom: Date | null;
 }
 
 export interface PlannedMaterial {
@@ -26,6 +27,7 @@ export interface PlannedMaterial {
   readonly body: string | null;
   readonly url: string | null;
   readonly position: number;
+  readonly availableFrom: Date | null;
 }
 
 export interface PlannedAssignment {
@@ -78,9 +80,24 @@ const SECTIONS = [
   {
     title: 'Weeks 1–4 — foundations',
     summary: 'The first block of lectures and the first assignment.',
+    opensAfterDays: null,
   },
-  { title: 'Weeks 5–8 — going further', summary: 'The second block, ending with the report.' },
+  {
+    title: 'Weeks 5–8 — going further',
+    summary: 'The second block, ending with the report.',
+    opensAfterDays: null,
+  },
+  {
+    title: 'Weeks 9–12 — revision',
+    summary: 'Past papers and a revision plan, opened once the second block is done.',
+    opensAfterDays: 56,
+  },
 ] as const;
+
+const REPORT_TEMPLATE_OPENS_AFTER_DAYS = 42;
+
+const opensAfter = (space: PlannedSpace, days: number | null) =>
+  days === null ? null : addDays(space.offering.term.startsAt, days);
 
 const sectionKey = (space: PlannedSpace, index: number) => `SEC-${space.key}-${index + 1}`;
 
@@ -92,13 +109,14 @@ export function planSections(spaces: readonly PlannedSpace[]): PlannedSection[] 
       title: section.title,
       summary: section.summary,
       position: index,
+      availableFrom: opensAfter(space, section.opensAfterDays),
     })),
   );
 }
 
 export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[] {
-  return spaces.flatMap((space) =>
-    Array.from({ length: MATERIALS_PER_SPACE }, (_, index) =>
+  return spaces.flatMap((space) => [
+    ...Array.from({ length: MATERIALS_PER_SPACE }, (_, index) =>
       index === 0
         ? {
             spaceKey: space.key,
@@ -108,6 +126,7 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
             body: `Lectures are weekly. Two assignments carry the coursework mark, and the exam is at the end of term. Ask in the seminar if anything here is unclear.`,
             url: null,
             position: 0,
+            availableFrom: null,
           }
         : {
             spaceKey: space.key,
@@ -117,9 +136,30 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
             body: null,
             url: `https://example.edu/${space.offering.course.code.toLowerCase().replaceAll('/', '-')}/${index}`,
             position: index - 1,
+            availableFrom: null,
           },
     ),
-  );
+    {
+      spaceKey: space.key,
+      sectionKey: sectionKey(space, 1),
+      kind: 'text' as const,
+      title: 'Report template',
+      body: 'Use these headings: question, method, findings, what you would do next. Four pages at most.',
+      url: null,
+      position: 1,
+      availableFrom: opensAfter(space, REPORT_TEMPLATE_OPENS_AFTER_DAYS),
+    },
+    {
+      spaceKey: space.key,
+      sectionKey: sectionKey(space, 2),
+      kind: 'link' as const,
+      title: 'Past exam papers',
+      body: null,
+      url: `https://example.edu/${space.offering.course.code.toLowerCase().replaceAll('/', '-')}/past-papers`,
+      position: 0,
+      availableFrom: null,
+    },
+  ]);
 }
 
 /**

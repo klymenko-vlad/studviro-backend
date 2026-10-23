@@ -64,13 +64,19 @@ Anything not in a section sits in the untitled general area at the top.
 - The _Materials_ tab becomes _Content_, the outline; assignments appear in it, linked to
   their place on the _Assignments_ tab.
 
-### CB2 — Available from, available until · S
+### CB2 — Available from, available until · S · **Done 2026-10-23**
 
 `availableFrom` / `availableUntil` on a section, a material and an assignment. Before the
 window a student sees the title and "Opens on …" (or nothing, if the author chooses _hide
 until then_); after it, nothing. Assignments keep `opensAt` for _submission_; availability is
 about _seeing_. Fold in the notification gap noted under CB1: "assignment published" must
 fire when the student can first see it, including when its section is shown.
+
+Shipped as **ADR 0044**: the server answers `availability` (`scheduled` / `open` / `ended`)
+with the dates; a not-yet-open item is title-only and 404 by id; a section's window covers
+its contents; deadlines and the calendar show an assignment once it is open. _Assignment
+published_ is claimed once through `announced_at`, straight away on the change that shows
+it and by a one-minute sweep when a date passes.
 
 ### CB3 — Completion and progress · M
 
@@ -98,7 +104,7 @@ files under one title). Each kind gets its own form section and its own row in t
 
 ### CB6 — Quiz authoring and the question bank · L
 
-ADR 0044 supersedes ADR 0028's L7. A course has a **question bank** organised in
+A new ADR (0044 went to CB2) supersedes ADR 0028's L7. A course has a **question bank** organised in
 categories; a question is versioned on edit so past attempts keep the text they were asked.
 Question types: **single choice, multiple choice, true/false, short answer, numerical,
 matching and essay**. A **quiz** is a new `learning_activities.type` placed in the outline
@@ -143,7 +149,7 @@ impersonation — the server answers the student view for the author on request.
 ## Checklist
 
 - [x] CB1 — Sections and one course outline
-- [ ] CB2 — Available from, available until
+- [x] CB2 — Available from, available until
 - [ ] CB3 — Completion and progress
 - [ ] CB4 — Step by step: restrict access
 - [ ] CB5 — More things to put on a page
@@ -156,5 +162,12 @@ impersonation — the server answers the student view for the author on request.
 
 ## Noticed
 
-- An assignment in a hidden section still raises _assignment published_ when the assignment
-  itself is shown, and nothing is raised when the section is later shown. CB2 owns it.
+- ~~An assignment in a hidden section still raises _assignment published_ when the assignment
+  itself is shown, and nothing is raised when the section is later shown.~~ Fixed in CB2.
+- Search indexes no materials or assignments. When it does, it must apply `sightOf` (CB2).
+- A section that has not opened yet shows its title and "Opens on …" with a little empty
+  space under it on the student's page; a tighter card when it has no contents would read better.
+- Materials have no edit form, only _Availability_, _Hide_ and _Remove_; renaming a material
+  means removing and re-adding it.
+- The demo seed's dates sit at midnight UTC, so the demo shows deadlines and openings at
+  01:00 or 02:00 local time.

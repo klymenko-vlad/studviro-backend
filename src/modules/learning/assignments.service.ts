@@ -11,9 +11,15 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
 import { LearningAccessService } from './learning-access.service';
-import { LearningOutlineService, shownTo } from './learning-outline.service';
+import {
+  assertAvailabilityWindow,
+  availabilityChanges,
+  teaserOf,
+} from './learning-availability';
+import { LearningOutlineService } from './learning-outline.service';
 
 export interface NewAssignment {
   readonly name: string;
@@ -27,6 +33,9 @@ export interface NewAssignment {
   readonly countsTowardFinalGrade?: boolean;
   readonly visible?: boolean;
   readonly sectionId?: string | null;
+  readonly availableFrom?: Date | null;
+  readonly availableUntil?: Date | null;
+  readonly hiddenUntilAvailable?: boolean;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -35,6 +44,8 @@ export interface AssignmentEntry {
   readonly activity: LearningActivity;
   readonly assessment: Assessment;
 }
+
+const ASSIGNMENT_CONTENT = ['brief', 'opensAt', 'dueAt', 'closesAt'] as const;
 
 /**
  * A brief, a window and an attempt policy. It is a `learning_activity` of type
@@ -49,6 +60,7 @@ export class AssignmentsService {
     private readonly access: LearningAccessService,
     private readonly notifications: LearningActivityNotificationsService,
     private readonly outline: LearningOutlineService,
+    private readonly announcements: AssignmentAnnouncementsService,
   ) {}
 
   async list(
@@ -77,11 +89,10 @@ export class AssignmentsService {
       )
       .orderBy(asc(learningActivities.position), asc(learningActivities.createdAt));
 
-    if (context.stance === 'author') return rows;
-
-    const hidden = await this.outline.hiddenSectionIds(spaceId);
-
-    return rows.filter((row) => shownTo(context.stance, row.activity, hidden));
+    return this.outline.sift(context.stance, spaceId, rows, {
+      itemOf: (row) => row.activity,
+      teaser: (row) => ({ ...row, activity: teaserOf(row.activity, ASSIGNMENT_CONTENT) }),
+    });
   }
 
   async findOne(
@@ -93,7 +104,7 @@ export class AssignmentsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const entry = await this.entryOrFail(spaceId, assignmentId);
 
-    if (!(await this.outline.isShownTo(context.stance, spaceId, entry.activity))) {
+    if (!(await this.outline.isOpenTo(context.stance, spaceId, entry.activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 
@@ -110,6 +121,7 @@ export class AssignmentsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     assertWindow(input);
+    assertAvailabilityWindow(input);
     assertAttemptPolicy(input.maxAttempts ?? null);
     await this.outline.assertSectionOf(spaceId, input.sectionId);
     const sectionId = input.sectionId ?? null;
@@ -131,6 +143,9 @@ export class AssignmentsService {
           maxAttempts: input.maxAttempts ?? 1,
           allowsLateSubmission: input.allowsLateSubmission ?? false,
           visible: input.visible ?? true,
+          availableFrom: input.availableFrom ?? null,
+          availableUntil: input.availableUntil ?? null,
+          hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
         })
         .returning();
 
@@ -154,11 +169,7 @@ export class AssignmentsService {
         throw new ConflictError('ASSIGNMENT_NOT_CREATED', 'The assignment was not created');
       }
 
-      await this.notifications.applied(
-        institutionId,
-        { previous: null, current: activity },
-        now,
-      );
+      await this.announcements.announceNewlySeen(now, spaceId);
 
       return { activity, assessment };
     });
@@ -177,6 +188,7 @@ export class AssignmentsService {
 
     const existing = await this.entryOrFail(spaceId, assignmentId);
     assertWindow({ ...existing.activity, ...changes });
+    assertAvailabilityWindow({ ...existing.activity, ...changes });
     if (changes.maxAttempts !== undefined) assertAttemptPolicy(changes.maxAttempts);
     const placement = await this.outline.placement(
       spaceId,
@@ -184,9 +196,6 @@ export class AssignmentsService {
       changes,
     );
 
-    // Drizzle refuses an `update` with no columns, so a change that touches
-    // only one of the pair — moving a deadline, or re-pricing the column —
-    // leaves the other row as it stands rather than writing nothing to it.
     const activityChanges = {
       ...(changes.name === undefined ? {} : { name: changes.name }),
       ...(changes.brief === undefined ? {} : { brief: changes.brief }),
@@ -198,6 +207,7 @@ export class AssignmentsService {
         ? {}
         : { allowsLateSubmission: changes.allowsLateSubmission }),
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
+      ...availabilityChanges(changes),
       ...placement,
     };
 
@@ -230,11 +240,12 @@ export class AssignmentsService {
 
       if (!assessment) throw new EntityNotFoundError('assessment', existing.assessment.id);
 
-      await this.notifications.applied(
+      await this.notifications.rescheduled(
         institutionId,
         { previous: existing.activity, current: activity },
         now,
       );
+      await this.announcements.announceNewlySeen(now, spaceId);
 
       return { activity, assessment };
     });

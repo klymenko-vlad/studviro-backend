@@ -243,7 +243,7 @@ export class SubmissionsService {
       userId,
     );
 
-    if (!(await this.outline.isShownTo(context.stance, activity.learningSpaceId, activity))) {
+    if (!(await this.outline.isOpenTo(context.stance, activity.learningSpaceId, activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 

@@ -50,6 +50,9 @@ export const learningSections = pgTable(
     summary: text('summary'),
     position: integer('position').notNull().default(0),
     visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
     deletedAt,
     ...timestamps,
   },
@@ -91,6 +94,10 @@ export const learningActivities = pgTable(
     maxAttempts: integer('max_attempts'),
     allowsLateSubmission: boolean('allows_late_submission').notNull().default(false),
     visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    announcedAt: timestampColumn('announced_at'),
     deletedAt,
     ...timestamps,
   },
@@ -101,6 +108,9 @@ export const learningActivities = pgTable(
     index('learning_activities_due_at_idx')
       .on(table.institutionId, table.dueAt)
       .where(isNull(table.deletedAt)),
+    index('learning_activities_unannounced_idx')
+      .on(table.dueAt)
+      .where(sql`${table.announcedAt} is null and ${table.deletedAt} is null`),
   ],
 );
 
@@ -131,6 +141,9 @@ export const learningMaterials = pgTable(
     scanStatus: scanStatusColumn(),
     position: integer('position').notNull().default(0),
     visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,
     ...timestamps,

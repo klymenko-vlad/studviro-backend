@@ -52,7 +52,7 @@ export class MyDeadlinesService {
   ): Promise<MyDeadline[]> {
     assertRange(filter);
 
-    const rows = await this.repository.findMyDeadlines(institutionId, userId, filter);
+    const rows = await this.repository.findMyDeadlines(institutionId, userId, filter, now);
 
     return rows.map((row) => compose(row, now));
   }

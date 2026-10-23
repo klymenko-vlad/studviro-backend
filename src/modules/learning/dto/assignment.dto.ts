@@ -18,11 +18,17 @@ import {
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import type { AssignmentEntry } from '../assignments.service';
 
+import {
+  AvailabilityDto,
+  AvailabilityResponseDto,
+  availabilityFields,
+} from './availability.dto';
+
 const MAX_NAME = 200;
 const MAX_BRIEF = 20_000;
 const MAX_POINTS = 100_000;
 
-export class CreateAssignmentDto {
+export class CreateAssignmentDto extends AvailabilityDto {
   @ApiProperty({ maxLength: MAX_NAME, example: 'Assignment 1 — sorting' })
   @IsString()
   @MinLength(1)
@@ -115,7 +121,7 @@ export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {
 }
 
 @Exclude()
-export class AssignmentResponseDto {
+export class AssignmentResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) learningSpaceId!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) assessmentId!: string;
@@ -145,7 +151,7 @@ export class AssignmentResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   sectionId!: string | null;
 
-  static from(entry: AssignmentEntry): AssignmentResponseDto {
+  static from(entry: AssignmentEntry, now = new Date()): AssignmentResponseDto {
     const { activity, assessment } = entry;
 
     return Object.assign(new AssignmentResponseDto(), {
@@ -164,6 +170,7 @@ export class AssignmentResponseDto {
       position: activity.position,
       visible: activity.visible,
       sectionId: activity.sectionId,
+      ...availabilityFields(activity, now),
     });
   }
 }

@@ -1,36 +1,78 @@
 import { describe, expect, it } from 'vitest';
 
-import { shownTo } from './learning-outline.service';
+import { sightOf } from './learning-outline.service';
 
-const HIDDEN_SECTION = '6a1f0c1e-0000-4000-8000-000000000001';
-const SHOWN_SECTION = '6a1f0c1e-0000-4000-8000-000000000002';
-const hidden = new Set([HIDDEN_SECTION]);
+const CLOSED_SECTION = '6a1f0c1e-0000-4000-8000-000000000001';
+const OPEN_SECTION = '6a1f0c1e-0000-4000-8000-000000000002';
+const closed = new Set([CLOSED_SECTION]);
+const NOW = new Date('2026-11-02T09:00:00.000Z');
+const LATER = new Date('2026-11-09T09:00:00.000Z');
+const EARLIER = new Date('2026-10-26T09:00:00.000Z');
 
-describe('shownTo', () => {
-  it('shows an author everything, hidden or not', () => {
-    expect(shownTo('author', { visible: false, sectionId: HIDDEN_SECTION }, hidden)).toBe(true);
-  });
+const item = (overrides: Partial<Parameters<typeof sightOf>[1]> = {}) => ({
+  visible: true,
+  sectionId: null,
+  availableFrom: null,
+  availableUntil: null,
+  hiddenUntilAvailable: false,
+  ...overrides,
+});
 
-  it('shows a participant a visible item in the general area or a shown section', () => {
-    expect(shownTo('participant', { visible: true, sectionId: null }, hidden)).toBe(true);
-    expect(shownTo('participant', { visible: true, sectionId: SHOWN_SECTION }, hidden)).toBe(
-      true,
-    );
-  });
-
-  it('hides an item that is hidden itself', () => {
-    expect(shownTo('participant', { visible: false, sectionId: null }, hidden)).toBe(false);
-  });
-
-  it('hides a visible item in a hidden section, from participants and observers alike', () => {
-    for (const stance of ['participant', 'observer'] as const) {
-      expect(shownTo(stance, { visible: true, sectionId: HIDDEN_SECTION }, hidden)).toBe(false);
+describe('sightOf', () => {
+  it('shows an author everything in full: hidden, scheduled, ended or in a closed section', () => {
+    for (const overrides of [
+      { visible: false, sectionId: CLOSED_SECTION },
+      { availableFrom: LATER, hiddenUntilAvailable: true },
+      { availableUntil: EARLIER },
+    ]) {
+      expect(sightOf('author', item(overrides), closed, NOW)).toBe('full');
     }
   });
 
-  it('shows everything visible when no section is hidden', () => {
-    expect(shownTo('observer', { visible: true, sectionId: HIDDEN_SECTION }, new Set())).toBe(
-      true,
+  it('shows a participant a visible item in the general area or an open section', () => {
+    expect(sightOf('participant', item(), closed, NOW)).toBe('full');
+    expect(sightOf('participant', item({ sectionId: OPEN_SECTION }), closed, NOW)).toBe('full');
+  });
+
+  it('hides an item that is hidden itself', () => {
+    expect(sightOf('participant', item({ visible: false }), closed, NOW)).toBe('none');
+  });
+
+  it('hides a visible item in a closed section, from participants and observers alike', () => {
+    for (const stance of ['participant', 'observer'] as const) {
+      expect(sightOf(stance, item({ sectionId: CLOSED_SECTION }), closed, NOW)).toBe('none');
+    }
+  });
+
+  it('hides even an item that would show its title, when its section is closed', () => {
+    expect(
+      sightOf(
+        'participant',
+        item({ sectionId: CLOSED_SECTION, availableFrom: LATER }),
+        closed,
+        NOW,
+      ),
+    ).toBe('none');
+  });
+
+  it('shows the title of an item in an open section that opens later', () => {
+    expect(
+      sightOf(
+        'participant',
+        item({ sectionId: OPEN_SECTION, availableFrom: LATER }),
+        closed,
+        NOW,
+      ),
+    ).toBe('title');
+  });
+
+  it('hides an item whose window has ended', () => {
+    expect(sightOf('participant', item({ availableUntil: EARLIER }), closed, NOW)).toBe('none');
+  });
+
+  it('shows everything open when no section is closed', () => {
+    expect(sightOf('observer', item({ sectionId: CLOSED_SECTION }), new Set(), NOW)).toBe(
+      'full',
     );
   });
 });

@@ -13,13 +13,19 @@ import {
 
 import type { LearningSection } from '../../../database/schema';
 
+import {
+  AvailabilityDto,
+  AvailabilityResponseDto,
+  availabilityFields,
+} from './availability.dto';
+
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 4000;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
-export class CreateLearningSectionDto {
+export class CreateLearningSectionDto extends AvailabilityDto {
   @ApiProperty({ minLength: 1, maxLength: MAX_TITLE, example: 'Week 1 — sorting' })
   @Transform(trimmed)
   @IsString()
@@ -49,20 +55,21 @@ export class UpdateLearningSectionDto extends PartialType(CreateLearningSectionD
 }
 
 @Exclude()
-export class LearningSectionResponseDto {
+export class LearningSectionResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() title!: string;
   @Expose() @ApiProperty({ type: String, nullable: true }) summary!: string | null;
   @Expose() @ApiProperty() position!: number;
   @Expose() @ApiProperty() visible!: boolean;
 
-  static from(section: LearningSection): LearningSectionResponseDto {
+  static from(section: LearningSection, now = new Date()): LearningSectionResponseDto {
     return Object.assign(new LearningSectionResponseDto(), {
       id: section.id,
       title: section.title,
       summary: section.summary,
       position: section.position,
       visible: section.visible,
+      ...availabilityFields(section, now),
     });
   }
 }

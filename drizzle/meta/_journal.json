@@ -253,6 +253,13 @@
       "when": 1792694484487,
       "tag": "0035_learning_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792746167579,
+      "tag": "0036_learning_availability",
+      "breakpoints": true
     }
   ]
 }

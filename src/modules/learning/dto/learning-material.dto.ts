@@ -22,6 +22,12 @@ import {
 } from '../../../database/schema';
 import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
 
+import {
+  AvailabilityDto,
+  AvailabilityResponseDto,
+  availabilityFields,
+} from './availability.dto';
+
 const MAX_TITLE = 200;
 const MAX_DESCRIPTION = 2000;
 const MAX_BODY = 20_000;
@@ -29,7 +35,7 @@ const MAX_URL = 2048;
 const MAX_FILENAME = 255;
 const MAX_STORAGE_KEY = 1024;
 
-export class CreateLearningMaterialDto {
+export class CreateLearningMaterialDto extends AvailabilityDto {
   @ApiProperty({ enum: LEARNING_MATERIAL_KINDS })
   @IsIn(LEARNING_MATERIAL_KINDS)
   kind!: LearningMaterialKind;
@@ -118,7 +124,7 @@ export class UpdateLearningMaterialDto extends PartialType(
 }
 
 @Exclude()
-export class LearningMaterialResponseDto {
+export class LearningMaterialResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ enum: LEARNING_MATERIAL_KINDS }) kind!: LearningMaterialKind;
   @Expose() @ApiProperty() title!: string;
@@ -140,7 +146,7 @@ export class LearningMaterialResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   sectionId!: string | null;
 
-  static from(material: LearningMaterial): LearningMaterialResponseDto {
+  static from(material: LearningMaterial, now = new Date()): LearningMaterialResponseDto {
     return Object.assign(new LearningMaterialResponseDto(), {
       id: material.id,
       kind: material.kind,
@@ -155,6 +161,7 @@ export class LearningMaterialResponseDto {
       position: material.position,
       visible: material.visible,
       sectionId: material.sectionId,
+      ...availabilityFields(material, now),
     });
   }
 }
