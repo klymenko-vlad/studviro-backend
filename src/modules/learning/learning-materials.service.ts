@@ -25,8 +25,11 @@ import {
   availabilityChanges,
   teaserOf,
 } from './learning-availability';
+import { AvailabilityService, type Gated } from './learning-availability.service';
 import { assertPayloadMatchesKind } from './learning-material-payload';
 import { LearningOutlineService, type Placement } from './learning-outline.service';
+import type { RestrictionInput } from './restriction';
+import { RestrictionRulesService } from './restriction-rules.service';
 
 export const MATERIAL_PURPOSE = 'materials';
 
@@ -54,6 +57,7 @@ export interface NewLearningMaterial {
   readonly availableUntil?: Date | null;
   readonly hiddenUntilAvailable?: boolean;
   readonly completionRule?: CompletionRule;
+  readonly restriction?: RestrictionInput | null;
 }
 
 export type LearningMaterialChanges = Partial<Omit<NewLearningMaterial, 'kind'>> & {
@@ -68,13 +72,15 @@ export class LearningMaterialsService {
     private readonly storage: StorageService,
     private readonly outline: LearningOutlineService,
     private readonly completion: CompletionService,
+    private readonly availability: AvailabilityService,
+    private readonly restrictions: RestrictionRulesService,
   ) {}
 
   async list(
     institutionId: string,
     spaceId: string,
     userId: string,
-  ): Promise<LearningMaterial[]> {
+  ): Promise<Gated<LearningMaterial>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
     const rows = await this.reader
@@ -88,7 +94,7 @@ export class LearningMaterialsService {
       )
       .orderBy(asc(learningMaterials.position), asc(learningMaterials.createdAt));
 
-    return this.outline.sift(context.stance, spaceId, rows, {
+    return this.availability.sift(context, rows, {
       itemOf: (row) => row,
       teaser: (row) => teaserOf(row, MATERIAL_CONTENT),
     });
@@ -116,7 +122,7 @@ export class LearningMaterialsService {
     spaceId: string,
     userId: string,
     input: NewLearningMaterial,
-  ): Promise<LearningMaterial> {
+  ): Promise<Gated<LearningMaterial>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
@@ -125,6 +131,10 @@ export class LearningMaterialsService {
     assertCompletionRule({ kind: 'material', rule: input.completionRule ?? 'none' });
     await this.outline.assertSectionOf(spaceId, input.sectionId);
     const sectionId = input.sectionId ?? null;
+    const { restriction = null } = await this.restrictions.settle(
+      { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
+      { input: input.restriction },
+    );
     const stored =
       input.kind === 'file' && input.storageKey
         ? await this.storage.confirm(input.storageKey, institutionId)
@@ -153,6 +163,7 @@ export class LearningMaterialsService {
           availableUntil: input.availableUntil ?? null,
           hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
           completionRule: input.completionRule ?? 'none',
+          restriction,
           createdById: userId,
         })
         .returning();
@@ -161,7 +172,7 @@ export class LearningMaterialsService {
         throw new ConflictError('LEARNING_MATERIAL_NOT_CREATED', 'The material was not added');
       }
 
-      return created;
+      return this.availability.gated(context, created);
     });
   }
 
@@ -171,7 +182,7 @@ export class LearningMaterialsService {
     materialId: string,
     userId: string,
     changes: LearningMaterialChanges,
-  ): Promise<LearningMaterial> {
+  ): Promise<Gated<LearningMaterial>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
@@ -182,15 +193,28 @@ export class LearningMaterialsService {
       assertCompletionRule({ kind: 'material', rule: changes.completionRule });
     }
     const placement = await this.outline.placement(spaceId, existing.sectionId, changes);
+    const restriction = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: `material:${materialId}`,
+        sectionId: placement.sectionId === undefined ? existing.sectionId : placement.sectionId,
+        restriction: existing.restriction,
+      },
+      { input: changes.restriction, moved: placement.sectionId !== undefined },
+    );
     const ruleChanged =
       changes.completionRule !== undefined &&
       changes.completionRule !== existing.completionRule;
 
     return this.txHost.run(async () => {
-      const updated = await this.write(materialId, existing, changes, placement);
+      const updated = await this.write(materialId, existing, changes, {
+        ...placement,
+        ...restriction,
+      });
       if (ruleChanged) await this.completion.recompute({ kind: 'material', id: materialId });
 
-      return updated;
+      return this.availability.gated(context, updated);
     });
   }
 
@@ -210,7 +234,7 @@ export class LearningMaterialsService {
     materialId: string,
     existing: LearningMaterial,
     changes: LearningMaterialChanges,
-    placement: Placement,
+    placement: Placement & { restriction?: LearningMaterial['restriction'] },
   ): Promise<LearningMaterial> {
     const [updated] = await this.client
       .update(learningMaterials)
@@ -284,7 +308,7 @@ export class LearningMaterialsService {
     context: LearningSpaceContext,
     material: LearningMaterial,
   ): Promise<void> {
-    if (!(await this.outline.isOpenTo(context.stance, material.learningSpaceId, material))) {
+    if (!(await this.availability.isOpenTo(context, material))) {
       throw new EntityNotFoundError('learning_material', material.id);
     }
   }

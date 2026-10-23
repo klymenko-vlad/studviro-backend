@@ -12,8 +12,10 @@ import {
 import { planCompletions } from './derive-completion';
 import {
   ASSIGNMENT_PASS_POINTS,
+  EXTENSION_MARK,
   planAssignments,
   planMaterials,
+  planRestrictions,
   planSections,
   planSpaces,
   planSubmissions,
@@ -161,7 +163,7 @@ describe('the learning half it seeds', () => {
   });
 
   it('gives every space materials and two assignments', () => {
-    expect(planMaterials(spaces)).toHaveLength(spaces.length * 5);
+    expect(planMaterials(spaces)).toHaveLength(spaces.length * 6);
     expect(assignments).toHaveLength(spaces.length * 2);
   });
 
@@ -182,13 +184,44 @@ describe('the learning half it seeds', () => {
     ]);
     expect(
       outline.filter((item) => item.sectionKey === first!.key).map((i) => i.title),
-    ).toEqual(['Lecture slides', 'Recommended reading', 'Assignment 1']);
+    ).toEqual(['Lecture slides', 'Recommended reading', 'Assignment 1', 'Extension exercises']);
     expect(
       outline.filter((item) => item.sectionKey === second!.key).map((i) => i.title),
     ).toEqual(['Assignment 2', 'Report template']);
     expect(
       outline.filter((item) => item.sectionKey === third!.key).map((i) => i.title),
     ).toEqual(['Past exam papers']);
+  });
+
+  it('locks the second block behind Assignment 1 and the extension behind a high mark', () => {
+    const space = spaces[0]!;
+    const [, second] = planSections(spaces).filter((section) => section.spaceKey === space.key);
+    const extension = planMaterials(spaces).find(
+      (material) => material.spaceKey === space.key && material.title === 'Extension exercises',
+    );
+    const firstAssignment = assignments.find(
+      (assignment) => assignment.spaceKey === space.key && assignment.name === 'Assignment 1',
+    );
+    const restrictions = planRestrictions(spaces).filter((planned) =>
+      [second!.key, extension!.key].includes(planned.target.key),
+    );
+
+    expect(planRestrictions(spaces)).toHaveLength(spaces.length * 2);
+    expect(restrictions).toEqual([
+      {
+        target: { kind: 'section', key: second!.key },
+        condition: { type: 'completed', assignmentKey: firstAssignment!.key },
+      },
+      {
+        target: { kind: 'material', key: extension!.key },
+        condition: {
+          type: 'mark',
+          assignmentKey: firstAssignment!.key,
+          atLeast: EXTENSION_MARK,
+        },
+      },
+    ]);
+    expect(EXTENSION_MARK).toBeLessThanOrEqual(firstAssignment!.maxPoints);
   });
 
   it('schedules a section and an item to open after the anchor, so both states show', () => {

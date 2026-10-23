@@ -267,6 +267,13 @@
       "when": 1792748419321,
       "tag": "0037_learning_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792751056119,
+      "tag": "0038_learning_restrictions",
+      "breakpoints": true
     }
   ]
 }

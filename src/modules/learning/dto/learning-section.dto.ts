@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 
 import type { LearningSection } from '../../../database/schema';
+import type { Gated } from '../learning-availability.service';
 
 import {
   AvailabilityDto,
@@ -62,14 +63,14 @@ export class LearningSectionResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty() position!: number;
   @Expose() @ApiProperty() visible!: boolean;
 
-  static from(section: LearningSection, now = new Date()): LearningSectionResponseDto {
+  static from(section: Gated<LearningSection>, now = new Date()): LearningSectionResponseDto {
     return Object.assign(new LearningSectionResponseDto(), {
       id: section.id,
       title: section.title,
       summary: section.summary,
       position: section.position,
       visible: section.visible,
-      ...availabilityFields(section, now),
+      ...availabilityFields(section, section.gate, now),
     });
   }
 }

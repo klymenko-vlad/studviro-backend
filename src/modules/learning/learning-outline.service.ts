@@ -5,21 +5,9 @@ import { InvalidInputError } from '../../common/errors/domain.error';
 import { learningActivities, learningMaterials, learningSections } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
-import type { LearningStance } from './learning-access.service';
-import { ownSight, type Schedulable, type Sight } from './learning-availability';
-
 export interface Placement {
   readonly sectionId?: string | null;
   readonly position?: number;
-}
-
-export interface OutlineItem extends Schedulable {
-  readonly sectionId: string | null;
-}
-
-export interface OutlineView<T> {
-  readonly itemOf: (row: T) => OutlineItem;
-  readonly teaser: (row: T) => T;
 }
 
 @Injectable()
@@ -94,60 +82,6 @@ export class LearningOutlineService {
       position: changes.position ?? (await this.nextPosition(spaceId, sectionId)),
     };
   }
-
-  async closedSectionIds(spaceId: string, now: Date): Promise<ReadonlySet<string>> {
-    const rows = await this.txHost
-      .reader()
-      .select()
-      .from(learningSections)
-      .where(
-        and(eq(learningSections.learningSpaceId, spaceId), isNull(learningSections.deletedAt)),
-      );
-
-    return new Set(rows.filter((row) => ownSight(row, now) !== 'full').map((row) => row.id));
-  }
-
-  async sift<T>(
-    stance: LearningStance,
-    spaceId: string,
-    rows: readonly T[],
-    view: OutlineView<T>,
-    now = new Date(),
-  ): Promise<T[]> {
-    if (stance === 'author') return [...rows];
-
-    const closed = await this.closedSectionIds(spaceId, now);
-
-    return rows.flatMap((row) => {
-      const sight = sightOf(stance, view.itemOf(row), closed, now);
-      if (sight === 'none') return [];
-
-      return [sight === 'title' ? view.teaser(row) : row];
-    });
-  }
-
-  async isOpenTo(
-    stance: LearningStance,
-    spaceId: string,
-    item: OutlineItem,
-    now = new Date(),
-  ): Promise<boolean> {
-    if (stance === 'author') return true;
-
-    return sightOf(stance, item, await this.closedSectionIds(spaceId, now), now) === 'full';
-  }
-}
-
-export function sightOf(
-  stance: LearningStance,
-  item: OutlineItem,
-  closedSections: ReadonlySet<string>,
-  now: Date,
-): Sight {
-  if (stance === 'author') return 'full';
-  if (item.sectionId !== null && closedSections.has(item.sectionId)) return 'none';
-
-  return ownSight(item, now);
 }
 
 function inSection(

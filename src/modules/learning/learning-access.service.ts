@@ -20,6 +20,7 @@ export interface LearningSpaceContext {
   readonly space: LearningSpace;
   readonly offeringId: string | null;
   readonly stance: LearningStance;
+  readonly userId: string;
 }
 
 /**
@@ -61,7 +62,7 @@ export class LearningAccessService {
       throw new EntityNotFoundError('learning_space', spaceId);
     }
 
-    return { space, offeringId: space.courseOfferingId, stance };
+    return { space, offeringId: space.courseOfferingId, stance, userId };
   }
 
   async stance(

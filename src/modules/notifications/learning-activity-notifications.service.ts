@@ -27,8 +27,11 @@ export class LearningActivityNotificationsService {
     institutionId: string,
     activity: LearningActivity,
     occurredAt: Date,
+    recipients?: readonly string[],
   ): Promise<void> {
-    await this.emitDeadline(institutionId, 'assignment_due_published', activity, occurredAt);
+    await this.emitDeadline(institutionId, 'assignment_due_published', activity, occurredAt, {
+      recipients,
+    });
   }
 
   async rescheduled(
@@ -41,13 +44,9 @@ export class LearningActivityNotificationsService {
     if (!previous.dueAt || !current.dueAt) return;
     if (previous.dueAt.getTime() === current.dueAt.getTime()) return;
 
-    await this.emitDeadline(
-      institutionId,
-      'assignment_due_rescheduled',
-      current,
-      occurredAt,
-      previous.dueAt,
-    );
+    await this.emitDeadline(institutionId, 'assignment_due_rescheduled', current, occurredAt, {
+      previousDueAt: previous.dueAt,
+    });
   }
 
   /**
@@ -84,7 +83,10 @@ export class LearningActivityNotificationsService {
     type: NotificationType,
     activity: LearningActivity,
     occurredAt: Date,
-    previousDueAt?: Date,
+    {
+      previousDueAt,
+      recipients,
+    }: { previousDueAt?: Date; recipients?: readonly string[] } = {},
   ): Promise<void> {
     if (!activity.dueAt) return;
 
@@ -101,6 +103,7 @@ export class LearningActivityNotificationsService {
       courseOfferingId,
       examTermId: null,
       learningActivityId: activity.id,
+      ...(recipients === undefined ? {} : { recipients }),
       payload: {
         activityName: activity.name,
         activityType: activity.type,

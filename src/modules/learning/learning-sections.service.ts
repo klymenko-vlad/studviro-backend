@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, eq, isNull, max } from 'drizzle-orm';
 
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import {
@@ -15,10 +15,12 @@ import { LearningAccessService } from './learning-access.service';
 import {
   assertAvailabilityWindow,
   availabilityChanges,
-  ownSight,
   teaserOf,
 } from './learning-availability';
+import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningOutlineService } from './learning-outline.service';
+import type { RestrictionInput } from './restriction';
+import { RestrictionRulesService } from './restriction-rules.service';
 
 export interface NewLearningSection {
   readonly title: string;
@@ -27,6 +29,7 @@ export interface NewLearningSection {
   readonly availableFrom?: Date | null;
   readonly availableUntil?: Date | null;
   readonly hiddenUntilAvailable?: boolean;
+  readonly restriction?: RestrictionInput | null;
 }
 
 export type LearningSectionChanges = Partial<NewLearningSection> & {
@@ -40,6 +43,8 @@ export class LearningSectionsService {
     private readonly access: LearningAccessService,
     private readonly outline: LearningOutlineService,
     private readonly announcements: AssignmentAnnouncementsService,
+    private readonly availability: AvailabilityService,
+    private readonly restrictions: RestrictionRulesService,
   ) {}
 
   async list(
@@ -47,26 +52,10 @@ export class LearningSectionsService {
     spaceId: string,
     userId: string,
     now = new Date(),
-  ): Promise<LearningSection[]> {
+  ): Promise<Gated<LearningSection>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
-    const rows = await this.txHost
-      .reader()
-      .select()
-      .from(learningSections)
-      .where(
-        and(eq(learningSections.learningSpaceId, spaceId), isNull(learningSections.deletedAt)),
-      )
-      .orderBy(asc(learningSections.position), asc(learningSections.createdAt));
-
-    if (context.stance === 'author') return rows;
-
-    return rows.flatMap((row) => {
-      const sight = ownSight(row, now);
-      if (sight === 'none') return [];
-
-      return [sight === 'title' ? teaserOf(row, ['summary']) : row];
-    });
+    return this.availability.siftSections(context, (row) => teaserOf(row, ['summary']), now);
   }
 
   async create(
@@ -74,10 +63,20 @@ export class LearningSectionsService {
     spaceId: string,
     userId: string,
     input: NewLearningSection,
-  ): Promise<LearningSection> {
+  ): Promise<Gated<LearningSection>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     assertAvailabilityWindow(input);
+    const { restriction = null } = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: null,
+        sectionId: null,
+        restriction: null,
+      },
+      { input: input.restriction },
+    );
 
     return this.txHost.run(async () => {
       const [created] = await this.client
@@ -92,6 +91,7 @@ export class LearningSectionsService {
           availableFrom: input.availableFrom ?? null,
           availableUntil: input.availableUntil ?? null,
           hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
+          restriction,
         })
         .returning();
 
@@ -99,7 +99,7 @@ export class LearningSectionsService {
         throw new ConflictError('LEARNING_SECTION_NOT_CREATED', 'The section was not added');
       }
 
-      return created;
+      return this.availability.gated(context, created);
     });
   }
 
@@ -110,11 +110,21 @@ export class LearningSectionsService {
     userId: string,
     changes: LearningSectionChanges,
     now = new Date(),
-  ): Promise<LearningSection> {
+  ): Promise<Gated<LearningSection>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     const existing = await this.sectionOrFail(spaceId, sectionId);
     assertAvailabilityWindow({ ...existing, ...changes });
+    const restriction = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: `section:${sectionId}`,
+        sectionId: null,
+        restriction: existing.restriction,
+      },
+      { input: changes.restriction },
+    );
 
     const set = {
       ...(changes.title === undefined ? {} : { title: changes.title }),
@@ -122,8 +132,9 @@ export class LearningSectionsService {
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
       ...(changes.position === undefined ? {} : { position: changes.position }),
       ...availabilityChanges(changes),
+      ...restriction,
     };
-    if (Object.keys(set).length === 0) return existing;
+    if (Object.keys(set).length === 0) return this.availability.gated(context, existing);
 
     return this.txHost.run(async () => {
       const [updated] = await this.client
@@ -136,7 +147,7 @@ export class LearningSectionsService {
 
       await this.announcements.announceNewlySeen(now, spaceId);
 
-      return updated;
+      return this.availability.gated(context, updated);
     });
   }
 

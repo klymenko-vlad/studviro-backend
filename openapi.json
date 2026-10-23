@@ -17923,9 +17923,200 @@
           }
         }
       },
+      "LeafConditionViewDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "completed",
+              "mark",
+              "date",
+              "group",
+              "set"
+            ],
+            "type": "string"
+          },
+          "itemKind": {
+            "nullable": true,
+            "enum": [
+              "material",
+              "assignment",
+              null
+            ],
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "itemTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "atLeast": {
+            "type": "number",
+            "nullable": true
+          },
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "missing": {
+            "type": "boolean",
+            "description": "The item or group it refers to has been removed, so it can never be met."
+          }
+        },
+        "required": [
+          "type",
+          "itemKind",
+          "itemId",
+          "itemTitle",
+          "atLeast",
+          "from",
+          "groupId",
+          "groupName",
+          "missing"
+        ]
+      },
+      "ConditionViewDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "completed",
+              "mark",
+              "date",
+              "group",
+              "set"
+            ],
+            "type": "string"
+          },
+          "itemKind": {
+            "nullable": true,
+            "enum": [
+              "material",
+              "assignment",
+              null
+            ],
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "itemTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "atLeast": {
+            "type": "number",
+            "nullable": true
+          },
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "missing": {
+            "type": "boolean",
+            "description": "The item or group it refers to has been removed, so it can never be met."
+          },
+          "match": {
+            "nullable": true,
+            "enum": [
+              "all",
+              "any",
+              null
+            ],
+            "type": "string"
+          },
+          "conditions": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeafConditionViewDto"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "itemKind",
+          "itemId",
+          "itemTitle",
+          "atLeast",
+          "from",
+          "groupId",
+          "groupName",
+          "missing",
+          "match",
+          "conditions"
+        ]
+      },
+      "RestrictionViewDto": {
+        "type": "object",
+        "properties": {
+          "match": {
+            "enum": [
+              "all",
+              "any"
+            ],
+            "type": "string"
+          },
+          "hideWhenLocked": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "For a student: it is locked, and conditions are only those still unmet. For an author: always false, with every condition."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConditionViewDto"
+            }
+          }
+        },
+        "required": [
+          "match",
+          "hideWhenLocked",
+          "locked",
+          "conditions"
+        ]
+      },
       "LearningSectionResponseDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "An author sees the whole restriction. A student sees it only while it keeps the item locked, as what is still needed.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionViewDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -17967,6 +18158,7 @@
           }
         },
         "required": [
+          "restriction",
           "availableFrom",
           "availableUntil",
           "hiddenUntilAvailable",
@@ -17978,9 +18170,163 @@
           "visible"
         ]
       },
+      "LeafConditionDto": {
+        "type": "object",
+        "properties": {
+          "itemKind": {
+            "nullable": true,
+            "enum": [
+              "material",
+              "assignment",
+              null
+            ],
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The material or assignment for completed; the assignment for mark."
+          },
+          "atLeast": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "type": {
+            "enum": [
+              "completed",
+              "mark",
+              "date",
+              "group"
+            ],
+            "type": "string",
+            "description": "completed: another item is complete; mark: an assignment is marked at or above atLeast points; date: from a moment on; group: the student is in a study group."
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ConditionDto": {
+        "type": "object",
+        "properties": {
+          "itemKind": {
+            "nullable": true,
+            "enum": [
+              "material",
+              "assignment",
+              null
+            ],
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The material or assignment for completed; the assignment for mark."
+          },
+          "atLeast": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "type": {
+            "enum": [
+              "completed",
+              "mark",
+              "date",
+              "group",
+              "set"
+            ],
+            "type": "string",
+            "description": "A leaf condition, or set: a group of leaf conditions with a match of its own."
+          },
+          "match": {
+            "nullable": true,
+            "enum": [
+              "all",
+              "any",
+              null
+            ],
+            "type": "string"
+          },
+          "conditions": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeafConditionDto"
+            }
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "RestrictionDto": {
+        "type": "object",
+        "properties": {
+          "match": {
+            "enum": [
+              "all",
+              "any"
+            ],
+            "type": "string",
+            "description": "Every condition, or any one of them."
+          },
+          "hideWhenLocked": {
+            "type": "boolean",
+            "description": "A student who does not meet it sees nothing at all, rather than the title and what unlocks it."
+          },
+          "conditions": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConditionDto"
+            }
+          }
+        },
+        "required": [
+          "match",
+          "conditions"
+        ]
+      },
       "CreateLearningSectionDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18020,6 +18366,16 @@
       "UpdateLearningSectionDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18060,6 +18416,16 @@
       "LearningMaterialResponseDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "An author sees the whole restriction. A student sees it only while it keeps the item locked, as what is still needed.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionViewDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18155,6 +18521,7 @@
           }
         },
         "required": [
+          "restriction",
           "availableFrom",
           "availableUntil",
           "hiddenUntilAvailable",
@@ -18231,6 +18598,16 @@
       "CreateLearningMaterialDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18316,6 +18693,16 @@
       "UpdateLearningMaterialDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18405,6 +18792,16 @@
       "AssignmentResponseDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "An author sees the whole restriction. A student sees it only while it keeps the item locked, as what is still needed.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionViewDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18504,6 +18901,7 @@
           }
         },
         "required": [
+          "restriction",
           "availableFrom",
           "availableUntil",
           "hiddenUntilAvailable",
@@ -18530,6 +18928,16 @@
       "CreateAssignmentDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,
@@ -18626,6 +19034,16 @@
       "UpdateAssignmentDto": {
         "type": "object",
         "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the restriction.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
           "availableFrom": {
             "type": "string",
             "nullable": true,

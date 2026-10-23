@@ -28,6 +28,7 @@ import {
   teachingAssignments,
   timetableEvents,
   users,
+  type Restriction,
 } from '../schema';
 
 import {
@@ -43,6 +44,7 @@ import { planCompletions } from './derive-completion';
 import {
   planAssignments,
   planMaterials,
+  planRestrictions,
   planSections,
   planSpaces,
   planSubmissions,
@@ -663,6 +665,30 @@ export async function writePlan(
       const row = columns.find((candidate) => candidate.learningActivityId === activityId);
       if (row) assessmentIds.set(assignment.key, row.id);
     }
+  }
+
+  for (const planned of planRestrictions(plannedSpaces)) {
+    const itemId = required(assignmentIds, planned.condition.assignmentKey, 'assignment');
+    const restriction: Restriction = {
+      match: 'all',
+      hideWhenLocked: false,
+      conditions: [
+        planned.condition.type === 'completed'
+          ? { type: 'completed', itemKind: 'assignment', itemId }
+          : { type: 'mark', itemId, atLeast: planned.condition.atLeast },
+      ],
+    };
+    await (planned.target.kind === 'section'
+      ? db
+          .update(learningSections)
+          .set({ restriction })
+          .where(eq(learningSections.id, required(sectionIds, planned.target.key, 'section')))
+      : db
+          .update(learningMaterials)
+          .set({ restriction })
+          .where(
+            eq(learningMaterials.id, required(materialIds, planned.target.key, 'material')),
+          ));
   }
 
   const plannedSubmissions = planSubmissions(plannedAssignments, plannedEnrollments, options);

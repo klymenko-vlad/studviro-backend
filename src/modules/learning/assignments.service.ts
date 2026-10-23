@@ -16,13 +16,16 @@ import { AssignmentAnnouncementsService } from './assignment-announcements.servi
 import { assignmentCompletion, completionChanged } from './assignment-completion';
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
 import { CompletionService } from './completion.service';
-import { LearningAccessService } from './learning-access.service';
+import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
 import {
   assertAvailabilityWindow,
   availabilityChanges,
   teaserOf,
 } from './learning-availability';
+import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningOutlineService } from './learning-outline.service';
+import type { RestrictionInput } from './restriction';
+import { RestrictionRulesService } from './restriction-rules.service';
 
 export interface NewAssignment {
   readonly name: string;
@@ -41,6 +44,7 @@ export interface NewAssignment {
   readonly hiddenUntilAvailable?: boolean;
   readonly completionRule?: CompletionRule;
   readonly completionPassPoints?: number | null;
+  readonly restriction?: RestrictionInput | null;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -67,13 +71,15 @@ export class AssignmentsService {
     private readonly outline: LearningOutlineService,
     private readonly announcements: AssignmentAnnouncementsService,
     private readonly completion: CompletionService,
+    private readonly availability: AvailabilityService,
+    private readonly restrictions: RestrictionRulesService,
   ) {}
 
   async list(
     institutionId: string,
     spaceId: string,
     userId: string,
-  ): Promise<AssignmentEntry[]> {
+  ): Promise<Gated<AssignmentEntry>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
     const rows = await this.reader
@@ -95,7 +101,7 @@ export class AssignmentsService {
       )
       .orderBy(asc(learningActivities.position), asc(learningActivities.createdAt));
 
-    return this.outline.sift(context.stance, spaceId, rows, {
+    return this.availability.sift(context, rows, {
       itemOf: (row) => row.activity,
       teaser: (row) => ({ ...row, activity: teaserOf(row.activity, ASSIGNMENT_CONTENT) }),
     });
@@ -106,15 +112,15 @@ export class AssignmentsService {
     spaceId: string,
     assignmentId: string,
     userId: string,
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const entry = await this.entryOrFail(spaceId, assignmentId);
 
-    if (!(await this.outline.isOpenTo(context.stance, spaceId, entry.activity))) {
+    if (!(await this.availability.isOpenTo(context, entry.activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 
-    return entry;
+    return this.gatedEntry(context, entry);
   }
 
   async create(
@@ -123,7 +129,7 @@ export class AssignmentsService {
     userId: string,
     input: NewAssignment,
     now = new Date(),
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     assertWindow(input);
@@ -132,6 +138,10 @@ export class AssignmentsService {
     const completion = assignmentCompletion(input);
     await this.outline.assertSectionOf(spaceId, input.sectionId);
     const sectionId = input.sectionId ?? null;
+    const { restriction = null } = await this.restrictions.settle(
+      { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
+      { input: input.restriction },
+    );
 
     return this.txHost.run(async () => {
       const [activity] = await this.client
@@ -153,6 +163,7 @@ export class AssignmentsService {
           availableFrom: input.availableFrom ?? null,
           availableUntil: input.availableUntil ?? null,
           hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
+          restriction,
           ...completion,
         })
         .returning();
@@ -179,7 +190,7 @@ export class AssignmentsService {
 
       await this.announcements.announceNewlySeen(now, spaceId);
 
-      return { activity, assessment };
+      return this.gatedEntry(context, { activity, assessment });
     });
   }
 
@@ -190,7 +201,7 @@ export class AssignmentsService {
     userId: string,
     changes: AssignmentChanges,
     now = new Date(),
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
@@ -203,6 +214,17 @@ export class AssignmentsService {
       spaceId,
       existing.activity.sectionId,
       changes,
+    );
+    const restriction = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: `assignment:${assignmentId}`,
+        sectionId:
+          placement.sectionId === undefined ? existing.activity.sectionId : placement.sectionId,
+        restriction: existing.activity.restriction,
+      },
+      { input: changes.restriction, moved: placement.sectionId !== undefined },
     );
 
     const activityChanges = {
@@ -218,6 +240,7 @@ export class AssignmentsService {
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
       ...availabilityChanges(changes),
       ...placement,
+      ...restriction,
       ...completion,
     };
 
@@ -261,7 +284,7 @@ export class AssignmentsService {
       );
       await this.announcements.announceNewlySeen(now, spaceId);
 
-      return { activity, assessment };
+      return this.gatedEntry(context, { activity, assessment });
     });
   }
 
@@ -313,6 +336,15 @@ export class AssignmentsService {
     if (!row) throw new EntityNotFoundError('assignment', assignmentId);
 
     return row;
+  }
+
+  private async gatedEntry(
+    context: LearningSpaceContext,
+    entry: AssignmentEntry,
+  ): Promise<Gated<AssignmentEntry>> {
+    const { gate } = await this.availability.gated(context, entry.activity);
+
+    return { ...entry, gate };
   }
 
   private get client() {

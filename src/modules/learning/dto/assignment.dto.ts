@@ -20,6 +20,7 @@ import { COMPLETION_RULES, type CompletionRule } from '../../../database/schema'
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import type { AssignmentEntry } from '../assignments.service';
 import { ASSIGNMENT_COMPLETION_RULES } from '../completion-rule';
+import type { Gated } from '../learning-availability.service';
 
 import {
   AvailabilityDto,
@@ -183,7 +184,7 @@ export class AssignmentResponseDto extends AvailabilityResponseDto {
   @ApiProperty({ type: Number, nullable: true })
   completionPassPoints!: number | null;
 
-  static from(entry: AssignmentEntry, now = new Date()): AssignmentResponseDto {
+  static from(entry: Gated<AssignmentEntry>, now = new Date()): AssignmentResponseDto {
     const { activity, assessment } = entry;
 
     return Object.assign(new AssignmentResponseDto(), {
@@ -205,7 +206,7 @@ export class AssignmentResponseDto extends AvailabilityResponseDto {
       completionRule: activity.completionRule,
       completionPassPoints:
         activity.completionPassPoints === null ? null : Number(activity.completionPassPoints),
-      ...availabilityFields(activity, now),
+      ...availabilityFields(activity, entry.gate, now),
     });
   }
 }

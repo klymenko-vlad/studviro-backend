@@ -12,6 +12,7 @@ export * from './institution-settings';
 export * from './institutions';
 export * from './invitations';
 export * from './learning';
+export * from './learning-restrictions';
 export * from './notifications';
 export * from './password-reset-tokens';
 export * from './refresh-tokens';

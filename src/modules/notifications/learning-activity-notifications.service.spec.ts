@@ -75,6 +75,14 @@ describe(LearningActivityNotificationsService.name, () => {
       );
     });
 
+    it('leaves the audience to the offering unless told who may know', async () => {
+      await service.published(INSTITUTION, activity(), AT);
+      await service.published(INSTITUTION, activity(), AT, ['student-1']);
+
+      expect(emit.mock.calls[0]![0]).not.toHaveProperty('recipients');
+      expect(emit.mock.calls[1]![0]).toMatchObject({ recipients: ['student-1'] });
+    });
+
     it('says nothing about an activity that carries no deadline', async () => {
       await service.published(INSTITUTION, activity({ dueAt: null }), AT);
 

@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -15,6 +16,7 @@ import {
 import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
+import type { Restriction } from './learning-restrictions';
 import { users } from './users';
 
 export const learningSpaces = pgTable(
@@ -54,6 +56,7 @@ export const learningSections = pgTable(
     availableFrom: timestampColumn('available_from'),
     availableUntil: timestampColumn('available_until'),
     hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
     deletedAt,
     ...timestamps,
   },
@@ -109,6 +112,7 @@ export const learningActivities = pgTable(
     availableFrom: timestampColumn('available_from'),
     availableUntil: timestampColumn('available_until'),
     hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
     announcedAt: timestampColumn('announced_at'),
     completionRule: completionRule('completion_rule').notNull().default('none'),
     completionPassPoints: numeric('completion_pass_points', { precision: 10, scale: 4 }),
@@ -158,6 +162,7 @@ export const learningMaterials = pgTable(
     availableFrom: timestampColumn('available_from'),
     availableUntil: timestampColumn('available_until'),
     hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
     completionRule: completionRule('completion_rule').notNull().default('none'),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,

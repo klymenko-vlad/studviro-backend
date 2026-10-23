@@ -96,13 +96,23 @@ handed in / marked / passed with ≥ N points_. Progress counts tracked items th
 open now; the teacher's table is a _Progress_ tab, a page of students at a time.
 `CompletionService.isComplete` / `completedItems` are CB4's entry points.
 
-### CB4 — Step by step: restrict access · M
+### CB4 — Step by step: restrict access · M · **Done 2026-10-23**
 
 An item or a section is **locked until** a condition holds: another item complete (CB3), a
 mark at or above a threshold, a date (CB2), or membership of a study group. Conditions
 combine with _all_ / _any_. A locked item shows the student what unlocks it; a condition the
 student must not know about can hide the item outright instead. Evaluated on the server on
 every read path from principle 1, with one `AvailabilityService` the other services call.
+
+Shipped as **ADR 0046**: a `restriction` (jsonb) on sections, materials and assignments —
+_complete_, _mark ≥ N_, _date_, _study group_, under all/any with one level of grouping,
+and one _hide while locked_ switch per restriction. A locked student gets the title and the
+unmet conditions, 404 on every content path, and nothing on deadlines or the calendar;
+locked items do not count towards progress. Cycles and foreign targets are refused when
+saved; a removed target fails closed and is flagged `missing`. _Assignment published_ goes
+only to the students a restricted assignment is open to, once one can open it; students who
+unlock it later are not told (future work in the ADR). The demo seed locks _Weeks 5–8_
+behind Assignment 1 and _Extension exercises_ behind 90 points in it.
 
 ### CB5 — More things to put on a page · M
 
@@ -160,7 +170,7 @@ impersonation — the server answers the student view for the author on request.
 - [x] CB1 — Sections and one course outline
 - [x] CB2 — Available from, available until
 - [x] CB3 — Completion and progress
-- [ ] CB4 — Step by step: restrict access
+- [x] CB4 — Step by step: restrict access
 - [ ] CB5 — More things to put on a page
 - [ ] CB6 — Quiz authoring and the question bank
 - [ ] CB7 — Taking a quiz
@@ -190,3 +200,12 @@ impersonation — the server answers the student view for the author on request.
   the teacher search kind from backend `c281c6b`. CB3 handles it minimally (a teacher hit goes
   to People, a _Teachers_ label); when the branch merges, keep `dev`'s teacher profile route
   (`cda3724`) instead.
+- An empty `PATCH` of a material (no fields) answers 500: drizzle refuses an update with
+  nothing to set. Sections short-circuit it; materials do not.
+- A restriction can wait for an item whose completion rule is later set to _none_; it then
+  can never be met and nothing warns the author. Likewise a mark threshold above a later
+  lowered maximum.
+- Students who unlock a restricted assignment after it was announced get no notification
+  (ADR 0046); per-student announcements need their own table.
+- The restriction editor sits on the Content tab only; the Assignments tab shows the badge
+  but has no _Access_ button.

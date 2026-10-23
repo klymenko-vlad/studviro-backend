@@ -50,6 +50,13 @@ export interface PlannedAssignment {
   readonly completionPassPoints: number | null;
 }
 
+export interface PlannedRestriction {
+  readonly target: { readonly kind: 'section' | 'material'; readonly key: string };
+  readonly condition:
+    | { readonly type: 'completed'; readonly assignmentKey: string }
+    | { readonly type: 'mark'; readonly assignmentKey: string; readonly atLeast: number };
+}
+
 export interface PlannedSubmission {
   readonly assignmentKey: string;
   readonly studentKey: string;
@@ -152,6 +159,18 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
           },
     ),
     {
+      key: materialKey(space, 'extension'),
+      spaceKey: space.key,
+      sectionKey: sectionKey(space, 0),
+      kind: 'text' as const,
+      title: 'Extension exercises',
+      body: 'Harder versions of the Assignment 1 exercises, for anyone who found it easy. Bring your answers to the seminar.',
+      url: null,
+      position: MATERIALS_PER_SPACE,
+      availableFrom: null,
+      completionRule: 'none' as const,
+    },
+    {
       key: materialKey(space, 'template'),
       spaceKey: space.key,
       sectionKey: sectionKey(space, 1),
@@ -176,6 +195,33 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       completionRule: 'viewed' as const,
     },
   ]);
+}
+
+export const EXTENSION_MARK = 90;
+
+/**
+ * Step by step: the second block opens once Assignment 1 is complete (passed),
+ * and the extension exercises once it is marked at 90 or more.
+ */
+export function planRestrictions(spaces: readonly PlannedSpace[]): PlannedRestriction[] {
+  return spaces.flatMap((space) => {
+    const firstAssignment = `ASG-${space.key}-1`;
+
+    return [
+      {
+        target: { kind: 'section' as const, key: sectionKey(space, 1) },
+        condition: { type: 'completed' as const, assignmentKey: firstAssignment },
+      },
+      {
+        target: { kind: 'material' as const, key: materialKey(space, 'extension') },
+        condition: {
+          type: 'mark' as const,
+          assignmentKey: firstAssignment,
+          atLeast: EXTENSION_MARK,
+        },
+      },
+    ];
+  });
 }
 
 /**

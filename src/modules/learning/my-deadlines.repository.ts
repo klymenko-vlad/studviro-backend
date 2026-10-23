@@ -13,6 +13,7 @@ import {
   submissions,
   teachingAssignments,
   type LearningActivityType,
+  type Restriction,
   type SubmissionState,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -39,6 +40,13 @@ export interface MyDeadlineRow {
   termId: string;
   termCode: string;
   termName: string;
+  sectionId: string | null;
+  visible: boolean;
+  availableFrom: Date | null;
+  availableUntil: Date | null;
+  hiddenUntilAvailable: boolean;
+  restriction: Restriction | null;
+  sectionRestriction: Restriction | null;
 }
 
 export interface MyDeadlineFilter {
@@ -102,6 +110,13 @@ export class MyDeadlinesRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
+        sectionId: learningActivities.sectionId,
+        visible: learningActivities.visible,
+        availableFrom: learningActivities.availableFrom,
+        availableUntil: learningActivities.availableUntil,
+        hiddenUntilAvailable: learningActivities.hiddenUntilAvailable,
+        restriction: learningActivities.restriction,
+        sectionRestriction: learningSections.restriction,
       })
       .from(learningActivities)
       .leftJoin(

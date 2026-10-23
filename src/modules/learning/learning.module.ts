@@ -14,6 +14,7 @@ import { CompletionRepository } from './completion.repository';
 import { CompletionService } from './completion.service';
 import { CourseStudentsRepository } from './course-students.repository';
 import { LearningAccessService } from './learning-access.service';
+import { AvailabilityService } from './learning-availability.service';
 import { LearningMaterialsController } from './learning-materials.controller';
 import { LearningMaterialsService } from './learning-materials.service';
 import { LearningOutlineService } from './learning-outline.service';
@@ -31,6 +32,8 @@ import { MyDeadlinesController } from './my-deadlines.controller';
 import { MyDeadlinesRepository } from './my-deadlines.repository';
 import { MyDeadlinesService } from './my-deadlines.service';
 import { MyProgressService } from './my-progress.service';
+import { RestrictionFactsRepository } from './restriction-facts.repository';
+import { RestrictionRulesService } from './restriction-rules.service';
 import { SubmissionMarkingController } from './submission-marking.controller';
 import { SubmissionMarkingService } from './submission-marking.service';
 import { SubmissionsController } from './submissions.controller';
@@ -57,6 +60,9 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     LearningSpacesRepository,
     LearningSpaceAuthoringService,
     LearningOutlineService,
+    AvailabilityService,
+    RestrictionFactsRepository,
+    RestrictionRulesService,
     LearningSectionsService,
     LearningMaterialsService,
     AssignmentsService,

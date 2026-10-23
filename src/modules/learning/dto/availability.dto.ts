@@ -8,8 +8,15 @@ import {
   type Availability,
   type Schedulable,
 } from '../learning-availability';
+import type { RestrictionView } from '../restriction-view';
 
-export class AvailabilityDto {
+import {
+  RestrictedDto,
+  RestrictionResponseDto,
+  type RestrictionViewDto,
+} from './restriction.dto';
+
+export class AvailabilityDto extends RestrictedDto {
   @ApiPropertyOptional({
     type: String,
     format: 'date-time',
@@ -44,7 +51,7 @@ export class AvailabilityDto {
 }
 
 @Exclude()
-export class AvailabilityResponseDto {
+export class AvailabilityResponseDto extends RestrictionResponseDto {
   @Expose()
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   availableFrom!: Date | null;
@@ -69,10 +76,12 @@ export interface AvailabilityFields {
   readonly availableUntil: Date | null;
   readonly hiddenUntilAvailable: boolean;
   readonly availability: Availability;
+  readonly restriction: RestrictionViewDto | null;
 }
 
 export function availabilityFields(
   row: Omit<Schedulable, 'visible'>,
+  gate: RestrictionView | null,
   now: Date,
 ): AvailabilityFields {
   return {
@@ -80,5 +89,6 @@ export function availabilityFields(
     availableUntil: row.availableUntil,
     hiddenUntilAvailable: row.hiddenUntilAvailable,
     availability: availabilityAt(row, now),
+    restriction: gate,
   };
 }

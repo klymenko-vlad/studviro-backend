@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-23 (CB3)
+Last updated: 2026-10-23 (CB4)
 
 ## What this is
 
@@ -92,7 +92,7 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: CB4 of `docs/Course Builder Plan.md` — restrict access.** On
+**Next task: CB5 of `docs/Course Builder Plan.md` — more things to put on a page.** On
 2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
 tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1** (2026-10-22)
 made a course page an outline of sections (ADR 0043). **CB2** (2026-10-23) added _available
@@ -100,8 +100,11 @@ from / until_, decided on the server's clock on every read path (ADR 0044). **CB
 (2026-10-23) writes `activity_completions` for materials and assignments: the author picks a
 rule per item, the server records completion when the event happens, a student gets a tick
 per item and progress bars per course and section, and teachers a _Progress_ tab with a
-students × items table (ADR 0045). CB4 calls `CompletionService.isComplete` /
-`completedItems`. The client half is on branch
+students × items table (ADR 0045). **CB4** (2026-10-23) locks a section, material or
+assignment until conditions hold — another item complete, a mark of at least N, a date, a
+study group — combined with all/any and one level of grouping; a locked student sees the
+title and what unlocks it, or nothing. One `AvailabilityService` decides every read path
+(ADR 0046). Split `learning-materials.service.ts` before CB5 adds kinds. The client half is on branch
 `feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
 uncommitted interface work in `../frontend`; merge it to `dev` first.
 
@@ -127,8 +130,8 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 620 kB and measures 618.03 kB after CB3** (`.size-limit.mjs`; CB3 cost 6.64 kB and raised
-it from 615 kB). The quiz steps will need room of their own.
+is 625 kB and measures 624.42 kB after CB4** (`.size-limit.mjs`; CB4 cost 6.4 kB and raised
+it from 620 kB). The quiz steps will need room of their own.
 
 Noticed while walking, not fixed:
 

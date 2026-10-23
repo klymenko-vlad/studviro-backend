@@ -10,7 +10,7 @@ import type { ActivityCompletionState } from '../../database/schema';
 import { completionKey, isCompleteState, type CompletionItem } from './completion-rule';
 import { CompletionService } from './completion.service';
 import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
-import { LearningOutlineService, sightOf } from './learning-outline.service';
+import { AvailabilityService, viewerOf } from './learning-availability.service';
 import { TrackedItemsRepository, type TrackedItem } from './tracked-items.repository';
 
 export interface ItemProgress extends CompletionItem {
@@ -38,7 +38,7 @@ export interface Progress extends Tally {
 export class MyProgressService {
   constructor(
     private readonly access: LearningAccessService,
-    private readonly outline: LearningOutlineService,
+    private readonly availability: AvailabilityService,
     private readonly tracked: TrackedItemsRepository,
     private readonly completion: CompletionService,
   ) {}
@@ -91,7 +91,7 @@ export class MyProgressService {
     }
 
     const tracked = await this.tracked.find(spaceId, item);
-    if (!tracked || !(await this.outline.isOpenTo(context.stance, spaceId, tracked, now))) {
+    if (!tracked || !(await this.availability.isOpenTo(context, tracked, now))) {
       throw new EntityNotFoundError(item.kind, item.id);
     }
     if (tracked.rule !== 'manual') {
@@ -109,11 +109,8 @@ export class MyProgressService {
 
   private async openItems(context: LearningSpaceContext, now: Date): Promise<TrackedItem[]> {
     const items = await this.tracked.inOutlineOrder(context.space.id);
-    if (context.stance === 'author') return items;
 
-    const closed = await this.outline.closedSectionIds(context.space.id, now);
-
-    return items.filter((item) => sightOf(context.stance, item, closed, now) === 'full');
+    return this.availability.openItems(viewerOf(context), items, now);
   }
 }
 

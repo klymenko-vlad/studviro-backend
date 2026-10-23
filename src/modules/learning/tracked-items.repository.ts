@@ -11,8 +11,8 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import type { OutlineItem } from './availability-lens';
 import type { CompletionItem } from './completion-rule';
-import type { OutlineItem } from './learning-outline.service';
 
 export interface TrackedItem extends CompletionItem, OutlineItem {
   readonly title: string;
@@ -129,6 +129,7 @@ function outlineItemOf(row: LearningMaterial | LearningActivity): OutlineItem {
     availableFrom: row.availableFrom,
     availableUntil: row.availableUntil,
     hiddenUntilAvailable: row.hiddenUntilAvailable,
+    restriction: row.restriction,
   };
 }
 

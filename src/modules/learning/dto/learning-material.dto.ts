@@ -24,6 +24,7 @@ import {
 } from '../../../database/schema';
 import { SCAN_STATUS_DESCRIPTION } from '../../storage/scan-status.dto';
 import { MATERIAL_COMPLETION_RULES } from '../completion-rule';
+import type { Gated } from '../learning-availability.service';
 
 import {
   AvailabilityDto,
@@ -160,7 +161,10 @@ export class LearningMaterialResponseDto extends AvailabilityResponseDto {
 
   @Expose() @ApiProperty({ enum: COMPLETION_RULES }) completionRule!: CompletionRule;
 
-  static from(material: LearningMaterial, now = new Date()): LearningMaterialResponseDto {
+  static from(
+    material: Gated<LearningMaterial>,
+    now = new Date(),
+  ): LearningMaterialResponseDto {
     return Object.assign(new LearningMaterialResponseDto(), {
       id: material.id,
       kind: material.kind,
@@ -176,7 +180,7 @@ export class LearningMaterialResponseDto extends AvailabilityResponseDto {
       visible: material.visible,
       sectionId: material.sectionId,
       completionRule: material.completionRule,
-      ...availabilityFields(material, now),
+      ...availabilityFields(material, material.gate, now),
     });
   }
 }
