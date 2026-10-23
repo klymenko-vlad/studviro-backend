@@ -34,6 +34,7 @@ import {
   UploadTicketResponseDto,
 } from './dto/upload-ticket.dto';
 import { LearningMaterialsService } from './learning-materials.service';
+import { MaterialOpeningService } from './material-opening.service';
 
 const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as const;
 
@@ -44,7 +45,10 @@ const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as con
   version: '1',
 })
 export class LearningMaterialsController {
-  constructor(private readonly materials: LearningMaterialsService) {}
+  constructor(
+    private readonly materials: LearningMaterialsService,
+    private readonly opening: MaterialOpeningService,
+  ) {}
 
   @Get()
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
@@ -161,7 +165,7 @@ export class LearningMaterialsController {
     @Param('materialId', ParseUUIDPipe) materialId: string,
     @CurrentUser('id') userId: string,
   ): Promise<void> {
-    await this.materials.view(institutionId, spaceId, materialId, userId);
+    await this.opening.view(institutionId, spaceId, materialId, userId);
   }
 
   @Get(':materialId/download')
@@ -179,7 +183,7 @@ export class LearningMaterialsController {
     @CurrentUser('id') userId: string,
   ): Promise<DownloadUrlResponseDto> {
     return DownloadUrlResponseDto.from(
-      await this.materials.downloadUrl(institutionId, spaceId, materialId, userId),
+      await this.opening.downloadUrl(institutionId, spaceId, materialId, userId),
     );
   }
 }

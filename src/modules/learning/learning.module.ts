@@ -17,6 +17,7 @@ import { GroupContentService } from './group-content.service';
 import { LearningAccessService } from './learning-access.service';
 import { AvailabilityService } from './learning-availability.service';
 import { LearningMaterialsController } from './learning-materials.controller';
+import { LearningMaterialsRepository } from './learning-materials.repository';
 import { LearningMaterialsService } from './learning-materials.service';
 import { LearningOutlineService } from './learning-outline.service';
 import { LearningSectionsController } from './learning-sections.controller';
@@ -27,6 +28,7 @@ import { LearningSpaceAuthoringService } from './learning-space-authoring.servic
 import { LearningSpacesController } from './learning-spaces.controller';
 import { LearningSpacesRepository } from './learning-spaces.repository';
 import { LearningSpacesService } from './learning-spaces.service';
+import { MaterialOpeningService } from './material-opening.service';
 import { MyAssessmentResultsController } from './my-assessment-results.controller';
 import { MyAssessmentResultsRepository } from './my-assessment-results.repository';
 import { MyAssessmentResultsService } from './my-assessment-results.service';
@@ -74,6 +76,8 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     RestrictionRulesService,
     LearningSectionsService,
     LearningMaterialsService,
+    LearningMaterialsRepository,
+    MaterialOpeningService,
     AssignmentsService,
     AssignmentAnnouncementsRepository,
     AssignmentAnnouncementsService,
