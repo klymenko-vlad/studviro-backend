@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-24 (CB5)
+Last updated: 2026-10-24 (CB6)
 
 ## What this is
 
@@ -92,8 +92,8 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: CB6 of `docs/Course Builder Plan.md` — quiz authoring and the question bank.**
-The remaining order is CB6, CB7, CB8, CB10. On
+**Next task: CB7 of `docs/Course Builder Plan.md` — taking a quiz.** Build it on the
+attempt tables sketched in ADR 0050. The remaining order is CB7, CB8, CB10. On
 2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
 tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1** (2026-10-22)
 made a course page an outline of sections (ADR 0043). **CB2** (2026-10-23) added _available
@@ -113,7 +113,13 @@ enrolled student or as a new student with no progress and no group: read-only, t
 same service methods the student's own reads call, with a paged picker (ADR 0048). **CB5**
 (2026-10-24) adds pages (Markdown on a route of their own, rendered on the server with no
 dependency), labels, YouTube/Vimeo videos as privacy embeds allowed by `frame-src`, and
-folders of up to 100 files, paged and filtered; every material can be edited (ADR 0049). The client half is on branch
+folders of up to 100 files, paged and filtered; every material can be edited (ADR 0049).
+**CB6** (2026-10-24) brings quizzes back (ADR 0050, superseding ADR 0028's L7): a question
+bank per course page in flat categories, seven question types with server-checked answer
+keys, versioned on every edit; a quiz is a `learning_activities` row of type `quiz` with its
+own gradebook column, settings and slots (questions by hand, or N at random from a
+category), placed in the outline like an assignment. Authoring only; no student response
+carries a question or answer. The bank and the quiz editor are routes of their own. The client half is on branch
 `feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
 uncommitted interface work in `../frontend`; merge it to `dev` first.
 
@@ -139,8 +145,9 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 638 kB and measures 637.38 kB after CB5** (`.size-limit.mjs`; CB5 cost 4.08 kB and raised
-it from 634 kB; the Markdown renderer is not in it). The quiz steps will need room of their own.
+is 677 kB and measures 675.76 kB after CB6** (`.size-limit.mjs`; CB6 cost 38.38 kB — two
+client-heavy routes of their own, about 16 kB each, measured piece by piece). CB7 and CB8
+will need room of their own.
 
 Noticed while walking, not fixed:
 
@@ -181,7 +188,7 @@ Noticed while walking, not fixed:
 - **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
   in a table at the top of each document. Do not invent them.
 - **Quizzes are in scope again** (user, 2026-10-22): `Course Builder Plan.md` CB6–CB8. ADR
-  0028's L7 stands until CB6 writes the ADR that supersedes it.
+  0050 supersedes ADR 0028's L7; the bank is per course page and CB10 copies it.
 - **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
 
 ## Traps that have cost time here

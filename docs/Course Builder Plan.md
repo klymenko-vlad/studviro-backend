@@ -132,7 +132,7 @@ scanned, downloaded and reclaimed like a file material's; erasure keeps them as 
 content. Every material can now be retitled and rewritten. The demo seed puts a study guide,
 a label, a lecture recording and a folder of two handouts on every course page.
 
-### CB6 — Quiz authoring and the question bank · L
+### CB6 — Quiz authoring and the question bank · L · **Done 2026-10-24**
 
 A new ADR (0044 went to CB2) supersedes ADR 0028's L7. A course has a **question bank** organised in
 categories; a question is versioned on edit so past attempts keep the text they were asked.
@@ -141,6 +141,24 @@ matching and essay**. A **quiz** is a new `learning_activities.type` placed in t
 like an assignment: window, time limit, attempt limit, grading method (highest, last,
 average), questions picked by hand or at random from a category, shuffle on or off, its own
 gradebook column. Authoring only — no attempts yet.
+
+Shipped as **ADR 0050**: one bank per course page (offering), not per catalogue course — a
+quiz takes a question's latest version when an attempt starts, so a bank shared across terms
+would let next year's edits change this year's running quiz; CB10 copies the bank instead.
+Flat categories, unique by name, removable only when empty and not drawn from. Questions are
+an identity (`questions`, type fixed) and immutable `question_versions` (text, default mark,
+feedback, answer key as `jsonb`), a new version on every edit that changes them. Seven types,
+each key validated by one pure function. A quiz is a `learning_activities` row of type `quiz`
+with a `quizzes` settings row and an `assessment` worth 10 points by default (question marks
+are scaled to it, as Moodle's maximum grade); its close is stored in `due_at`, so deadlines,
+the calendar and announcements read it unchanged. Its questions are `quiz_slots`: one
+question by hand with a mark, or N at random from a category with a mark each, mixed freely,
+paged and filtered. `quiz` is now an item kind for completion, restrictions (a _mark_ condition
+takes `itemKind: quiz`), the sight report and group content; the student view lists quizzes.
+The bank and the quiz editor are routes of their own; adding a quiz on the course page takes
+a name and makes it hidden. The demo seed gives Algorithms a bank of one question of each type
+in three categories and a _Foundations quiz_ in _Weeks 1–4_. The CB7/CB8 tables are sketched
+in the ADR.
 
 ### CB7 — Taking a quiz · L
 
@@ -198,7 +216,7 @@ _Back to editing_.
 - [x] CB3 — Completion and progress
 - [x] CB4 — Step by step: restrict access
 - [x] CB5 — More things to put on a page
-- [ ] CB6 — Quiz authoring and the question bank
+- [x] CB6 — Quiz authoring and the question bank
 - [ ] CB7 — Taking a quiz
 - [ ] CB8 — Quiz review and marking
 - [x] CB9 — Content for one group
@@ -265,3 +283,19 @@ _Back to editing_.
   are left for the orphan sweep, since their rows go with the institution.
 - The student's Content tab opens with the _Course page_ card ("The page students see for this
   course…"), which is written for the author.
+- _Deadline published_ and _deadline moved_ fire for a quiz too, and the inbox still calls
+  them an "assignment deadline"; their notification links open the Assignments tab, which
+  does not list quizzes (the calendar links to the quiz's row).
+- The Assignments tab and the Up next card do not show quizzes; only the outline, deadlines
+  and the calendar do.
+- Removing a quiz or a question has no confirmation, like every other removal (U1).
+- A random draw is checked against its category's size only when it is saved; questions
+  removed or moved out later can leave it short (CB7 must decide what an attempt does).
+- The `ilike` escape now has a shared helper (`contains-pattern.ts`, used by the bank); the
+  four older copies listed above have not moved to it.
+- The question list shows each question's latest version only; the versions endpoint has no
+  screen yet.
+- A quiz's completion rule is set only on its settings page, not with the select materials
+  have in the outline.
+- Two client-heavy routes cost about 16 kB of bundle each; CB7's attempt screen will cost
+  more, so its budget should be planned, not discovered.
