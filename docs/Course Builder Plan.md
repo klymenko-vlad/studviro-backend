@@ -160,13 +160,33 @@ a name and makes it hidden. The demo seed gives Algorithms a bank of one questio
 in three categories and a _Foundations quiz_ in _Weeks 1–4_. The CB7/CB8 tables are sketched
 in the ADR.
 
-### CB7 — Taking a quiz · L
+### CB7 — Taking a quiz · L · **Done 2026-10-24**
 
 The attempt lives on the server: started, answers saved as they are given, survives a
 closed laptop, closed by submission, by the time limit or by the quiz window — whichever is
 first, on the server's clock. Auto-graded on submission with partial credit for multiple
 choice; the mark lands in the quiz's assessment, as marking does for an assignment. One
 question per page or all on one, keyboard-operable, WCAG 2.2 AA.
+
+Shipped as **ADR 0051**: `quiz_attempts` and `quiz_attempt_questions` fix each attempt at
+start — latest version per question, random draws, the question and choice shuffles (a
+matching question's answers always) — one in progress per student, resumed rather than
+doubled. A draw that comes up short asks what there is, records `missing_questions` and is
+marked out of what it asked. Each answer is saved as given, last write wins; the server's time
+left comes back on every save and read. An attempt closes at submit or at
+`min(start + limit, close)` with **no grace**: an answer at the deadline is refused (`409`)
+and the attempt closed, on the next read or write and by a one-minute sweep. Closing marks
+every type automatically (Moodle-style partial credit for multiple choice, per pair for
+matching), leaves essays provisional, scales to the gradebook column and writes the quiz
+grade by highest / last / average over attempts whose marks are final; completion and
+restrictions follow. Students get Start / Continue and their paged attempts on the quiz
+row, and an attempt route with a timer announced only at 10, 5 and 1 minutes and 30
+seconds, a question navigator, autosave, a submit check that names unanswered questions,
+and a clear end state; choices are native radios and checkboxes (a new `Choice`
+primitive), matching uses selects. Authors get a paged, filtered attempts table on the quiz
+page, and choose one question per page or all on one. No correctness or key reaches a
+student. The demo seed gives every other Algorithms student, Marek Novák among them, one
+finished attempt at the _Foundations quiz_, with a second left.
 
 ### CB8 — Quiz review and marking · M
 
@@ -217,7 +237,7 @@ _Back to editing_.
 - [x] CB4 — Step by step: restrict access
 - [x] CB5 — More things to put on a page
 - [x] CB6 — Quiz authoring and the question bank
-- [ ] CB7 — Taking a quiz
+- [x] CB7 — Taking a quiz
 - [ ] CB8 — Quiz review and marking
 - [x] CB9 — Content for one group
 - [ ] CB10 — Reuse last year's course
@@ -290,7 +310,8 @@ _Back to editing_.
   and the calendar do.
 - Removing a quiz or a question has no confirmation, like every other removal (U1).
 - A random draw is checked against its category's size only when it is saved; questions
-  removed or moved out later can leave it short (CB7 must decide what an attempt does).
+  removed or moved out later can leave it short. Decided in CB7: the attempt draws what there
+  is and records the shortfall (ADR 0051).
 - The `ilike` escape now has a shared helper (`contains-pattern.ts`, used by the bank); the
   four older copies listed above have not moved to it.
 - The question list shows each question's latest version only; the versions endpoint has no
@@ -298,4 +319,17 @@ _Back to editing_.
 - A quiz's completion rule is set only on its settings page, not with the select materials
   have in the outline.
 - Two client-heavy routes cost about 16 kB of bundle each; CB7's attempt screen will cost
-  more, so its budget should be planned, not discovered.
+  more, so its budget should be planned, not discovered. (CB7 measured +16.26 kB; the
+  ceiling is 693 kB.)
+- Changing a quiz's grading method or maximum does not rewrite the grades already in the
+  gradebook; CB8's regrade should cover both, not only a changed key.
+- An author cannot preview a quiz by taking it (attempts are for enrolled students); the
+  student view shows the quiz row only. A preview attempt that is never graded would help.
+- The quiz grade appears in the student's gradebook as soon as an attempt closes, before
+  CB8's review options exist; if a teacher wants marks hidden until the quiz closes, CB8
+  must gate the gradebook entry too, not only the attempt review.
+- The attempt's deadline is fixed at start, so extending a quiz's close (or the time limit)
+  does not help a student already in an attempt; Moodle recomputes it.
+- On a phone the authors' attempts table scrolls sideways, like the other tables.
+- The `Choice` primitive is native; the restriction editor's and question editor's
+  Switch-based checkbox lists could move to it.

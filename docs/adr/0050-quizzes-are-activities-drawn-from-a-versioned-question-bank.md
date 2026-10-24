@@ -141,6 +141,9 @@ count and total of marks across all pages. Moving a slot renumbers the rest.
 
 ## CB7 and CB8, sketched — not built
 
+CB7 built the attempt tables with amendments recorded in **ADR 0051** (no `abandoned`
+state; deadline and closing causes; manual marking columns left for CB8).
+
 ```text
 quiz_attempts
   id, institution_id, learning_activity_id → quizzes, user_id, attempt (1…),
@@ -169,7 +172,8 @@ for an assignment; completion's `submitted` fact is the first finished attempt.
 - A question cannot be removed while a quiz holds it, and a category while a quiz draws from
   it. A removed quiz no longer holds anything.
 - A draw may later find fewer questions than it picks, if questions are removed or moved
-  out. CB7 must say what an attempt does then; authoring checks only when the draw is saved.
+  out; authoring checks only when the draw is saved. An attempt then draws what there is and
+  records the shortfall (ADR 0051).
 - _Deadline published_ and _deadline moved_ fire for quizzes; the inbox still calls them an
   "assignment deadline" (Noticed).
 - Search still indexes no learning content (ADR 0044).
