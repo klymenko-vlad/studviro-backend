@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-23 (CB11)
+Last updated: 2026-10-24 (CB5)
 
 ## What this is
 
@@ -92,8 +92,8 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: CB5 of `docs/Course Builder Plan.md` — more things to put on a page.** The
-remaining order is CB5, CB6, CB7, CB8, CB10. On
+**Next task: CB6 of `docs/Course Builder Plan.md` — quiz authoring and the question bank.**
+The remaining order is CB6, CB7, CB8, CB10. On
 2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
 tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1** (2026-10-22)
 made a course page an outline of sections (ADR 0043). **CB2** (2026-10-23) added _available
@@ -110,7 +110,10 @@ or item only for some study groups — hidden from or shown locked to the rest, 
 conditions — a _Who can see_ table per item and each group's content on the People tab
 (ADR 0047). **CB11** (2026-10-23, ahead of CB5) lets an author view the Content tab as one
 enrolled student or as a new student with no progress and no group: read-only, through the
-same service methods the student's own reads call, with a paged picker (ADR 0048). Split `learning-materials.service.ts` before CB5 adds kinds. The client half is on branch
+same service methods the student's own reads call, with a paged picker (ADR 0048). **CB5**
+(2026-10-24) adds pages (Markdown on a route of their own, rendered on the server with no
+dependency), labels, YouTube/Vimeo videos as privacy embeds allowed by `frame-src`, and
+folders of up to 100 files, paged and filtered; every material can be edited (ADR 0049). The client half is on branch
 `feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
 uncommitted interface work in `../frontend`; merge it to `dev` first.
 
@@ -136,8 +139,8 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 634 kB and measures 633.3 kB after CB11** (`.size-limit.mjs`; CB11 cost 2.82 kB and raised
-it from 632 kB). The quiz steps will need room of their own.
+is 638 kB and measures 637.38 kB after CB5** (`.size-limit.mjs`; CB5 cost 4.08 kB and raised
+it from 634 kB; the Markdown renderer is not in it). The quiz steps will need room of their own.
 
 Noticed while walking, not fixed:
 

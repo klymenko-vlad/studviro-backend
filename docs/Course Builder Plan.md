@@ -114,12 +114,23 @@ only to the students a restricted assignment is open to, once one can open it; s
 unlock it later are not told (future work in the ADR). The demo seed locks _Weeks 5–8_
 behind Assignment 1 and _Extension exercises_ behind 90 points in it.
 
-### CB5 — More things to put on a page · M
+### CB5 — More things to put on a page · M · **Done 2026-10-24**
 
 New material kinds: **page** (a long body with headings and lists, sanitised Markdown —
 no editor dependency), **label** (a line of text between items, no page of its own),
 **video** (an embedded YouTube or Vimeo URL, allow-listed in the CSP) and **folder** (several
 files under one title). Each kind gets its own form section and its own row in the outline.
+
+Shipped as **ADR 0049**: four new `learning_material_kind` values, so every rule from CB1–CB11
+holds for them unchanged. A page is Markdown up to 100 000 characters, left out of the list
+and read whole by id on a route of its own, rendered by a dependency-free Server Component
+that builds elements rather than HTML; the form previews it through a Server Action. A label
+is titled by its own text and can only be untracked. A video is normalised on the server to
+the YouTube no-cookie or Vimeo do-not-track embed, and only those two origins may be framed.
+A folder holds up to 100 files in `learning_material_files`, paged and filtered, uploaded,
+scanned, downloaded and reclaimed like a file material's; erasure keeps them as course
+content. Every material can now be retitled and rewritten. The demo seed puts a study guide,
+a label, a lecture recording and a folder of two handouts on every course page.
 
 ### CB6 — Quiz authoring and the question bank · L
 
@@ -186,7 +197,7 @@ _Back to editing_.
 - [x] CB2 — Available from, available until
 - [x] CB3 — Completion and progress
 - [x] CB4 — Step by step: restrict access
-- [ ] CB5 — More things to put on a page
+- [x] CB5 — More things to put on a page
 - [ ] CB6 — Quiz authoring and the question bank
 - [ ] CB7 — Taking a quiz
 - [ ] CB8 — Quiz review and marking
@@ -201,22 +212,23 @@ _Back to editing_.
 - Search indexes no materials or assignments. When it does, it must apply `sightOf` (CB2).
 - A section that has not opened yet shows its title and "Opens on …" with a little empty
   space under it on the student's page; a tighter card when it has no contents would read better.
-- Materials have no edit form, only _Availability_, _Hide_ and _Remove_; renaming a material
-  means removing and re-adding it.
+- ~~Materials have no edit form, only _Availability_, _Hide_ and _Remove_; renaming a material
+  means removing and re-adding it.~~ Fixed in CB5: an _Edit_ action for the title and content.
 - The demo seed's dates sit at midnight UTC, so the demo shows deadlines and openings at
   01:00 or 02:00 local time.
-- `learning-materials.service.ts` is past 300 lines after CB3 (views and the completion rule
-  joined upload, create, update, remove and download); split it before CB5 adds more kinds.
-- The `ilike` escape is written out three times now (`people.repository.ts`,
-  `search.service.ts`, `course-students.repository.ts`); one shared helper would do.
+- ~~`learning-materials.service.ts` is past 300 lines after CB3; split it before CB5 adds more
+  kinds.~~ Split in CB5: `MaterialOpeningService` and `LearningMaterialsRepository`.
+- The `ilike` escape is written out four times now (`people.repository.ts`,
+  `search.service.ts`, `course-students.repository.ts`, `folder-files.repository.ts`); one
+  shared helper would do.
 - The Assignments tab does not show a student their completion state; only the outline does.
 - On a phone, the completion table clips long item titles to three lines in its header.
 - `feat/course-sections` (frontend) is behind `dev`: regenerating the client in CB3 brought in
   the teacher search kind from backend `c281c6b`. CB3 handles it minimally (a teacher hit goes
   to People, a _Teachers_ label); when the branch merges, keep `dev`'s teacher profile route
   (`cda3724`) instead.
-- An empty `PATCH` of a material (no fields) answers 500: drizzle refuses an update with
-  nothing to set. Sections short-circuit it; materials do not.
+- ~~An empty `PATCH` of a material (no fields) answers 500.~~ Fixed in CB5, with a regression
+  test.
 - A restriction can wait for an item whose completion rule is later set to _none_; it then
   can never be met and nothing warns the author. Likewise a mark threshold above a later
   lowered maximum.
@@ -238,3 +250,18 @@ _Back to editing_.
   would read better to the author but needs the meter to take its label from outside.
 - The student view of an unpublished page shows it as it will be once published, with no
   note saying a student cannot reach it yet.
+- A folder is created empty and its files are added one by one after it, so a failed upload
+  in the add form leaves the folder with the files that did arrive (the author is told).
+- A video with the rule _opened_ completes when the student sees its row, not when they play
+  it; the player is cross-origin (ADR 0049).
+- The page route has a _Back to the course_ link but no breadcrumb trail like the course page.
+- While a page's preview is shown, the _Page text_ label points at no control; a role="tab"
+  pair (Write / Preview) would read better than one toggle.
+- Markdown on a page has no tables, images or nested lists; images would need an upload of
+  their own and a wider `img-src`.
+- Folder files cannot be renamed or moved between folders, and there is no download of a
+  whole folder.
+- The demo seed writes 144 small objects to the store on every run; the previous run's objects
+  are left for the orphan sweep, since their rows go with the institution.
+- The student's Content tab opens with the _Course page_ card ("The page students see for this
+  course…"), which is written for the author.
