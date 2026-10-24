@@ -137,6 +137,9 @@ which is what the paragraph above already described it doing.
 
 ## L7 — quizzes are out of scope
 
+**Superseded by ADR 0050** (2026-10-24): quizzes are back in scope, at the user's request.
+What follows is kept as the reasoning about their size, which still holds.
+
 **No quiz engine.** Nothing in the docs asks for one: `System Plan.md` lists quizzes as a
 Moodle strength and, in the same table, recommends against mapping them to anything
 administrative; `Tasks Plan.md` mentions them only as a thing to _display_; the MVP exclusion
