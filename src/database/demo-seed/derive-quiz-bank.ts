@@ -143,8 +143,15 @@ const QUESTIONS: readonly Omit<PlannedQuestion, 'key'>[] = [
   },
 ];
 
-export function planQuizBank(spaces: readonly PlannedSpace[]): PlannedQuizBank | null {
-  const space = spaces.find((candidate) => candidate.offering.course.title === BANK_COURSE);
+export function planQuizBank(
+  spaces: readonly PlannedSpace[],
+  yearOffset = 0,
+): PlannedQuizBank | null {
+  const space = spaces.find(
+    (candidate) =>
+      candidate.offering.course.title === BANK_COURSE &&
+      candidate.offering.term.yearOffset === yearOffset,
+  );
   if (!space) return null;
 
   const questions = QUESTIONS.map((question, index) => ({

@@ -84,20 +84,21 @@ export interface PlannedSubmission {
 const MATERIALS_PER_SPACE = 3;
 const ASSIGNMENTS_PER_SPACE = 2;
 
-/**
- * Only the current academic year gets a learning space. A past year's
- * materials are rows nobody opens, and the point of the demo is that the
- * screens have something on them now.
- */
+export const REUSED_COURSE = 'Algorithms';
+
 export function planSpaces(offerings: readonly PlannedOffering[]): PlannedSpace[] {
-  return offerings
-    .filter((offering) => offering.term.yearOffset === 0)
-    .map((offering) => ({
-      key: `SPACE-${offering.key}`,
-      offering,
-      name: `${offering.course.title} (${offering.term.code})`,
-      summary: `Everything for ${offering.course.title} this term: slides, reading and the assignments.`,
-    }));
+  const current = offerings.filter((offering) => offering.term.yearOffset === 0);
+  const reused = current.find((offering) => offering.course.title === REUSED_COURSE);
+  const previous = offerings.filter(
+    (offering) => offering.term.yearOffset === -1 && offering.course.key === reused?.course.key,
+  );
+
+  return [...current, ...previous].map((offering) => ({
+    key: `SPACE-${offering.key}`,
+    offering,
+    name: `${offering.course.title} (${offering.term.code})`,
+    summary: `Everything for ${offering.course.title} this term: slides, reading and the assignments.`,
+  }));
 }
 
 const SECTIONS = [

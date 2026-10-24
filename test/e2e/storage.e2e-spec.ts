@@ -140,4 +140,27 @@ describe('Object storage (e2e)', () => {
     expect(ticket.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 3_600_000);
     expect(new URL(ticket.url).searchParams.get('X-Amz-Expires')).not.toBeNull();
   });
+
+  it('copies an object to a new key in the same institution, leaving the original', async () => {
+    const { ticket } = await upload('copy me');
+    const to = `institutions/${INSTITUTION}/materials/copy-target/notes.pdf`;
+
+    await storage.copy(ticket.key, to, INSTITUTION);
+
+    await expect(storage.head(to)).resolves.toMatchObject({ sizeBytes: 7 });
+    await expect(storage.head(ticket.key)).resolves.toMatchObject({ sizeBytes: 7 });
+    const link = await storage.createDownloadUrl(to, INSTITUTION);
+    await expect((await fetch(link)).text()).resolves.toBe('copy me');
+  });
+
+  it('refuses to copy from or into another institution', async () => {
+    const { ticket } = await upload('mine');
+
+    await expect(
+      storage.copy(ticket.key, `institutions/${OTHER}/materials/x/notes.pdf`, INSTITUTION),
+    ).rejects.toBeInstanceOf(EntityNotFoundError);
+    await expect(
+      storage.copy(ticket.key, `institutions/${OTHER}/materials/x/notes.pdf`, OTHER),
+    ).rejects.toBeInstanceOf(EntityNotFoundError);
+  });
 });

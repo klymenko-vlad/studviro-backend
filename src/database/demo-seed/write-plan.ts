@@ -685,6 +685,7 @@ export async function writePlan(
 
   const plannedBank = planQuizBank(plannedSpaces);
   const writtenBank = await writeQuizBank(db, institutionId, plannedBank, spaceIds, sectionIds);
+  await writeQuizBank(db, institutionId, planQuizBank(plannedSpaces, -1), spaceIds, sectionIds);
   const quizAttemptCount = await writeQuizAttempts(
     db,
     institutionId,

@@ -166,7 +166,10 @@ describe('the learning half it seeds', () => {
 
   it('gives Algorithms a question bank with one question of each type, and a quiz in its first block', () => {
     const bank = planQuizBank(spaces);
-    const algorithms = spaces.find((space) => space.offering.course.title === 'Algorithms');
+    const algorithms = spaces.find(
+      (space) =>
+        space.offering.course.title === 'Algorithms' && space.offering.term.yearOffset === 0,
+    );
 
     expect(bank).not.toBeNull();
     expect(bank!.space).toBe(algorithms);
@@ -219,9 +222,23 @@ describe('the learning half it seeds', () => {
     );
   });
 
-  it('gives only the current year a learning space', () => {
-    expect(spaces.length).toBeGreaterThan(0);
-    expect(spaces.every((space) => space.offering.term.yearOffset === 0)).toBe(true);
+  it('gives the current year a learning space, and last year’s Algorithms one to import from', () => {
+    const past = spaces.filter((space) => space.offering.term.yearOffset !== 0);
+
+    expect(spaces.length).toBeGreaterThan(1);
+    expect(
+      past.map((space) => [space.offering.course.title, space.offering.term.yearOffset]),
+    ).toEqual([['Algorithms', -1]]);
+  });
+
+  it('gives last year’s Algorithms a bank and a quiz of its own, and no attempts', () => {
+    const current = planQuizBank(spaces);
+    const past = planQuizBank(spaces, -1);
+
+    expect(past).not.toBeNull();
+    expect(past!.space.offering.term.yearOffset).toBe(-1);
+    expect(past!.space.offering.course).toBe(current!.space.offering.course);
+    expect(past!.quiz.opensAt < current!.quiz.opensAt).toBe(true);
   });
 
   it('gives every space materials and two assignments', () => {
@@ -460,9 +477,10 @@ describe('the learning half it seeds', () => {
             s.assignmentKey === completion.target.key &&
             s.studentKey === completion.studentKey,
         )!;
-        expect(completion.state).toBe(
-          source.points! >= ASSIGNMENT_PASS_POINTS ? 'complete_pass' : 'complete_fail',
-        );
+        const rule = assignments.find((a) => a.key === source.assignmentKey)!.completionRule;
+        const passed =
+          source.points! >= ASSIGNMENT_PASS_POINTS ? 'complete_pass' : 'complete_fail';
+        expect(completion.state).toBe(rule === 'passed' ? passed : 'complete');
       }
     });
 

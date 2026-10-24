@@ -14,6 +14,13 @@ import { CompletionReportService } from './completion-report.service';
 import { CompletionController } from './completion.controller';
 import { CompletionRepository } from './completion.repository';
 import { CompletionService } from './completion.service';
+import { CourseImportPlanner } from './course-import-planner.service';
+import { CourseImportSnapshotRepository } from './course-import-snapshot.repository';
+import { CourseImportSourcesRepository } from './course-import-sources.repository';
+import { CourseImportSourcesService } from './course-import-sources.service';
+import { CourseImportWriterRepository } from './course-import-writer.repository';
+import { CourseImportController } from './course-import.controller';
+import { CourseImportService } from './course-import.service';
 import { CourseStudentsRepository } from './course-students.repository';
 import { FolderFilesController } from './folder-files.controller';
 import { FolderFilesRepository } from './folder-files.repository';
@@ -105,6 +112,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuizSlotsController,
     QuizAttemptsController,
     QuizMarkingController,
+    CourseImportController,
   ],
   providers: [
     LearningAccessService,
@@ -165,6 +173,12 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuizRegradeService,
     QuizResultsRepository,
     QuizResultsService,
+    CourseImportSnapshotRepository,
+    CourseImportSourcesRepository,
+    CourseImportSourcesService,
+    CourseImportWriterRepository,
+    CourseImportPlanner,
+    CourseImportService,
   ],
   exports: [
     LearningSpacesService,

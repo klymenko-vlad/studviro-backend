@@ -9,6 +9,7 @@ export const AUDIT_ACTIONS = [
   'personal_data.erased',
   'discussion.hidden',
   'discussion.restored',
+  'learning_space.imported',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -22,6 +23,7 @@ export const AUDIT_SUBJECT_TYPES = [
   'personal_data_erasure',
   'discussion_thread',
   'discussion_post',
+  'learning_space',
 ] as const;
 
 export type AuditSubjectType = (typeof AUDIT_SUBJECT_TYPES)[number];
