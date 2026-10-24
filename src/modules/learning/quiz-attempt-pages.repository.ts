@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { and, count, desc, eq } from 'drizzle-orm';
 
+import { EntityNotFoundError } from '../../common/errors/domain.error';
 import {
   quizAttempts,
   users,
@@ -15,6 +16,7 @@ export interface AttemptPageQuery {
   readonly page: number;
   readonly limit: number;
   readonly state?: QuizAttemptProgress;
+  readonly needsMarking?: boolean;
   readonly q?: string;
 }
 
@@ -64,6 +66,12 @@ export class QuizAttemptPagesRepository {
     const where = and(
       eq(quizAttempts.learningActivityId, quizId),
       query.state === undefined ? undefined : eq(quizAttempts.state, query.state),
+      query.needsMarking === undefined
+        ? undefined
+        : and(
+            eq(quizAttempts.state, 'finished'),
+            eq(quizAttempts.needsMarking, query.needsMarking),
+          ),
       containsText([users.displayName, users.email], query.q),
     );
     const [rows, [counted]] = await Promise.all([
@@ -86,6 +94,22 @@ export class QuizAttemptPagesRepository {
     ]);
 
     return { rows, total: counted?.total ?? 0 };
+  }
+
+  async one(quizId: string, attemptId: string): Promise<StudentAttempt> {
+    const [row] = await this.txHost
+      .client()
+      .select({
+        attempt: quizAttempts,
+        student: { id: users.id, displayName: users.displayName, email: users.email },
+      })
+      .from(quizAttempts)
+      .innerJoin(users, eq(users.id, quizAttempts.userId))
+      .where(and(eq(quizAttempts.id, attemptId), eq(quizAttempts.learningActivityId, quizId)))
+      .limit(1);
+    if (!row) throw new EntityNotFoundError('quiz_attempt', attemptId);
+
+    return row;
   }
 
   private get reader() {

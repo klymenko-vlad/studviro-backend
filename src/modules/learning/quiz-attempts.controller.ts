@@ -23,6 +23,7 @@ import {
   MyQuizAttemptPageResponseDto,
   QuizAttemptPageResponseDto,
 } from './dto/quiz-attempt-list.dto';
+import { QuizAttemptReviewResponseDto } from './dto/quiz-attempt-review.dto';
 import {
   QuizAnswerSavedResponseDto,
   QuizAttemptResponseDto,
@@ -30,6 +31,7 @@ import {
 } from './dto/quiz-attempt.dto';
 import type { QuizAt } from './quiz-attempt-access.service';
 import { QuizAttemptListsService } from './quiz-attempt-lists.service';
+import { QuizAttemptReviewService } from './quiz-attempt-review.service';
 import { QuizAttemptsService } from './quiz-attempts.service';
 
 const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as const;
@@ -44,6 +46,7 @@ export class QuizAttemptsController {
   constructor(
     private readonly attempts: QuizAttemptsService,
     private readonly lists: QuizAttemptListsService,
+    private readonly reviews: QuizAttemptReviewService,
   ) {}
 
   @Get()
@@ -51,7 +54,8 @@ export class QuizAttemptsController {
   @ApiOperation({
     operationId: 'listQuizAttempts',
     summary: 'Every student’s attempts at a quiz, newest first, a page at a time',
-    description: 'For the course’s authors. Closes any attempt past its deadline first.',
+    description:
+      'For the course’s authors. Closes any attempt past its deadline first. `needsMarking=true` is the marking queue.',
   })
   @ApiOkResponse({ type: QuizAttemptPageResponseDto })
   @ApiErrorResponses({ notFound: true })
@@ -72,7 +76,8 @@ export class QuizAttemptsController {
   @ApiOperation({
     operationId: 'listMyQuizAttempts',
     summary: 'The caller’s own attempts at a quiz, and whether another may start',
-    description: 'States only: no mark and no answer.',
+    description:
+      'States, and the mark and whether it can be reviewed only as far as the quiz’s review options allow now.',
   })
   @ApiOkResponse({ type: MyQuizAttemptPageResponseDto })
   @ApiErrorResponses({ notFound: true })
@@ -127,6 +132,29 @@ export class QuizAttemptsController {
   ): Promise<QuizAttemptResponseDto> {
     return QuizAttemptResponseDto.from(
       await this.attempts.view(this.at(institutionId, spaceId, quizId, userId), attemptId),
+    );
+  }
+
+  @Get(':attemptId/review')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'reviewQuizAttempt',
+    summary:
+      'One of the caller’s closed attempts, as much as the quiz’s review options show now',
+    description:
+      'Each option is shown immediately, once the quiz has closed, or never, on the server’s clock. Nothing kept back is sent. 409 while the attempt runs.',
+  })
+  @ApiOkResponse({ type: QuizAttemptReviewResponseDto })
+  @ApiErrorResponses({ notFound: true, conflict: true })
+  async review(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @Param('quizId', ParseUUIDPipe) quizId: string,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<QuizAttemptReviewResponseDto> {
+    return QuizAttemptReviewResponseDto.from(
+      await this.reviews.review(this.at(institutionId, spaceId, quizId, userId), attemptId),
     );
   }
 

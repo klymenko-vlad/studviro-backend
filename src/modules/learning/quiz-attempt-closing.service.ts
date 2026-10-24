@@ -4,11 +4,11 @@ import type { QuizAttempt } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
 import { isOverdue } from './attempt-clock';
-import { autoMarkOf, rounded } from './attempt-grading';
+import { autoMarkOf } from './attempt-grading';
 import { AttemptQuestionsRepository } from './attempt-questions.repository';
+import { attemptScoreOf } from './attempt-score';
 import { CompletionService } from './completion.service';
 import { QuizAttemptsRepository } from './quiz-attempts.repository';
-import { scaledPoints } from './quiz-grade';
 import { QuizGradebookService } from './quiz-gradebook.service';
 
 export type CloseRequest = 'student' | 'deadline';
@@ -38,19 +38,15 @@ export class QuizAttemptClosingService {
 
       const byDeadline = request === 'deadline' || isOverdue(attempt.deadlineAt, now);
       const marks = await this.autoMark(attemptId);
-      const rawMarks = rounded(marks.reduce<number>((sum, mark) => sum + (mark ?? 0), 0));
       const grading = await this.attempts.gradingOf(attempt.learningActivityId);
-      const points =
-        grading.maxPoints === null
-          ? null
-          : scaledPoints(rawMarks, Number(attempt.maxMarks), grading.maxPoints);
+      const score = attemptScoreOf(marks, Number(attempt.maxMarks), grading.maxPoints);
 
       const finished = await this.attempts.finish(attemptId, {
         finishedAt: byDeadline ? (attempt.deadlineAt ?? now) : now,
         closedBy: byDeadline ? (attempt.deadlineCause ?? 'quiz_close') : 'student',
-        rawMarks: rawMarks.toFixed(4),
-        points: points === null ? null : points.toFixed(4),
-        needsMarking: marks.includes(null),
+        rawMarks: score.rawMarks.toFixed(4),
+        points: score.points === null ? null : score.points.toFixed(4),
+        needsMarking: score.needsMarking,
       });
 
       await this.gradebook.record(attempt, grading, now);

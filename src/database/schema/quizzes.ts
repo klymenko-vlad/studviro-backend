@@ -106,6 +106,10 @@ export const QUIZ_LAYOUTS = ['one_per_page', 'all_on_one'] as const;
 export type QuizLayout = (typeof QUIZ_LAYOUTS)[number];
 export const quizLayout = pgEnum('quiz_layout', QUIZ_LAYOUTS);
 
+export const QUIZ_REVIEW_TIMINGS = ['immediately', 'after_close', 'never'] as const;
+export type QuizReviewTiming = (typeof QUIZ_REVIEW_TIMINGS)[number];
+export const quizReviewTiming = pgEnum('quiz_review_timing', QUIZ_REVIEW_TIMINGS);
+
 export const quizzes = pgTable('quizzes', {
   learningActivityId: uuid('learning_activity_id')
     .primaryKey()
@@ -116,6 +120,13 @@ export const quizzes = pgTable('quizzes', {
   shuffleQuestions: boolean('shuffle_questions').notNull().default(false),
   shuffleChoices: boolean('shuffle_choices').notNull().default(true),
   layout: quizLayout('layout').notNull().default('one_per_page'),
+  reviewResponses: quizReviewTiming('review_responses').notNull().default('immediately'),
+  reviewCorrectness: quizReviewTiming('review_correctness').notNull().default('immediately'),
+  reviewCorrectAnswer: quizReviewTiming('review_correct_answer')
+    .notNull()
+    .default('after_close'),
+  reviewFeedback: quizReviewTiming('review_feedback').notNull().default('immediately'),
+  reviewOverallMark: quizReviewTiming('review_overall_mark').notNull().default('immediately'),
   ...timestamps,
 });
 

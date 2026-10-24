@@ -105,6 +105,44 @@ export class QuizAttemptsRepository {
     return row;
   }
 
+  async update(attemptId: string, changes: Partial<QuizAttempt>): Promise<QuizAttempt> {
+    const [row] = await this.client
+      .update(quizAttempts)
+      .set(changes)
+      .where(eq(quizAttempts.id, attemptId))
+      .returning();
+    if (!row) throw new EntityNotFoundError('quiz_attempt', attemptId);
+
+    return row;
+  }
+
+  async inQuizOrFail(quizId: string, attemptId: string): Promise<QuizAttempt> {
+    const [row] = await this.client
+      .select()
+      .from(quizAttempts)
+      .where(and(eq(quizAttempts.id, attemptId), eq(quizAttempts.learningActivityId, quizId)))
+      .limit(1);
+    if (!row) throw new EntityNotFoundError('quiz_attempt', attemptId);
+
+    return row;
+  }
+
+  async finishedOfQuiz(quizId: string): Promise<QuizAttempt[]> {
+    return this.client
+      .select()
+      .from(quizAttempts)
+      .where(
+        and(eq(quizAttempts.learningActivityId, quizId), eq(quizAttempts.state, 'finished')),
+      )
+      .orderBy(asc(quizAttempts.userId), asc(quizAttempts.attempt));
+  }
+
+  async lockQuiz(quizId: string): Promise<void> {
+    await this.client.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`quiz-grades:${quizId}`}, 0))`,
+    );
+  }
+
   async overdueIds(
     now: Date,
     limit: number,

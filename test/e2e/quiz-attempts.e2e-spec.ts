@@ -813,7 +813,7 @@ describe('Quiz attempts (e2e)', () => {
       questions = await bank();
     });
 
-    it('shows a student their attempts and whether another may start, without a mark', async () => {
+    it('shows a student their attempts and whether another may start', async () => {
       const quiz = await quizOf([questions.true_false], { maxAttempts: 2 });
 
       const before = await ok<Page & { standing: Row }>(
@@ -844,7 +844,7 @@ describe('Quiz attempts (e2e)', () => {
         blockedBy: null,
       });
       expect(Object.keys(during.items[1]!).sort()).toEqual(
-        ['attempt', 'closedBy', 'finishedAt', 'id', 'startedAt', 'state'].sort(),
+        ['attempt', 'closedBy', 'finishedAt', 'id', 'review', 'startedAt', 'state'].sort(),
       );
 
       await submit(quiz.id, running.id);

@@ -51,12 +51,19 @@ import { QuizAttemptAccessService } from './quiz-attempt-access.service';
 import { QuizAttemptBuilder } from './quiz-attempt-builder';
 import { QuizAttemptClosingService } from './quiz-attempt-closing.service';
 import { QuizAttemptListsService } from './quiz-attempt-lists.service';
+import { QuizAttemptMarkingService } from './quiz-attempt-marking.service';
 import { QuizAttemptPagesRepository } from './quiz-attempt-pages.repository';
+import { QuizAttemptReviewService } from './quiz-attempt-review.service';
+import { QuizAttemptScoringService } from './quiz-attempt-scoring.service';
 import { QuizAttemptSweepService } from './quiz-attempt-sweep.service';
 import { QuizAttemptsController } from './quiz-attempts.controller';
 import { QuizAttemptsRepository } from './quiz-attempts.repository';
 import { QuizAttemptsService } from './quiz-attempts.service';
 import { QuizGradebookService } from './quiz-gradebook.service';
+import { QuizMarkingController } from './quiz-marking.controller';
+import { QuizRegradeService } from './quiz-regrade.service';
+import { QuizResultsRepository } from './quiz-results.repository';
+import { QuizResultsService } from './quiz-results.service';
 import { QuizSlotsController } from './quiz-slots.controller';
 import { QuizSlotsRepository } from './quiz-slots.repository';
 import { QuizSlotsService } from './quiz-slots.service';
@@ -97,6 +104,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuizzesController,
     QuizSlotsController,
     QuizAttemptsController,
+    QuizMarkingController,
   ],
   providers: [
     LearningAccessService,
@@ -151,6 +159,12 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuizAttemptSweepService,
     QuizAttemptsService,
     QuizAttemptListsService,
+    QuizAttemptScoringService,
+    QuizAttemptReviewService,
+    QuizAttemptMarkingService,
+    QuizRegradeService,
+    QuizResultsRepository,
+    QuizResultsService,
   ],
   exports: [
     LearningSpacesService,

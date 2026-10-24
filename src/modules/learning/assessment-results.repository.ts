@@ -60,6 +60,35 @@ export class AssessmentResultsRepository {
     return written;
   }
 
+  async find(key: ResultKey): Promise<AssessmentResult | null> {
+    const [row] = await this.client
+      .select()
+      .from(assessmentResults)
+      .where(
+        and(
+          eq(assessmentResults.assessmentId, key.assessmentId),
+          eq(assessmentResults.userId, key.userId),
+          isNull(assessmentResults.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async withdraw(key: ResultKey, now: Date): Promise<void> {
+    await this.client
+      .update(assessmentResults)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          eq(assessmentResults.assessmentId, key.assessmentId),
+          eq(assessmentResults.userId, key.userId),
+          isNull(assessmentResults.deletedAt),
+        ),
+      );
+  }
+
   private get client() {
     return this.txHost.client();
   }

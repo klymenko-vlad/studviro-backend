@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import type { QuizAttempt } from '../../database/schema';
 
+import { showsQuestions } from './attempt-review';
+import { scoreViewOf, type AttemptScoreView } from './attempt-score';
 import { QuizAttemptAccessService, type QuizAt } from './quiz-attempt-access.service';
 import { QuizAttemptClosingService } from './quiz-attempt-closing.service';
 import {
@@ -11,6 +13,7 @@ import {
 } from './quiz-attempt-pages.repository';
 import { QuizAttemptsRepository } from './quiz-attempts.repository';
 import { startBlockOf, type StartBlock } from './quiz-policy';
+import { reviewSettingsOf, reviewShownAt } from './quiz-review';
 
 export interface Paged<T> {
   readonly items: readonly T[];
@@ -26,7 +29,17 @@ export interface AttemptStanding {
   readonly blockedBy: StartBlock | null;
 }
 
-export interface MyAttempts extends Paged<QuizAttempt> {
+export interface AttemptReviewState {
+  readonly available: boolean;
+  readonly score: AttemptScoreView | null;
+}
+
+export interface MyAttempt {
+  readonly attempt: QuizAttempt;
+  readonly review: AttemptReviewState;
+}
+
+export interface MyAttempts extends Paged<MyAttempt> {
   readonly standing: AttemptStanding;
 }
 
@@ -40,7 +53,7 @@ export class QuizAttemptListsService {
   ) {}
 
   async mine(at: QuizAt, query: AttemptPageQuery, now = new Date()): Promise<MyAttempts> {
-    const { entry } = await this.access.forStudent(at, now);
+    const { entry, quiz } = await this.access.forStudent(at, now);
     await this.closing.closeOverdue(now, { quizId: at.quizId, userId: at.userId });
 
     const [page, running, tally] = await Promise.all([
@@ -49,9 +62,22 @@ export class QuizAttemptListsService {
       this.attempts.tally(at.quizId, at.userId),
     ]);
     const { activity, totals } = entry;
+    const shown = reviewShownAt(reviewSettingsOf(quiz), activity.dueAt, now);
+    const reviewable = showsQuestions(shown) || shown.overallMark;
+    const maxPoints = Number(entry.assessment.maxPoints);
 
     return {
-      items: page.rows,
+      items: page.rows.map((attempt) => {
+        const finished = attempt.state === 'finished';
+
+        return {
+          attempt,
+          review: {
+            available: finished && reviewable,
+            score: finished && shown.overallMark ? scoreViewOf(attempt, maxPoints) : null,
+          },
+        };
+      }),
       page: query.page,
       limit: query.limit,
       total: page.total,

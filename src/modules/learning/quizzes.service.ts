@@ -24,7 +24,9 @@ import {
 } from './learning-availability';
 import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningOutlineService } from './learning-outline.service';
+import { QuizAttemptScoringService } from './quiz-attempt-scoring.service';
 import { assertQuizWindow } from './quiz-policy';
+import { DEFAULT_REVIEW, reviewColumnsOf, type ReviewSettings } from './quiz-review';
 import { QuizzesRepository, type QuizEntry } from './quizzes.repository';
 import type { RestrictionInput } from './restriction';
 import type { AudienceInput } from './restriction-audience';
@@ -43,6 +45,7 @@ export interface NewQuiz {
   readonly shuffleQuestions?: boolean;
   readonly shuffleChoices?: boolean;
   readonly layout?: QuizLayout;
+  readonly review?: Partial<ReviewSettings>;
   readonly maxPoints?: number;
   readonly countsTowardFinalGrade?: boolean;
   readonly visible?: boolean;
@@ -72,6 +75,7 @@ export class QuizzesService {
     private readonly availability: AvailabilityService,
     private readonly restrictions: RestrictionRulesService,
     private readonly quizzes: QuizzesRepository,
+    private readonly scoring: QuizAttemptScoringService,
   ) {}
 
   async list(institutionId: string, spaceId: string, userId: string) {
@@ -169,6 +173,7 @@ export class QuizzesService {
         shuffleQuestions: input.shuffleQuestions ?? false,
         shuffleChoices: input.shuffleChoices ?? true,
         layout: input.layout ?? 'one_per_page',
+        ...reviewColumnsOf({ ...DEFAULT_REVIEW, ...input.review }),
       });
 
       await this.announcements.announceNewlySeen(now, spaceId);
@@ -245,6 +250,7 @@ export class QuizzesService {
       shuffleQuestions: changes.shuffleQuestions,
       shuffleChoices: changes.shuffleChoices,
       layout: changes.layout,
+      ...reviewColumnsOf(changes.review ?? {}),
     });
 
     return this.txHost.run(async () => {
@@ -263,6 +269,9 @@ export class QuizzesService {
       await this.quizzes.updateSettings(quizId, settingsChanges);
 
       const current = await this.quizzes.findOrFail(spaceId, quizId);
+      if (gradingChanged(existing, current)) {
+        await this.scoring.rescoreAll(institutionId, quizId, now);
+      }
       if (completionChanged(existing, current)) {
         await this.completion.recompute({ kind: 'quiz', id: quizId });
       }
@@ -313,6 +322,13 @@ export class QuizzesService {
   private get client() {
     return this.txHost.client();
   }
+}
+
+function gradingChanged(previous: QuizEntry, current: QuizEntry): boolean {
+  return (
+    previous.quiz?.gradingMethod !== current.quiz?.gradingMethod ||
+    Number(previous.assessment.maxPoints) !== Number(current.assessment.maxPoints)
+  );
 }
 
 function secondsOf(minutes: number | null | undefined): number | null {

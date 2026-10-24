@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { Exclude, Expose, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 import { PageMetaDto } from '../../../common/dto/pagination.dto';
 import {
@@ -10,9 +19,16 @@ import {
   type QuizAttemptCloser,
   type QuizAttemptProgress,
 } from '../../../database/schema';
-import type { AttemptStanding, MyAttempts, Paged } from '../quiz-attempt-lists.service';
+import type {
+  AttemptStanding,
+  MyAttempt,
+  MyAttempts,
+  Paged,
+} from '../quiz-attempt-lists.service';
 import type { StudentAttempt } from '../quiz-attempt-pages.repository';
 import { START_BLOCKS, type StartBlock } from '../quiz-policy';
+
+import { QuizAttemptScoreDto } from './quiz-attempt-score.dto';
 
 export class ListQuizAttemptsQueryDto {
   @ApiPropertyOptional({ type: Number, minimum: 1, default: 1 })
@@ -36,6 +52,16 @@ export class ListQuizAttemptsQueryDto {
   state?: QuizAttemptProgress;
 
   @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'True: only closed attempts waiting for a teacher’s mark. False: only final ones.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  needsMarking?: boolean;
+
+  @ApiPropertyOptional({
     type: String,
     description: 'Narrows to students whose name or e-mail contains this',
   })
@@ -47,10 +73,11 @@ export class ListQuizAttemptsQueryDto {
 
 export class ListMyQuizAttemptsQueryDto extends OmitType(ListQuizAttemptsQueryDto, [
   'q',
+  'needsMarking',
 ] as const) {}
 
 @Exclude()
-export class MyQuizAttemptDto {
+export class QuizAttemptSummaryDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty() attempt!: number;
 
@@ -67,9 +94,37 @@ export class MyQuizAttemptDto {
   @Expose()
   @ApiProperty({ enum: QUIZ_ATTEMPT_CLOSERS, enumName: 'QuizAttemptCloser', nullable: true })
   closedBy!: QuizAttemptCloser | null;
+}
 
-  static from(attempt: QuizAttempt): MyQuizAttemptDto {
-    return Object.assign(new MyQuizAttemptDto(), attemptFields(attempt));
+@Exclude()
+export class QuizAttemptReviewStateDto {
+  @Expose()
+  @ApiProperty({ description: 'Whether the attempt can be reviewed now, on the server clock.' })
+  available!: boolean;
+
+  @Expose()
+  @ApiProperty({
+    type: QuizAttemptScoreDto,
+    nullable: true,
+    description: 'Null while the quiz’s review options keep the mark back.',
+  })
+  score!: QuizAttemptScoreDto | null;
+}
+
+@Exclude()
+export class MyQuizAttemptDto extends QuizAttemptSummaryDto {
+  @Expose()
+  @ApiProperty({ type: QuizAttemptReviewStateDto })
+  review!: QuizAttemptReviewStateDto;
+
+  static from(mine: MyAttempt): MyQuizAttemptDto {
+    return Object.assign(new MyQuizAttemptDto(), {
+      ...attemptFields(mine.attempt),
+      review: Object.assign(new QuizAttemptReviewStateDto(), {
+        available: mine.review.available,
+        score: QuizAttemptScoreDto.from(mine.review.score),
+      }),
+    });
   }
 }
 
@@ -107,7 +162,7 @@ export class MyQuizAttemptPageResponseDto {
 
   static from(page: MyAttempts): MyQuizAttemptPageResponseDto {
     return Object.assign(new MyQuizAttemptPageResponseDto(), {
-      items: page.items.map((attempt) => MyQuizAttemptDto.from(attempt)),
+      items: page.items.map((mine) => MyQuizAttemptDto.from(mine)),
       meta: new PageMetaDto(page.page, page.limit, page.total),
       standing: QuizAttemptStandingDto.from(page.standing),
     });
@@ -122,7 +177,7 @@ export class AttemptStudentDto {
 }
 
 @Exclude()
-export class QuizAttemptRowDto extends MyQuizAttemptDto {
+export class QuizAttemptRowDto extends QuizAttemptSummaryDto {
   @Expose() @ApiProperty({ type: AttemptStudentDto }) student!: AttemptStudentDto;
   @Expose() @ApiProperty() maxMarks!: number;
 

@@ -15,15 +15,18 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 import {
   COMPLETION_RULES,
   QUIZ_GRADING_METHODS,
   QUIZ_LAYOUTS,
+  QUIZ_REVIEW_TIMINGS,
   type CompletionRule,
   type QuizGradingMethod,
   type QuizLayout,
+  type QuizReviewTiming,
 } from '../../../database/schema';
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import { QUIZ_COMPLETION_RULES } from '../completion-rule';
@@ -34,6 +37,7 @@ import {
   QUIZ_ATTEMPT_STATES,
   type QuizAttemptState,
 } from '../quiz-policy';
+import { reviewSettingsOf } from '../quiz-review';
 import type { QuizEntry } from '../quizzes.repository';
 
 import {
@@ -45,6 +49,72 @@ import {
 const MAX_NAME = 200;
 const MAX_BRIEF = 20_000;
 const MAX_POINTS = 100_000;
+
+export class QuizReviewOptionsDto {
+  @ApiPropertyOptional({
+    enum: QUIZ_REVIEW_TIMINGS,
+    enumName: 'QuizReviewTiming',
+    description: 'Their own answers.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_REVIEW_TIMINGS)
+  responses?: QuizReviewTiming;
+
+  @ApiPropertyOptional({
+    enum: QUIZ_REVIEW_TIMINGS,
+    enumName: 'QuizReviewTiming',
+    description: 'Whether each answer was right, and the marks per question.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_REVIEW_TIMINGS)
+  correctness?: QuizReviewTiming;
+
+  @ApiPropertyOptional({
+    enum: QUIZ_REVIEW_TIMINGS,
+    enumName: 'QuizReviewTiming',
+    description: 'The right answers.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_REVIEW_TIMINGS)
+  correctAnswer?: QuizReviewTiming;
+
+  @ApiPropertyOptional({
+    enum: QUIZ_REVIEW_TIMINGS,
+    enumName: 'QuizReviewTiming',
+    description: 'General and per-choice feedback, and the marker’s comment.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_REVIEW_TIMINGS)
+  feedback?: QuizReviewTiming;
+
+  @ApiPropertyOptional({
+    enum: QUIZ_REVIEW_TIMINGS,
+    enumName: 'QuizReviewTiming',
+    description: 'The mark for each attempt and the quiz grade, in the gradebook too.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_REVIEW_TIMINGS)
+  overallMark?: QuizReviewTiming;
+}
+
+@Exclude()
+export class QuizReviewOptionsResponseDto {
+  @Expose()
+  @ApiProperty({ enum: QUIZ_REVIEW_TIMINGS, enumName: 'QuizReviewTiming' })
+  responses!: QuizReviewTiming;
+  @Expose()
+  @ApiProperty({ enum: QUIZ_REVIEW_TIMINGS, enumName: 'QuizReviewTiming' })
+  correctness!: QuizReviewTiming;
+  @Expose()
+  @ApiProperty({ enum: QUIZ_REVIEW_TIMINGS, enumName: 'QuizReviewTiming' })
+  correctAnswer!: QuizReviewTiming;
+  @Expose()
+  @ApiProperty({ enum: QUIZ_REVIEW_TIMINGS, enumName: 'QuizReviewTiming' })
+  feedback!: QuizReviewTiming;
+  @Expose()
+  @ApiProperty({ enum: QUIZ_REVIEW_TIMINGS, enumName: 'QuizReviewTiming' })
+  overallMark!: QuizReviewTiming;
+}
 
 export class CreateQuizDto extends AvailabilityDto {
   @ApiProperty({ maxLength: MAX_NAME, example: 'Week 1 quiz' })
@@ -146,6 +216,16 @@ export class CreateQuizDto extends AvailabilityDto {
   layout?: QuizLayout;
 
   @ApiPropertyOptional({
+    type: QuizReviewOptionsDto,
+    description:
+      'What a student sees of a closed attempt, and when. Unset options keep their value (on create: answers, right or wrong, feedback and the mark at once; the right answers once the quiz closes).',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => QuizReviewOptionsDto)
+  review?: QuizReviewOptionsDto;
+
+  @ApiPropertyOptional({
     minimum: 0,
     exclusiveMinimum: true,
     maximum: MAX_POINTS,
@@ -208,6 +288,10 @@ export class QuizSettingsResponseDto {
   @Expose() @ApiProperty() shuffleQuestions!: boolean;
   @Expose() @ApiProperty() shuffleChoices!: boolean;
   @Expose() @ApiProperty({ enum: QUIZ_LAYOUTS, enumName: 'QuizLayout' }) layout!: QuizLayout;
+
+  @Expose()
+  @ApiProperty({ type: QuizReviewOptionsResponseDto })
+  review!: QuizReviewOptionsResponseDto;
 
   @Expose()
   @ApiProperty({ description: 'How many questions an attempt asks.' })
@@ -291,6 +375,7 @@ export class QuizResponseDto extends AvailabilityResponseDto {
               shuffleQuestions: quiz.shuffleQuestions,
               shuffleChoices: quiz.shuffleChoices,
               layout: quiz.layout,
+              review: Object.assign(new QuizReviewOptionsResponseDto(), reviewSettingsOf(quiz)),
               questionCount: totals?.questionCount ?? 0,
               attempts: attemptStateAt(
                 { opensAt: activity.opensAt, closesAt: activity.dueAt },

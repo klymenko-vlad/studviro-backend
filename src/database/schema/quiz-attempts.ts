@@ -8,6 +8,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  text,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -95,12 +96,20 @@ export const quizAttemptQuestions = pgTable(
     response: jsonb('response').$type<AttemptResponse>(),
     answeredAt: timestampColumn('answered_at'),
     autoMark: numeric('auto_mark', { precision: 10, scale: 4 }),
+    manualMark: numeric('manual_mark', { precision: 10, scale: 4 }),
+    markedById: uuid('marked_by_id').references(() => users.id, { onDelete: 'set null' }),
+    markedAt: timestampColumn('marked_at'),
+    comment: text('comment'),
     ...timestamps,
   },
   (table) => [
     uniqueIndex('quiz_attempt_questions_position_idx').on(table.attemptId, table.position),
     index('quiz_attempt_questions_slot_idx').on(table.slotId),
     check('quiz_attempt_questions_mark_positive', sql`${table.mark} > 0`),
+    check(
+      'quiz_attempt_questions_manual_mark_range',
+      sql`${table.manualMark} is null or (${table.manualMark} >= 0 and ${table.manualMark} <= ${table.mark})`,
+    ),
   ],
 );
 

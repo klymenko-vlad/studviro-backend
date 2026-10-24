@@ -10772,7 +10772,7 @@
     },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/attempts": {
       "get": {
-        "description": "For the course’s authors. Closes any attempt past its deadline first.",
+        "description": "For the course’s authors. Closes any attempt past its deadline first. `needsMarking=true` is the marking queue.",
         "operationId": "listQuizAttempts",
         "parameters": [
           {
@@ -10826,6 +10826,15 @@
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/QuizAttemptProgress"
+            }
+          },
+          {
+            "name": "needsMarking",
+            "required": false,
+            "in": "query",
+            "description": "True: only closed attempts waiting for a teacher’s mark. False: only final ones.",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -11005,7 +11014,7 @@
     },
     "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/attempts/mine": {
       "get": {
-        "description": "States only: no mark and no answer.",
+        "description": "States, and the mark and whether it can be reviewed only as far as the quiz’s review options allow now.",
         "operationId": "listMyQuizAttempts",
         "parameters": [
           {
@@ -11220,6 +11229,117 @@
           }
         ],
         "summary": "One of the caller’s attempts, with its questions and saved answers while it runs",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/attempts/{attemptId}/review": {
+      "get": {
+        "description": "Each option is shown immediately, once the quiz has closed, or never, on the server’s clock. Nothing kept back is sent. 409 while the attempt runs.",
+        "operationId": "reviewQuizAttempt",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptReviewResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "One of the caller’s closed attempts, as much as the quiz’s review options show now",
         "tags": [
           "learning"
         ]
@@ -11450,6 +11570,541 @@
           }
         ],
         "summary": "Hand the attempt in; it is marked straight away",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/attempts/{attemptId}/marking": {
+      "get": {
+        "operationId": "getQuizAttemptForMarking",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptMarkingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A student’s attempt with every answer, key and mark, for the course’s authors",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/attempts/{attemptId}/questions/{position}/mark": {
+      "put": {
+        "description": "The attempt’s total, the student’s quiz grade, completion and what unlocks after it follow. The marker and the time are kept.",
+        "operationId": "markQuizQuestion",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "position",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkQuizQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptMarkingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Mark an essay, or change an automatic mark with a reason",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/regrade": {
+      "get": {
+        "operationId": "previewQuizRegrade",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizRegradeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "What regrading against the latest versions of the questions would change",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "description": "A teacher’s mark on a question stands. Running it again changes nothing.",
+        "operationId": "regradeQuiz",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizRegradeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move closed attempts to the latest versions of their questions and mark them again",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/results": {
+      "get": {
+        "operationId": "listQuizQuestionResults",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to questions whose name or text contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResultsPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "How each question went across closed attempts, a page of questions at a time",
         "tags": [
           "learning"
         ]
@@ -24046,6 +24701,61 @@
           "all_on_one"
         ]
       },
+      "QuizReviewTiming": {
+        "type": "string",
+        "enum": [
+          "immediately",
+          "after_close",
+          "never"
+        ]
+      },
+      "QuizReviewOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "responses": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "correctness": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "correctAnswer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "feedback": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "overallMark": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          }
+        },
+        "required": [
+          "responses",
+          "correctness",
+          "correctAnswer",
+          "feedback",
+          "overallMark"
+        ]
+      },
       "QuizAttemptState": {
         "type": "string",
         "enum": [
@@ -24086,6 +24796,9 @@
               }
             ]
           },
+          "review": {
+            "$ref": "#/components/schemas/QuizReviewOptionsResponseDto"
+          },
           "questionCount": {
             "type": "number",
             "description": "How many questions an attempt asks."
@@ -24106,6 +24819,7 @@
           "shuffleQuestions",
           "shuffleChoices",
           "layout",
+          "review",
           "questionCount",
           "attempts"
         ]
@@ -25024,6 +25738,51 @@
           "defaultMark"
         ]
       },
+      "QuizReviewOptionsDto": {
+        "type": "object",
+        "properties": {
+          "responses": {
+            "description": "Their own answers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "correctness": {
+            "description": "Whether each answer was right, and the marks per question.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "correctAnswer": {
+            "description": "The right answers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "feedback": {
+            "description": "General and per-choice feedback, and the marker’s comment.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          },
+          "overallMark": {
+            "description": "The mark for each attempt and the quiz grade, in the gradebook too.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewTiming"
+              }
+            ]
+          }
+        }
+      },
       "CreateQuizDto": {
         "type": "object",
         "properties": {
@@ -25120,6 +25879,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/QuizLayout"
+              }
+            ]
+          },
+          "review": {
+            "description": "What a student sees of a closed attempt, and when. Unset options keep their value (on create: answers, right or wrong, feedback and the mark at once; the right answers once the quiz closes).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewOptionsDto"
               }
             ]
           },
@@ -25259,6 +26026,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/QuizLayout"
+              }
+            ]
+          },
+          "review": {
+            "description": "What a student sees of a closed attempt, and when. Unset options keep their value (on create: answers, right or wrong, feedback and the mark at once; the right answers once the quiz closes).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewOptionsDto"
               }
             ]
           },
@@ -25613,6 +26388,60 @@
           "meta"
         ]
       },
+      "QuizAttemptScoreDto": {
+        "type": "object",
+        "properties": {
+          "rawMarks": {
+            "type": "number",
+            "nullable": true,
+            "description": "Null while it waits for marking."
+          },
+          "maxMarks": {
+            "type": "number"
+          },
+          "points": {
+            "type": "number",
+            "nullable": true,
+            "description": "Null while it waits for marking."
+          },
+          "maxPoints": {
+            "type": "number"
+          },
+          "awaitingMarking": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rawMarks",
+          "maxMarks",
+          "points",
+          "maxPoints",
+          "awaitingMarking"
+        ]
+      },
+      "QuizAttemptReviewStateDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether the attempt can be reviewed now, on the server clock."
+          },
+          "score": {
+            "nullable": true,
+            "description": "Null while the quiz’s review options keep the mark back.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptScoreDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "score"
+        ]
+      },
       "MyQuizAttemptDto": {
         "type": "object",
         "properties": {
@@ -25646,6 +26475,9 @@
                 "$ref": "#/components/schemas/QuizAttemptCloser"
               }
             ]
+          },
+          "review": {
+            "$ref": "#/components/schemas/QuizAttemptReviewStateDto"
           }
         },
         "required": [
@@ -25654,7 +26486,8 @@
           "state",
           "startedAt",
           "finishedAt",
-          "closedBy"
+          "closedBy",
+          "review"
         ]
       },
       "QuizStartBlock": {
@@ -25940,6 +26773,277 @@
           "questions"
         ]
       },
+      "QuizReviewShownDto": {
+        "type": "object",
+        "properties": {
+          "responses": {
+            "type": "boolean",
+            "description": "Their own answers."
+          },
+          "correctness": {
+            "type": "boolean",
+            "description": "Whether each answer was right, and the marks per question."
+          },
+          "correctAnswer": {
+            "type": "boolean",
+            "description": "The right answers."
+          },
+          "feedback": {
+            "type": "boolean",
+            "description": "General and per-choice feedback, and the marker’s comment."
+          },
+          "overallMark": {
+            "type": "boolean",
+            "description": "The mark for the attempt."
+          }
+        },
+        "required": [
+          "responses",
+          "correctness",
+          "correctAnswer",
+          "feedback",
+          "overallMark"
+        ]
+      },
+      "QuizQuestionOutcome": {
+        "type": "string",
+        "enum": [
+          "right",
+          "partial",
+          "wrong",
+          "not_answered",
+          "needs_marking"
+        ],
+        "description": "Null while right and wrong are kept back."
+      },
+      "QuizRevealedKeyDto": {
+        "type": "object",
+        "properties": {
+          "choices": {
+            "nullable": true,
+            "description": "Right choice ids.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "value": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "texts": {
+            "nullable": true,
+            "description": "Accepted answers.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "number": {
+            "type": "number",
+            "nullable": true
+          },
+          "tolerance": {
+            "type": "number",
+            "nullable": true
+          },
+          "pairs": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchedPairResponseDto"
+            }
+          }
+        },
+        "required": [
+          "choices",
+          "value",
+          "texts",
+          "number",
+          "tolerance",
+          "pairs"
+        ]
+      },
+      "QuizQuestionReviewDto": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "mark": {
+            "type": "number"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "response": {
+            "nullable": true,
+            "description": "Null when unanswered, or while their answers are kept back.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAnswerDto"
+              }
+            ]
+          },
+          "outcome": {
+            "nullable": true,
+            "description": "Null while right and wrong are kept back.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizQuestionOutcome"
+              }
+            ]
+          },
+          "awarded": {
+            "type": "number",
+            "nullable": true,
+            "description": "Marks earned, when shown."
+          },
+          "key": {
+            "nullable": true,
+            "description": "When shown.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizRevealedKeyDto"
+              }
+            ]
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "specificFeedback": {
+            "description": "Feedback on what was picked.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true,
+            "description": "The marker’s comment."
+          }
+        },
+        "required": [
+          "position",
+          "type",
+          "text",
+          "mark",
+          "choices",
+          "prompts",
+          "answers",
+          "response",
+          "outcome",
+          "awarded",
+          "key",
+          "generalFeedback",
+          "specificFeedback",
+          "comment"
+        ]
+      },
+      "QuizAttemptReviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quizId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "closedBy": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptCloser"
+              }
+            ]
+          },
+          "shown": {
+            "description": "What the quiz lets them see now.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizReviewShownDto"
+              }
+            ]
+          },
+          "revealsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "When more becomes visible: the quiz’s close, if something waits for it."
+          },
+          "score": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptScoreDto"
+              }
+            ]
+          },
+          "questions": {
+            "description": "Empty when no per-question option is shown.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionReviewDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "quizId",
+          "attempt",
+          "startedAt",
+          "finishedAt",
+          "closedBy",
+          "shown",
+          "revealsAt",
+          "score",
+          "questions"
+        ]
+      },
       "MatchedPairDto": {
         "type": "object",
         "properties": {
@@ -26031,6 +27135,410 @@
           "response",
           "savedAt",
           "remainingSeconds"
+        ]
+      },
+      "MarkedQuizQuestionDto": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "mark": {
+            "type": "number"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizAttemptPartDto"
+            }
+          },
+          "response": {
+            "nullable": true,
+            "description": "Null when unanswered, or while their answers are kept back.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAnswerDto"
+              }
+            ]
+          },
+          "outcome": {
+            "nullable": true,
+            "description": "Null while right and wrong are kept back.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizQuestionOutcome"
+              }
+            ]
+          },
+          "awarded": {
+            "type": "number",
+            "nullable": true,
+            "description": "Marks earned, when shown."
+          },
+          "key": {
+            "nullable": true,
+            "description": "When shown.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizRevealedKeyDto"
+              }
+            ]
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "specificFeedback": {
+            "description": "Feedback on what was picked.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true,
+            "description": "The marker’s comment."
+          },
+          "autoMark": {
+            "type": "number",
+            "nullable": true,
+            "description": "What marking by the key gave."
+          },
+          "manualMark": {
+            "type": "number",
+            "nullable": true,
+            "description": "A teacher’s mark, which stands."
+          },
+          "markedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "position",
+          "type",
+          "text",
+          "mark",
+          "choices",
+          "prompts",
+          "answers",
+          "response",
+          "outcome",
+          "awarded",
+          "key",
+          "generalFeedback",
+          "specificFeedback",
+          "comment",
+          "autoMark",
+          "manualMark",
+          "markedAt"
+        ]
+      },
+      "QuizAttemptMarkingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "state": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptProgress"
+              }
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "closedBy": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptCloser"
+              }
+            ]
+          },
+          "student": {
+            "$ref": "#/components/schemas/AttemptStudentDto"
+          },
+          "maxMarks": {
+            "type": "number"
+          },
+          "rawMarks": {
+            "type": "number",
+            "nullable": true,
+            "description": "Marks earned, once closed."
+          },
+          "points": {
+            "type": "number",
+            "nullable": true,
+            "description": "Scaled to what the quiz is worth; provisional while it needs marking."
+          },
+          "needsMarking": {
+            "type": "boolean"
+          },
+          "missingQuestions": {
+            "type": "number"
+          },
+          "score": {
+            "$ref": "#/components/schemas/QuizAttemptScoreDto"
+          },
+          "questions": {
+            "description": "Once it has closed.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarkedQuizQuestionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "attempt",
+          "state",
+          "startedAt",
+          "finishedAt",
+          "closedBy",
+          "student",
+          "maxMarks",
+          "rawMarks",
+          "points",
+          "needsMarking",
+          "missingQuestions",
+          "score",
+          "questions"
+        ]
+      },
+      "MarkQuizQuestionDto": {
+        "type": "object",
+        "properties": {
+          "mark": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "The mark, up to what the question is worth. Null takes a teacher’s mark away: an essay waits for marking again, any other question goes back to its automatic mark."
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 5000,
+            "description": "A comment for an essay; the reason, required, for changing an automatic mark."
+          }
+        },
+        "required": [
+          "mark"
+        ]
+      },
+      "QuizRegradeResponseDto": {
+        "type": "object",
+        "properties": {
+          "outdatedAttempts": {
+            "type": "number",
+            "description": "Closed attempts that asked an earlier version of a question."
+          },
+          "incompatible": {
+            "type": "number",
+            "description": "Questions left as they were because the new version has a different number of choices or pairs."
+          },
+          "regradedAttempts": {
+            "type": "number",
+            "description": "Attempts moved to the latest versions."
+          },
+          "changedAttempts": {
+            "type": "number",
+            "description": "Attempts whose score changes."
+          },
+          "changedStudents": {
+            "type": "number",
+            "description": "Students whose quiz grade changes."
+          },
+          "largestRise": {
+            "type": "number",
+            "description": "The largest rise in a student’s grade, in points."
+          },
+          "largestFall": {
+            "type": "number",
+            "description": "The largest fall in a student’s grade, in points."
+          },
+          "applied": {
+            "type": "boolean",
+            "description": "False for a preview."
+          }
+        },
+        "required": [
+          "outdatedAttempts",
+          "incompatible",
+          "regradedAttempts",
+          "changedAttempts",
+          "changedStudents",
+          "largestRise",
+          "largestFall",
+          "applied"
+        ]
+      },
+      "QuizChosenOptionDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true,
+            "description": "A choice’s text."
+          },
+          "value": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "True or false."
+          },
+          "correct": {
+            "type": "boolean",
+            "description": "Right in the latest version."
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "text",
+          "value",
+          "correct",
+          "count"
+        ]
+      },
+      "QuizChoiceDistributionDto": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizChosenOptionDto"
+            }
+          },
+          "unanswered": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "options",
+          "unanswered"
+        ]
+      },
+      "QuizQuestionResultDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "The latest version’s name."
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "attempts": {
+            "type": "number",
+            "description": "Closed attempts that asked it."
+          },
+          "fullyRight": {
+            "type": "number"
+          },
+          "awaitingMarking": {
+            "type": "number"
+          },
+          "fullyRightPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Of those marked, in per cent."
+          },
+          "averageMark": {
+            "type": "number",
+            "nullable": true
+          },
+          "averageOutOf": {
+            "type": "number",
+            "nullable": true,
+            "description": "What it was worth, on average."
+          },
+          "distribution": {
+            "nullable": true,
+            "description": "For single choice, multiple choice and true or false.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizChoiceDistributionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "questionId",
+          "name",
+          "type",
+          "attempts",
+          "fullyRight",
+          "awaitingMarking",
+          "fullyRightPercent",
+          "averageMark",
+          "averageOutOf",
+          "distribution"
+        ]
+      },
+      "QuizResultsPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionResultDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
         ]
       },
       "CreateDemoRequestDto": {

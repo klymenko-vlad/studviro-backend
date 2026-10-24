@@ -203,6 +203,22 @@ describe('the learning half it seeds', () => {
     expect(attempts.some((attempt) => !attempt.drawnKeys.includes(essay))).toBe(true);
   });
 
+  it('leaves the latest essay attempt in the marking queue and has the teacher mark the rest', () => {
+    const bank = planQuizBank(spaces);
+    const attempts = planQuizAttempts(bank, enrollments);
+    const essays = attempts.filter((attempt) => attempt.essayMark !== undefined);
+    const waiting = essays.filter((attempt) => attempt.essayMark === null);
+
+    expect(essays.length).toBeGreaterThan(1);
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0]!.finishedAt).toEqual(
+      new Date(Math.max(...essays.map((attempt) => attempt.finishedAt.getTime()))),
+    );
+    expect(attempts.find((attempt) => attempt.studentKey === 'PSN-S-0017')?.essayMark).not.toBe(
+      null,
+    );
+  });
+
   it('gives only the current year a learning space', () => {
     expect(spaces.length).toBeGreaterThan(0);
     expect(spaces.every((space) => space.offering.term.yearOffset === 0)).toBe(true);

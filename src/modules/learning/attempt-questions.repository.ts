@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 
 import {
   questions,
@@ -21,6 +21,15 @@ export interface AskedVersion {
 
 export interface AskedQuestion extends AskedVersion {
   readonly row: QuizAttemptQuestion;
+  readonly questionId: string;
+  readonly generalFeedback: string | null;
+}
+
+export interface ManualMark {
+  readonly manualMark: number | null;
+  readonly comment: string | null;
+  readonly markerId: string;
+  readonly now: Date;
 }
 
 @Injectable()
@@ -48,7 +57,10 @@ export class AttemptQuestionsRepository {
     return pools;
   }
 
-  async latestVersions(questionIds: readonly string[]): Promise<Map<string, AskedVersion>> {
+  async latestVersions(
+    questionIds: readonly string[],
+    includeRemoved = false,
+  ): Promise<Map<string, AskedVersion>> {
     if (questionIds.length === 0) return new Map();
 
     const rows = await this.client
@@ -67,7 +79,12 @@ export class AttemptQuestionsRepository {
           eq(questionVersions.version, questions.latestVersion),
         ),
       )
-      .where(and(inArray(questions.id, [...questionIds]), isNull(questions.deletedAt)));
+      .where(
+        and(
+          inArray(questions.id, [...questionIds]),
+          includeRemoved ? undefined : isNull(questions.deletedAt),
+        ),
+      );
 
     return new Map(rows.map(({ questionId, ...version }) => [questionId, version]));
   }
@@ -115,10 +132,40 @@ export class AttemptQuestionsRepository {
       .where(eq(quizAttemptQuestions.id, id));
   }
 
-  private async asked(where: ReturnType<typeof and>): Promise<AskedQuestion[]> {
+  async ofAttempts(attemptIds: readonly string[]): Promise<AskedQuestion[]> {
+    if (attemptIds.length === 0) return [];
+
+    return this.asked(inArray(quizAttemptQuestions.attemptId, [...attemptIds]));
+  }
+
+  async setManualMark(id: string, mark: ManualMark): Promise<void> {
+    await this.client
+      .update(quizAttemptQuestions)
+      .set({
+        manualMark: mark.manualMark === null ? null : mark.manualMark.toFixed(4),
+        comment: mark.comment,
+        markedById: mark.markerId,
+        markedAt: mark.now,
+      })
+      .where(eq(quizAttemptQuestions.id, id));
+  }
+
+  async moveVersion(id: string, versionId: string, autoMark: number | null): Promise<void> {
+    await this.client
+      .update(quizAttemptQuestions)
+      .set({
+        questionVersionId: versionId,
+        autoMark: autoMark === null ? null : autoMark.toFixed(4),
+      })
+      .where(eq(quizAttemptQuestions.id, id));
+  }
+
+  private async asked(where: SQL | undefined): Promise<AskedQuestion[]> {
     const rows = await this.client
       .select({
         row: quizAttemptQuestions,
+        questionId: questions.id,
+        generalFeedback: questionVersions.generalFeedback,
         versionId: questionVersions.id,
         type: questions.type,
         text: questionVersions.text,
@@ -131,7 +178,7 @@ export class AttemptQuestionsRepository {
       )
       .innerJoin(questions, eq(questions.id, questionVersions.questionId))
       .where(where)
-      .orderBy(asc(quizAttemptQuestions.position));
+      .orderBy(asc(quizAttemptQuestions.attemptId), asc(quizAttemptQuestions.position));
 
     return rows;
   }
