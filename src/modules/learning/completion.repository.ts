@@ -19,6 +19,7 @@ import {
   assessments,
   learningActivities,
   learningMaterials,
+  quizAttempts,
   submissions,
   type ActivityCompletionState,
 } from '../../database/schema';
@@ -92,19 +93,9 @@ export class CompletionRepository {
     if (item.kind === 'material') return [...byUser.values()];
 
     const [handedIn, marks] = await Promise.all([
-      this.client
-        .select({ userId: submissions.userId, submittedAt: min(submissions.submittedAt) })
-        .from(submissions)
-        .where(
-          and(
-            eq(submissions.learningActivityId, item.id),
-            ne(submissions.state, 'draft'),
-            isNotNull(submissions.submittedAt),
-            isNull(submissions.deletedAt),
-            forUsers(submissions.userId, userIds),
-          ),
-        )
-        .groupBy(submissions.userId),
+      item.kind === 'quiz'
+        ? this.finishedAttempts(item, userIds)
+        : this.handedIn(item, userIds),
       this.client
         .select({
           userId: assessmentResults.userId,
@@ -263,6 +254,36 @@ export class CompletionRepository {
 
       return [];
     });
+  }
+
+  private handedIn(item: CompletionItem, userIds?: readonly string[]) {
+    return this.client
+      .select({ userId: submissions.userId, submittedAt: min(submissions.submittedAt) })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.learningActivityId, item.id),
+          ne(submissions.state, 'draft'),
+          isNotNull(submissions.submittedAt),
+          isNull(submissions.deletedAt),
+          forUsers(submissions.userId, userIds),
+        ),
+      )
+      .groupBy(submissions.userId);
+  }
+
+  private finishedAttempts(item: CompletionItem, userIds?: readonly string[]) {
+    return this.client
+      .select({ userId: quizAttempts.userId, submittedAt: min(quizAttempts.finishedAt) })
+      .from(quizAttempts)
+      .where(
+        and(
+          eq(quizAttempts.learningActivityId, item.id),
+          eq(quizAttempts.state, 'finished'),
+          forUsers(quizAttempts.userId, userIds),
+        ),
+      )
+      .groupBy(quizAttempts.userId);
   }
 
   private recordedRows(item: CompletionItem, userIds?: readonly string[]) {

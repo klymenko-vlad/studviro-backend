@@ -25,6 +25,7 @@ import {
   planSubmissions,
   sectionKey,
 } from './derive-learning';
+import { planQuizAttempts } from './derive-quiz-attempts';
 import { planQuizBank } from './derive-quiz-bank';
 import { DEFAULT_DEMO_SEED_OPTIONS } from './options';
 import { allCourses, allPersons, allPrograms, allRooms } from './plan';
@@ -176,6 +177,30 @@ describe('the learning half it seeds', () => {
     expect(bank!.quiz.sectionKey).toBe(sectionKey(algorithms!, 0));
     expect(bank!.quiz.slots.some((slot) => slot.kind === 'random')).toBe(true);
     expect(bank!.quiz.slots.some((slot) => slot.kind === 'question')).toBe(true);
+  });
+
+  it('gives every other Algorithms student one finished attempt at the quiz, with a second left', () => {
+    const bank = planQuizBank(spaces);
+    const attempts = planQuizAttempts(bank, enrollments);
+    const cohort = enrollments.filter(
+      (enrollment) =>
+        enrollment.offering.key === bank!.space.offering.key && enrollment.status === 'active',
+    );
+
+    expect(attempts).toHaveLength(Math.ceil(cohort.length / 2));
+    expect(attempts.map((attempt) => attempt.studentKey)).toContain('PSN-S-0017');
+    expect(bank!.quiz.maxAttempts).toBe(2);
+    expect(
+      attempts.every(
+        (attempt) =>
+          attempt.startedAt >= bank!.quiz.opensAt &&
+          attempt.finishedAt > attempt.startedAt &&
+          attempt.finishedAt <= options.anchor,
+      ),
+    ).toBe(true);
+    const essay = bank!.questions.find((question) => question.type === 'essay')!.key;
+    expect(attempts.some((attempt) => attempt.drawnKeys.includes(essay))).toBe(true);
+    expect(attempts.some((attempt) => !attempt.drawnKeys.includes(essay))).toBe(true);
   });
 
   it('gives only the current year a learning space', () => {

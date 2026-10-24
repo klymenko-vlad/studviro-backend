@@ -20,8 +20,10 @@ import {
 import {
   COMPLETION_RULES,
   QUIZ_GRADING_METHODS,
+  QUIZ_LAYOUTS,
   type CompletionRule,
   type QuizGradingMethod,
+  type QuizLayout,
 } from '../../../database/schema';
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import { QUIZ_COMPLETION_RULES } from '../completion-rule';
@@ -135,6 +137,15 @@ export class CreateQuizDto extends AvailabilityDto {
   shuffleChoices?: boolean;
 
   @ApiPropertyOptional({
+    enum: QUIZ_LAYOUTS,
+    enumName: 'QuizLayout',
+    description: 'One question per page (the default) or every question on one page.',
+  })
+  @IsOptional()
+  @IsIn(QUIZ_LAYOUTS)
+  layout?: QuizLayout;
+
+  @ApiPropertyOptional({
     minimum: 0,
     exclusiveMinimum: true,
     maximum: MAX_POINTS,
@@ -196,6 +207,7 @@ export class QuizSettingsResponseDto {
 
   @Expose() @ApiProperty() shuffleQuestions!: boolean;
   @Expose() @ApiProperty() shuffleChoices!: boolean;
+  @Expose() @ApiProperty({ enum: QUIZ_LAYOUTS, enumName: 'QuizLayout' }) layout!: QuizLayout;
 
   @Expose()
   @ApiProperty({ description: 'How many questions an attempt asks.' })
@@ -278,6 +290,7 @@ export class QuizResponseDto extends AvailabilityResponseDto {
               gradingMethod: quiz.gradingMethod,
               shuffleQuestions: quiz.shuffleQuestions,
               shuffleChoices: quiz.shuffleChoices,
+              layout: quiz.layout,
               questionCount: totals?.questionCount ?? 0,
               attempts: attemptStateAt(
                 { opensAt: activity.opensAt, closesAt: activity.dueAt },

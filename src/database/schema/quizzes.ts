@@ -102,6 +102,10 @@ export const QUIZ_GRADING_METHODS = ['highest', 'last', 'average'] as const;
 export type QuizGradingMethod = (typeof QUIZ_GRADING_METHODS)[number];
 export const quizGradingMethod = pgEnum('quiz_grading_method', QUIZ_GRADING_METHODS);
 
+export const QUIZ_LAYOUTS = ['one_per_page', 'all_on_one'] as const;
+export type QuizLayout = (typeof QUIZ_LAYOUTS)[number];
+export const quizLayout = pgEnum('quiz_layout', QUIZ_LAYOUTS);
+
 export const quizzes = pgTable('quizzes', {
   learningActivityId: uuid('learning_activity_id')
     .primaryKey()
@@ -111,6 +115,7 @@ export const quizzes = pgTable('quizzes', {
   gradingMethod: quizGradingMethod('grading_method').notNull().default('highest'),
   shuffleQuestions: boolean('shuffle_questions').notNull().default(false),
   shuffleChoices: boolean('shuffle_choices').notNull().default(true),
+  layout: quizLayout('layout').notNull().default('one_per_page'),
   ...timestamps,
 });
 

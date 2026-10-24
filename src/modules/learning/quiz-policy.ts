@@ -46,3 +46,22 @@ export function slotTotals(
     { questionCount: 0, totalMarks: 0 },
   );
 }
+
+export const START_BLOCKS = ['upcoming', 'closed', 'no_attempts_left', 'no_questions'] as const;
+export type StartBlock = (typeof START_BLOCKS)[number];
+
+export interface StartFacts {
+  readonly window: QuizWindow;
+  readonly maxAttempts: number | null;
+  readonly used: number;
+  readonly questionCount: number;
+}
+
+export function startBlockOf(facts: StartFacts, now: Date): StartBlock | null {
+  const state = attemptStateAt(facts.window, now);
+  if (state !== 'open') return state;
+  if (facts.maxAttempts !== null && facts.used >= facts.maxAttempts) return 'no_attempts_left';
+  if (facts.questionCount === 0) return 'no_questions';
+
+  return null;
+}

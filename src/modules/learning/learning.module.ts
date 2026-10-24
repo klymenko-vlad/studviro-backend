@@ -3,11 +3,13 @@ import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { AssessmentResultsRepository } from './assessment-results.repository';
 import { AssignmentAnnouncementSweepService } from './assignment-announcement-sweep.service';
 import { AssignmentAnnouncementsRepository } from './assignment-announcements.repository';
 import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
+import { AttemptQuestionsRepository } from './attempt-questions.repository';
 import { CompletionReportService } from './completion-report.service';
 import { CompletionController } from './completion.controller';
 import { CompletionRepository } from './completion.repository';
@@ -45,6 +47,16 @@ import { QuestionCategoriesController } from './question-categories.controller';
 import { QuestionCategoriesRepository } from './question-categories.repository';
 import { QuestionCategoriesService } from './question-categories.service';
 import { QuestionsRepository } from './questions.repository';
+import { QuizAttemptAccessService } from './quiz-attempt-access.service';
+import { QuizAttemptBuilder } from './quiz-attempt-builder';
+import { QuizAttemptClosingService } from './quiz-attempt-closing.service';
+import { QuizAttemptListsService } from './quiz-attempt-lists.service';
+import { QuizAttemptPagesRepository } from './quiz-attempt-pages.repository';
+import { QuizAttemptSweepService } from './quiz-attempt-sweep.service';
+import { QuizAttemptsController } from './quiz-attempts.controller';
+import { QuizAttemptsRepository } from './quiz-attempts.repository';
+import { QuizAttemptsService } from './quiz-attempts.service';
+import { QuizGradebookService } from './quiz-gradebook.service';
 import { QuizSlotsController } from './quiz-slots.controller';
 import { QuizSlotsRepository } from './quiz-slots.repository';
 import { QuizSlotsService } from './quiz-slots.service';
@@ -84,6 +96,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuestionBankController,
     QuizzesController,
     QuizSlotsController,
+    QuizAttemptsController,
   ],
   providers: [
     LearningAccessService,
@@ -127,6 +140,17 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     QuizzesService,
     QuizSlotsRepository,
     QuizSlotsService,
+    AssessmentResultsRepository,
+    AttemptQuestionsRepository,
+    QuizAttemptsRepository,
+    QuizAttemptPagesRepository,
+    QuizAttemptAccessService,
+    QuizAttemptBuilder,
+    QuizGradebookService,
+    QuizAttemptClosingService,
+    QuizAttemptSweepService,
+    QuizAttemptsService,
+    QuizAttemptListsService,
   ],
   exports: [
     LearningSpacesService,

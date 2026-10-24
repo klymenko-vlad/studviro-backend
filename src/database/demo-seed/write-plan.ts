@@ -51,11 +51,13 @@ import {
   planSpaces,
   planSubmissions,
 } from './derive-learning';
+import { planQuizAttempts } from './derive-quiz-attempts';
 import { planQuizBank } from './derive-quiz-bank';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
 import { writeFolderFiles, type SeedObjectStore } from './write-folder-files';
+import { writeQuizAttempts } from './write-quiz-attempts';
 import { writeQuizBank } from './write-quiz-bank';
 
 export type SeedDatabase = Database;
@@ -681,7 +683,16 @@ export async function writePlan(
     }
   }
 
-  await writeQuizBank(db, institutionId, planQuizBank(plannedSpaces), spaceIds, sectionIds);
+  const plannedBank = planQuizBank(plannedSpaces);
+  const writtenBank = await writeQuizBank(db, institutionId, plannedBank, spaceIds, sectionIds);
+  const quizAttemptCount = await writeQuizAttempts(
+    db,
+    institutionId,
+    plannedBank,
+    writtenBank,
+    planQuizAttempts(plannedBank, plannedEnrollments),
+    personIds,
+  );
 
   for (const planned of planRestrictions(plannedSpaces)) {
     const itemId = required(assignmentIds, planned.condition.assignmentKey, 'assignment');
@@ -795,6 +806,7 @@ export async function writePlan(
       submissions: submissionRows.length,
       marks: marks.length,
       completions: completions.length,
+      quizAttempts: quizAttemptCount,
     },
   };
 }

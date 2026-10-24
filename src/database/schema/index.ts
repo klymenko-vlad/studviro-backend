@@ -16,6 +16,8 @@ export * from './learning-restrictions';
 export * from './notifications';
 export * from './password-reset-tokens';
 export * from './question-answer-key';
+export * from './quiz-attempt-response';
+export * from './quiz-attempts';
 export * from './quizzes';
 export * from './refresh-tokens';
 export * from './role-assignments';

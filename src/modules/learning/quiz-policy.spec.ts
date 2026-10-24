@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { InvalidInputError } from '../../common/errors/domain.error';
 
-import { assertQuizWindow, attemptStateAt, slotTotals } from './quiz-policy';
+import { assertQuizWindow, attemptStateAt, slotTotals, startBlockOf } from './quiz-policy';
 
 const at = (iso: string) => new Date(iso);
 
@@ -57,5 +57,23 @@ describe('slotTotals', () => {
 
   it('is nothing for an empty quiz', () => {
     expect(slotTotals([])).toEqual({ questionCount: 0, totalMarks: 0 });
+  });
+});
+
+describe('startBlockOf', () => {
+  const open = { opensAt: at('2026-11-02T08:00Z'), closesAt: at('2026-11-02T10:00Z') };
+  const now = at('2026-11-02T09:00Z');
+  const ready = { window: open, maxAttempts: 2, used: 1, questionCount: 3 };
+
+  it('lets a student start while the quiz is open, with attempts and questions left', () => {
+    expect(startBlockOf(ready, now)).toBeNull();
+    expect(startBlockOf({ ...ready, maxAttempts: null, used: 40 }, now)).toBeNull();
+  });
+
+  it('says why a student cannot start', () => {
+    expect(startBlockOf(ready, at('2026-11-02T07:59Z'))).toBe('upcoming');
+    expect(startBlockOf(ready, at('2026-11-02T10:00Z'))).toBe('closed');
+    expect(startBlockOf({ ...ready, used: 2 }, now)).toBe('no_attempts_left');
+    expect(startBlockOf({ ...ready, questionCount: 0 }, now)).toBe('no_questions');
   });
 });

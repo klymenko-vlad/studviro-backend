@@ -7,6 +7,7 @@ import {
   learningActivities,
   type CompletionRule,
   type QuizGradingMethod,
+  type QuizLayout,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
@@ -41,6 +42,7 @@ export interface NewQuiz {
   readonly gradingMethod?: QuizGradingMethod;
   readonly shuffleQuestions?: boolean;
   readonly shuffleChoices?: boolean;
+  readonly layout?: QuizLayout;
   readonly maxPoints?: number;
   readonly countsTowardFinalGrade?: boolean;
   readonly visible?: boolean;
@@ -166,6 +168,7 @@ export class QuizzesService {
         gradingMethod: input.gradingMethod ?? 'highest',
         shuffleQuestions: input.shuffleQuestions ?? false,
         shuffleChoices: input.shuffleChoices ?? true,
+        layout: input.layout ?? 'one_per_page',
       });
 
       await this.announcements.announceNewlySeen(now, spaceId);
@@ -241,6 +244,7 @@ export class QuizzesService {
       gradingMethod: changes.gradingMethod,
       shuffleQuestions: changes.shuffleQuestions,
       shuffleChoices: changes.shuffleChoices,
+      layout: changes.layout,
     });
 
     return this.txHost.run(async () => {
