@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-24 (CB7)
+Last updated: 2026-10-24 (CB8)
 
 ## What this is
 
@@ -92,9 +92,9 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: CB8 of `docs/Course Builder Plan.md` — quiz review and marking.** Build it on
-the attempt tables of ADR 0051 (manual marks, review options, regrade). The remaining order
-is CB8, CB10. On
+**Next task: CB10 of `docs/Course Builder Plan.md` — reuse last year's course.** Copy an
+outline, its materials (files copied in the store), assignments, quizzes and the question
+bank (ADR 0050 says how) with dates shifted. It is the last step of the plan. On
 2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
 tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1** (2026-10-22)
 made a course page an outline of sections (ADR 0043). **CB2** (2026-10-23) added _available
@@ -124,9 +124,14 @@ own. **CB7** (2026-10-24) lets a student take one (ADR 0051): an attempt fixed a
 (versions, draws, shuffles), autosaved answer by answer, closed at submit or at the earlier
 of the time limit and the close on the server's clock — no grace, refused after, and swept
 every minute — marked on close with partial credit, scaled to the gradebook column and
-graded by highest / last / average over final attempts; essays stay provisional for CB8.
-Students get Start / Continue, their paged attempts and an attempt route; authors a paged,
-filtered attempts table on the quiz page. No correctness reaches a student. The client half is on branch
+graded by highest / last / average over final attempts. Students get Start / Continue, their
+paged attempts and an attempt route; authors a paged, filtered attempts table on the quiz
+page. **CB8** (2026-10-24) adds review and marking (ADR 0052): five review options (answers,
+right or wrong, right answers, feedback, the mark), each at once, once the quiz closes or
+never, applied by the server on its clock to the review and to the student's gradebook; the
+attempt route opens as a marking screen for authors (essays, and automatic marks changed
+with a reason, which stand over the key); a regrade with a preview after a key changes;
+grading-method and maximum changes recompute every grade; results by question. The client half is on branch
 `feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
 uncommitted interface work in `../frontend`; merge it to `dev` first.
 
@@ -152,9 +157,10 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 693 kB and measures 692.02 kB after CB7** (`.size-limit.mjs`; CB7 cost 16.26 kB, of which
-the attempt route is 10.4 kB, measured chunk by chunk against a clean CB6 build). CB8 will
-need room of its own; keep features that a route does not render out of its barrel imports.
+is 703 kB and measures 702.8 kB after CB8** (`.size-limit.mjs`; CB8 cost 10.78 kB, measured
+slice by slice against a build of the CB7 commit; a route of its own for marking cost 4.29 kB
+more than putting it on the attempt route, so it is not one). Keep features that a route does
+not render out of its barrel imports, and prefer an existing route to a new one.
 
 Noticed while walking, not fixed:
 

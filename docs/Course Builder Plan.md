@@ -188,12 +188,30 @@ page, and choose one question per page or all on one. No correctness or key reac
 student. The demo seed gives every other Algorithms student, Marek Novák among them, one
 finished attempt at the _Foundations quiz_, with a second left.
 
-### CB8 — Quiz review and marking · M
+### CB8 — Quiz review and marking · M · **Done 2026-10-24**
 
 Review options per quiz — what a student sees after an attempt and when (immediately,
 after the quiz closes, never): their answers, right/wrong, the correct answer, feedback.
 Teachers mark essay questions and override any automatic mark; changing an answer key
 offers a regrade. A per-question results view (how many got each question right).
+
+Shipped as **ADR 0052**: five review options (answers; right or wrong with marks per
+question; the right answers; feedback with the marker's comment; the overall mark), each
+_immediately_, _once the quiz closes_ or _never_ — by default everything at once except the
+right answers, which wait for the close. The server builds the student's review from them
+and its clock and sends nothing kept back; an unmarked essay keeps the mark back. A mark
+kept back is also left out of the student's gradebook and course page, and quiz marking
+sends no notification. Authors mark per question: an essay within its mark with an optional
+comment, any automatic mark changed only with a reason; the mark stands over the key, the
+attempt and the quiz grade recompute (withdrawn if no attempt stays final), completion and
+unlocks follow; marker and time are kept. The marking queue is the attempts table filtered
+to _needs marking_; the attempt route opens as the marking screen for authors. A regrade
+previews and then moves closed attempts to their questions' latest versions — hand marks
+survive, a version with a different number of choices or pairs is skipped and counted, a
+second run changes nothing — and changing the grading method or maximum recomputes every
+grade at once. _Results by question_ pages attempts, fully right, average mark and the
+options picked. The demo seed has the teacher's marks on all essay attempts but the latest,
+which waits in the queue; Marek Novák's attempt is reviewable.
 
 ### CB9 — Content for one group · S · **Done 2026-10-23**
 
@@ -238,7 +256,7 @@ _Back to editing_.
 - [x] CB5 — More things to put on a page
 - [x] CB6 — Quiz authoring and the question bank
 - [x] CB7 — Taking a quiz
-- [ ] CB8 — Quiz review and marking
+- [x] CB8 — Quiz review and marking
 - [x] CB9 — Content for one group
 - [ ] CB10 — Reuse last year's course
 - [x] CB11 — View as a student
@@ -321,15 +339,32 @@ _Back to editing_.
 - Two client-heavy routes cost about 16 kB of bundle each; CB7's attempt screen will cost
   more, so its budget should be planned, not discovered. (CB7 measured +16.26 kB; the
   ceiling is 693 kB.)
-- Changing a quiz's grading method or maximum does not rewrite the grades already in the
-  gradebook; CB8's regrade should cover both, not only a changed key.
+- ~~Changing a quiz's grading method or maximum does not rewrite the grades already in the
+  gradebook; CB8's regrade should cover both, not only a changed key.~~ Fixed in CB8:
+  recomputed at once with the settings change (ADR 0052).
 - An author cannot preview a quiz by taking it (attempts are for enrolled students); the
   student view shows the quiz row only. A preview attempt that is never graded would help.
-- The quiz grade appears in the student's gradebook as soon as an attempt closes, before
+- ~~The quiz grade appears in the student's gradebook as soon as an attempt closes, before
   CB8's review options exist; if a teacher wants marks hidden until the quiz closes, CB8
-  must gate the gradebook entry too, not only the attempt review.
+  must gate the gradebook entry too, not only the attempt review.~~ Done in CB8: the
+  gradebook and course page leave the row out until the overall mark may be seen.
 - The attempt's deadline is fixed at start, so extending a quiz's close (or the time limit)
   does not help a student already in an attempt; Moodle recomputes it.
 - On a phone the authors' attempts table scrolls sideways, like the other tables.
 - The `Choice` primitive is native; the restriction editor's and question editor's
   Switch-based checkbox lists could move to it.
+- A completion rule of _passed ≥ N_ and a _mark ≥ N_ restriction act on a quiz grade the
+  review options still keep back, so a student can infer a pass before the mark is shown
+  (ADR 0052, accepted).
+- Changing a slot's mark does not touch attempts already taken; Moodle regrades them. A
+  regrade could take the slot's current mark too.
+- A regrade loads every closed attempt of the quiz in memory; fine for a course, would need
+  batching for a quiz taken by thousands.
+- An empty essay waits for marking like a written one; Moodle marks an unanswered essay
+  zero at once.
+- The marking screen shows every question of the attempt on one page; an attempt of a
+  hundred questions would read better a page at a time or with a jump to the essays.
+- The marking queue is per quiz; a teacher has no list of everything waiting for them
+  across a course.
+- The personal-data export lists a quiz grade the review options still keep back; it is
+  the record of what is held (ADR 0052).
