@@ -39,6 +39,18 @@ import { MyDeadlinesController } from './my-deadlines.controller';
 import { MyDeadlinesRepository } from './my-deadlines.repository';
 import { MyDeadlinesService } from './my-deadlines.service';
 import { MyProgressService } from './my-progress.service';
+import { QuestionBankController } from './question-bank.controller';
+import { QuestionBankService } from './question-bank.service';
+import { QuestionCategoriesController } from './question-categories.controller';
+import { QuestionCategoriesRepository } from './question-categories.repository';
+import { QuestionCategoriesService } from './question-categories.service';
+import { QuestionsRepository } from './questions.repository';
+import { QuizSlotsController } from './quiz-slots.controller';
+import { QuizSlotsRepository } from './quiz-slots.repository';
+import { QuizSlotsService } from './quiz-slots.service';
+import { QuizzesController } from './quizzes.controller';
+import { QuizzesRepository } from './quizzes.repository';
+import { QuizzesService } from './quizzes.service';
 import { RestrictionFactsRepository } from './restriction-facts.repository';
 import { RestrictionRulesService } from './restriction-rules.service';
 import { SightReportService } from './sight-report.service';
@@ -68,6 +80,10 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     LearningSightController,
     StudentViewController,
     StudyGroupContentController,
+    QuestionCategoriesController,
+    QuestionBankController,
+    QuizzesController,
+    QuizSlotsController,
   ],
   providers: [
     LearningAccessService,
@@ -103,6 +119,14 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     CourseStudentsRepository,
     MyProgressService,
     CompletionReportService,
+    QuestionCategoriesRepository,
+    QuestionCategoriesService,
+    QuestionsRepository,
+    QuestionBankService,
+    QuizzesRepository,
+    QuizzesService,
+    QuizSlotsRepository,
+    QuizSlotsService,
   ],
   exports: [
     LearningSpacesService,

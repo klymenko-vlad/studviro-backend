@@ -41,7 +41,8 @@ class ConditionFieldsDto {
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'The material or assignment for completed; the assignment for mark.',
+    description:
+      'The material, assignment or quiz for completed; the assignment or quiz for mark, with itemKind quiz for a quiz.',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)

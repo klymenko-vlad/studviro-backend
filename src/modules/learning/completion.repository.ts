@@ -24,6 +24,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { activityKindOf } from './activity-kind';
 import {
   COMPLETE_STATES,
   type CompletionFacts,
@@ -183,8 +184,9 @@ export class CompletionRepository {
   ): Promise<RecordedCompletion[]> {
     if (userIds.length === 0 || items.length === 0) return [];
 
-    const activityIds = items.filter((item) => item.kind === 'assignment').map(({ id }) => id);
+    const activityIds = items.filter((item) => item.kind !== 'material').map(({ id }) => id);
     const materialIds = items.filter((item) => item.kind === 'material').map(({ id }) => id);
+    const kindOf = new Map(items.map((item) => [item.id, item.kind]));
 
     const rows = await this.txHost
       .reader()
@@ -213,7 +215,7 @@ export class CompletionRepository {
 
     return rows.map((row) => ({
       userId: row.userId,
-      item: { kind: row.materialId === null ? 'assignment' : 'material', id: row.itemId },
+      item: { kind: kindOf.get(row.itemId) ?? 'material', id: row.itemId },
       state: row.state,
       completedAt: row.completedAt,
     }));
@@ -225,6 +227,7 @@ export class CompletionRepository {
       .select({
         materialId: learningMaterials.id,
         activityId: learningActivities.id,
+        activityType: learningActivities.type,
       })
       .from(activityCompletions)
       .leftJoin(
@@ -254,7 +257,9 @@ export class CompletionRepository {
 
     return rows.flatMap((row): CompletionItem[] => {
       if (row.materialId !== null) return [{ kind: 'material', id: row.materialId }];
-      if (row.activityId !== null) return [{ kind: 'assignment', id: row.activityId }];
+      if (row.activityId !== null && row.activityType !== null) {
+        return [{ kind: activityKindOf(row.activityType), id: row.activityId }];
+      }
 
       return [];
     });

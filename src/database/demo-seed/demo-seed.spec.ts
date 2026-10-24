@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { QUESTION_TYPES } from '../schema';
+
 import { buildPlan } from './build-plan';
 import {
   planEnrollments,
@@ -21,7 +23,9 @@ import {
   planSections,
   planSpaces,
   planSubmissions,
+  sectionKey,
 } from './derive-learning';
+import { planQuizBank } from './derive-quiz-bank';
 import { DEFAULT_DEMO_SEED_OPTIONS } from './options';
 import { allCourses, allPersons, allPrograms, allRooms } from './plan';
 
@@ -158,6 +162,21 @@ describe('the learning half it seeds', () => {
   const enrollments = planEnrollments(offerings, options.anchor);
   const spaces = planSpaces(offerings);
   const assignments = planAssignments(spaces);
+
+  it('gives Algorithms a question bank with one question of each type, and a quiz in its first block', () => {
+    const bank = planQuizBank(spaces);
+    const algorithms = spaces.find((space) => space.offering.course.title === 'Algorithms');
+
+    expect(bank).not.toBeNull();
+    expect(bank!.space).toBe(algorithms);
+    expect(bank!.categories.length).toBeGreaterThanOrEqual(3);
+    expect(bank!.questions.map((question) => question.type).sort()).toEqual(
+      [...QUESTION_TYPES].sort(),
+    );
+    expect(bank!.quiz.sectionKey).toBe(sectionKey(algorithms!, 0));
+    expect(bank!.quiz.slots.some((slot) => slot.kind === 'random')).toBe(true);
+    expect(bank!.quiz.slots.some((slot) => slot.kind === 'question')).toBe(true);
+  });
 
   it('gives only the current year a learning space', () => {
     expect(spaces.length).toBeGreaterThan(0);

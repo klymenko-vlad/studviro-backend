@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 
 import {
   learningActivities,
@@ -11,6 +11,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { ACTIVITY_KINDS, activityKindOf } from './activity-kind';
 import type { OutlineItem } from './availability-lens';
 import type { CompletionItem } from './completion-rule';
 
@@ -58,7 +59,7 @@ export class TrackedItemsRepository {
         .where(
           and(
             eq(learningActivities.learningSpaceId, spaceId),
-            eq(learningActivities.type, 'assignment'),
+            inArray(learningActivities.type, ACTIVITY_KINDS),
             ne(learningActivities.completionRule, 'none'),
             isNull(learningActivities.deletedAt),
           ),
@@ -108,7 +109,7 @@ export class TrackedItemsRepository {
         and(
           eq(learningActivities.id, item.id),
           eq(learningActivities.learningSpaceId, spaceId),
-          eq(learningActivities.type, 'assignment'),
+          eq(learningActivities.type, item.kind),
           isNull(learningActivities.deletedAt),
         ),
       )
@@ -147,7 +148,7 @@ function materialItem(row: LearningMaterial): TrackedItem {
 function assignmentItem(row: LearningActivity): TrackedItem {
   return {
     ...outlineItemOf(row),
-    kind: 'assignment',
+    kind: activityKindOf(row.type),
     id: row.id,
     title: row.name,
     rule: row.completionRule,

@@ -7,8 +7,9 @@ export type LeafConditionType = (typeof LEAF_CONDITION_TYPES)[number];
 export const CONDITION_TYPES = [...LEAF_CONDITION_TYPES, 'set'] as const;
 export type ConditionType = (typeof CONDITION_TYPES)[number];
 
-export const RESTRICTED_ITEM_KINDS = ['material', 'assignment'] as const;
+export const RESTRICTED_ITEM_KINDS = ['material', 'assignment', 'quiz'] as const;
 export type RestrictedItemKind = (typeof RESTRICTED_ITEM_KINDS)[number];
+export type MarkedItemKind = Exclude<RestrictedItemKind, 'material'>;
 
 export interface CompletedCondition {
   readonly type: 'completed';
@@ -18,6 +19,7 @@ export interface CompletedCondition {
 
 export interface MarkCondition {
   readonly type: 'mark';
+  readonly itemKind?: MarkedItemKind;
   readonly itemId: string;
   readonly atLeast: number;
 }

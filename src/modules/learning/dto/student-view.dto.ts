@@ -10,6 +10,7 @@ import { AssignmentResponseDto } from './assignment.dto';
 import { ProgressResponseDto } from './completion.dto';
 import { LearningMaterialResponseDto } from './learning-material.dto';
 import { LearningSectionResponseDto } from './learning-section.dto';
+import { QuizResponseDto } from './quiz.dto';
 
 export class StudentViewQueryDto {
   @ApiPropertyOptional({
@@ -55,6 +56,10 @@ export class StudentViewResponseDto {
   @ApiProperty({ type: AssignmentResponseDto, isArray: true })
   assignments!: AssignmentResponseDto[];
 
+  @Expose()
+  @ApiProperty({ type: QuizResponseDto, isArray: true })
+  quizzes!: QuizResponseDto[];
+
   @Expose() @ApiProperty({ type: ProgressResponseDto }) progress!: ProgressResponseDto;
 
   static from(view: StudentView, now = new Date()): StudentViewResponseDto {
@@ -65,6 +70,7 @@ export class StudentViewResponseDto {
         LearningMaterialResponseDto.from(material, now),
       ),
       assignments: view.assignments.map((entry) => AssignmentResponseDto.from(entry, now)),
+      quizzes: view.quizzes.map((entry) => QuizResponseDto.from(entry, now)),
       progress: ProgressResponseDto.from(view.progress),
     });
   }

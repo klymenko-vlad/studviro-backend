@@ -15,7 +15,7 @@ import { LearningAccessService } from './learning-access.service';
 import { AvailabilityService, type ExplainSubject } from './learning-availability.service';
 import { RestrictionFactsRepository } from './restriction-facts.repository';
 
-export const SIGHT_SUBJECT_KINDS = ['section', 'material', 'assignment'] as const;
+export const SIGHT_SUBJECT_KINDS = ['section', 'material', 'assignment', 'quiz'] as const;
 export type SightSubjectKind = (typeof SIGHT_SUBJECT_KINDS)[number];
 
 export interface StudentSight extends CourseStudent {
@@ -136,11 +136,11 @@ export class SightReportService {
         and(
           eq(learningActivities.id, target.id),
           eq(learningActivities.learningSpaceId, spaceId),
-          eq(learningActivities.type, 'assignment'),
+          eq(learningActivities.type, target.kind),
           isNull(learningActivities.deletedAt),
         ),
       );
-    if (!activity) throw new EntityNotFoundError('assignment', target.id);
+    if (!activity) throw new EntityNotFoundError(target.kind, target.id);
 
     return { title: activity.name, subject: { kind: 'item', item: activity } };
   }

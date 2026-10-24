@@ -7,6 +7,8 @@ import type {
   RestrictionMatch,
 } from '../../database/schema';
 
+import { markedKindOf } from './restriction';
+
 export interface RestrictionNames {
   readonly items: ReadonlyMap<string, string>;
   readonly groups: ReadonlyMap<string, string>;
@@ -94,7 +96,7 @@ function leafView(leaf: LeafCondition, names: RestrictionNames): LeafConditionVi
   switch (leaf.type) {
     case 'completed':
     case 'mark': {
-      const itemKind = leaf.type === 'mark' ? 'assignment' : leaf.itemKind;
+      const itemKind = leaf.type === 'mark' ? markedKindOf(leaf) : leaf.itemKind;
       const itemTitle = names.items.get(`${itemKind}:${leaf.itemId}`) ?? null;
 
       return {

@@ -13,7 +13,14 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
-import { leavesOf, parseRestriction, referencesOf, type RestrictionInput } from './restriction';
+import { ACTIVITY_KINDS } from './activity-kind';
+import {
+  itemKeyOf,
+  leavesOf,
+  parseRestriction,
+  referencesOf,
+  type RestrictionInput,
+} from './restriction';
 import {
   composeRestriction,
   conditionsOf,
@@ -99,7 +106,7 @@ export class RestrictionRulesService {
     for (const leaf of leavesOf(restriction)) {
       if (leaf.type !== 'completed' && leaf.type !== 'mark') continue;
 
-      const key = `${leaf.type === 'mark' ? 'assignment' : leaf.itemKind}:${leaf.itemId}`;
+      const key = itemKeyOf(leaf);
       const target = targets.get(key);
       if (!target) {
         throw new InvalidInputError(
@@ -122,7 +129,7 @@ export class RestrictionRulesService {
       ) {
         throw new InvalidInputError(
           'RESTRICTION_THRESHOLD_ABOVE_MAXIMUM',
-          'A condition asks for more points than the assignment gives',
+          'A condition asks for more points than the item gives',
           { itemId: leaf.itemId, maxPoints: target.maxPoints },
         );
       }
@@ -182,6 +189,7 @@ export class RestrictionRulesService {
       this.client
         .select({
           id: learningActivities.id,
+          type: learningActivities.type,
           sectionId: learningActivities.sectionId,
           restriction: learningActivities.restriction,
           rule: learningActivities.completionRule,
@@ -198,7 +206,7 @@ export class RestrictionRulesService {
         .where(
           and(
             eq(learningActivities.learningSpaceId, spaceId),
-            eq(learningActivities.type, 'assignment'),
+            inArray(learningActivities.type, ACTIVITY_KINDS),
             isNull(learningActivities.deletedAt),
           ),
         ),
@@ -215,7 +223,7 @@ export class RestrictionRulesService {
       ...materials.map((row) => ({ ...row, key: `material:${row.id}`, maxPoints: null })),
       ...activities.map((row) => ({
         ...row,
-        key: `assignment:${row.id}`,
+        key: `${row.type}:${row.id}`,
         maxPoints: row.maxPoints === null ? null : Number(row.maxPoints),
       })),
     ];

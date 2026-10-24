@@ -8121,7 +8121,8 @@
             "schema": {
               "enum": [
                 "material",
-                "assignment"
+                "assignment",
+                "quiz"
               ],
               "type": "string"
             }
@@ -8363,7 +8364,8 @@
               "enum": [
                 "section",
                 "material",
-                "assignment"
+                "assignment",
+                "quiz"
               ],
               "type": "string"
             }
@@ -8801,6 +8803,1968 @@
           }
         ],
         "summary": "The sections and items of the course page restricted to this group",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/question-categories": {
+      "get": {
+        "description": "For the course’s authors only.",
+        "operationId": "listQuestionCategories",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to categories whose name contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionCategoryPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The categories of a course’s question bank, by name, a page at a time",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "operationId": "createQuestionCategory",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Open a category in the bank",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/question-categories/{categoryId}": {
+      "patch": {
+        "operationId": "renameQuestionCategory",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Rename a category",
+        "tags": [
+          "learning"
+        ]
+      },
+      "delete": {
+        "operationId": "removeQuestionCategory",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove an empty category that no quiz draws from",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/questions": {
+      "get": {
+        "description": "For the course’s authors only. Filtered by category, type and the text of the latest version; no answer keys.",
+        "operationId": "listQuestions",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/QuestionType"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to questions whose name or text contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The questions in a course’s bank, a page at a time",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "description": "Its answer key is checked against its type: a single choice has exactly one correct choice, a multiple choice at least one, both two to twenty; matching two to twenty pairs.",
+        "operationId": "createQuestion",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Write a question into the bank",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/questions/{questionId}": {
+      "get": {
+        "operationId": "getQuestion",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The latest version of a question, with its answer key",
+        "tags": [
+          "learning"
+        ]
+      },
+      "put": {
+        "description": "Earlier versions are kept as they were. Moving it to another category alone writes no version. Its type cannot change.",
+        "operationId": "reviseQuestion",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Edit a question, which writes a new version of it",
+        "tags": [
+          "learning"
+        ]
+      },
+      "delete": {
+        "operationId": "removeQuestion",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a question no quiz holds",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/questions/{questionId}/versions": {
+      "get": {
+        "operationId": "listQuestionVersions",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionVersionPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Every version of a question, newest first",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes": {
+      "get": {
+        "description": "Settings only: no question and no answer reaches anybody here. A student who may see only the title gets no settings.",
+        "operationId": "listQuizzes",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuizResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The quizzes on a course page, in order",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "description": "Its close is its deadline. A gradebook column is opened alongside it, worth 10 points unless said otherwise.",
+        "operationId": "createQuiz",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuizDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Set a quiz: a window, a time limit, attempts and how they are graded",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}": {
+      "get": {
+        "operationId": "getQuiz",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "One quiz, with its settings",
+        "tags": [
+          "learning"
+        ]
+      },
+      "patch": {
+        "operationId": "updateQuiz",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuizDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Change a quiz’s settings, its place or what it is worth",
+        "tags": [
+          "learning"
+        ]
+      },
+      "delete": {
+        "operationId": "removeQuiz",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Withdraw a quiz and its gradebook column",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/slots": {
+      "get": {
+        "description": "For the course’s authors only: a student never reads what a quiz asks here.",
+        "operationId": "listQuizSlots",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to questions, or categories drawn from, containing this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizSlotPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The questions in a quiz, in order, a page at a time",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "operationId": "addQuizSlots",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddQuizSlotsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuizSlotResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add questions from the bank by hand, or a number drawn at random from a category",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/quizzes/{quizId}/slots/{slotId}": {
+      "patch": {
+        "operationId": "updateQuizSlot",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuizSlotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizSlotResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move a question in the quiz, change its mark or how many a draw picks",
+        "tags": [
+          "learning"
+        ]
+      },
+      "delete": {
+        "operationId": "removeQuizSlot",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quizId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Take a question or a draw out",
         "tags": [
           "learning"
         ]
@@ -18932,6 +20896,7 @@
             "enum": [
               "material",
               "assignment",
+              "quiz",
               null
             ],
             "type": "string"
@@ -18998,6 +20963,7 @@
             "enum": [
               "material",
               "assignment",
+              "quiz",
               null
             ],
             "type": "string"
@@ -19221,6 +21187,7 @@
             "enum": [
               "material",
               "assignment",
+              "quiz",
               null
             ],
             "type": "string"
@@ -19229,7 +21196,7 @@
             "type": "string",
             "nullable": true,
             "format": "uuid",
-            "description": "The material or assignment for completed; the assignment for mark."
+            "description": "The material, assignment or quiz for completed; the assignment or quiz for mark, with itemKind quiz for a quiz."
           },
           "atLeast": {
             "type": "number",
@@ -19270,6 +21237,7 @@
             "enum": [
               "material",
               "assignment",
+              "quiz",
               null
             ],
             "type": "string"
@@ -19278,7 +21246,7 @@
             "type": "string",
             "nullable": true,
             "format": "uuid",
-            "description": "The material or assignment for completed; the assignment for mark."
+            "description": "The material, assignment or quiz for completed; the assignment or quiz for mark, with itemKind quiz for a quiz."
           },
           "atLeast": {
             "type": "number",
@@ -20713,6 +22681,7 @@
           "type": {
             "enum": [
               "assignment",
+              "quiz",
               "forum",
               "resource",
               "workshop",
@@ -20825,6 +22794,7 @@
           "type": {
             "enum": [
               "assignment",
+              "quiz",
               "forum",
               "resource",
               "workshop",
@@ -20992,7 +22962,8 @@
           "kind": {
             "enum": [
               "material",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "type": "string"
           },
@@ -21088,7 +23059,8 @@
           "kind": {
             "enum": [
               "material",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "type": "string"
           },
@@ -21139,7 +23111,8 @@
           "kind": {
             "enum": [
               "material",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "type": "string"
           },
@@ -21306,7 +23279,8 @@
             "enum": [
               "section",
               "material",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "type": "string"
           },
@@ -21372,6 +23346,201 @@
           "email"
         ]
       },
+      "QuizGradingMethod": {
+        "type": "string",
+        "enum": [
+          "highest",
+          "last",
+          "average"
+        ]
+      },
+      "QuizAttemptState": {
+        "type": "string",
+        "enum": [
+          "upcoming",
+          "open",
+          "closed"
+        ],
+        "description": "Whether attempts may start now, on the server clock."
+      },
+      "QuizSettingsResponseDto": {
+        "type": "object",
+        "properties": {
+          "timeLimitMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxAttempts": {
+            "type": "number",
+            "nullable": true
+          },
+          "gradingMethod": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizGradingMethod"
+              }
+            ]
+          },
+          "shuffleQuestions": {
+            "type": "boolean"
+          },
+          "shuffleChoices": {
+            "type": "boolean"
+          },
+          "questionCount": {
+            "type": "number",
+            "description": "How many questions an attempt asks."
+          },
+          "attempts": {
+            "description": "Whether attempts may start now, on the server clock.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizAttemptState"
+              }
+            ]
+          }
+        },
+        "required": [
+          "timeLimitMinutes",
+          "maxAttempts",
+          "gradingMethod",
+          "shuffleQuestions",
+          "shuffleChoices",
+          "questionCount",
+          "attempts"
+        ]
+      },
+      "QuizResponseDto": {
+        "type": "object",
+        "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "An author sees the whole restriction. A student sees it only while it keeps the item locked, as what is still needed.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionViewDto"
+              }
+            ]
+          },
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean"
+          },
+          "availability": {
+            "enum": [
+              "open",
+              "scheduled",
+              "ended"
+            ],
+            "type": "string",
+            "description": "Where its own window stands on the server clock: scheduled (not open yet), open, or ended."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "learningSpaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assessmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brief": {
+            "type": "string",
+            "nullable": true
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "closesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "maxPoints": {
+            "type": "number"
+          },
+          "countsTowardFinalGrade": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "number",
+            "nullable": true
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "viewed",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true
+          },
+          "settings": {
+            "nullable": true,
+            "description": "Null for a student who may see only the title.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizSettingsResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "restriction",
+          "availableFrom",
+          "availableUntil",
+          "hiddenUntilAvailable",
+          "availability",
+          "id",
+          "learningSpaceId",
+          "assessmentId",
+          "name",
+          "brief",
+          "opensAt",
+          "closesAt",
+          "maxPoints",
+          "countsTowardFinalGrade",
+          "position",
+          "visible",
+          "sectionId",
+          "completionRule",
+          "completionPassPoints",
+          "settings"
+        ]
+      },
       "StudentViewResponseDto": {
         "type": "object",
         "properties": {
@@ -21403,6 +23572,12 @@
               "$ref": "#/components/schemas/AssignmentResponseDto"
             }
           },
+          "quizzes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizResponseDto"
+            }
+          },
           "progress": {
             "$ref": "#/components/schemas/ProgressResponseDto"
           }
@@ -21412,6 +23587,7 @@
           "sections",
           "materials",
           "assignments",
+          "quizzes",
           "progress"
         ]
       },
@@ -21461,7 +23637,8 @@
             "enum": [
               "section",
               "material",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "type": "string"
           },
@@ -21535,6 +23712,1065 @@
           "items",
           "meta"
         ]
+      },
+      "QuestionCategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "questionCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "questionCount"
+        ]
+      },
+      "QuestionCategoryPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionCategoryResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "QuestionCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Sorting"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "QuestionType": {
+        "type": "string",
+        "enum": [
+          "single_choice",
+          "multiple_choice",
+          "true_false",
+          "short_answer",
+          "numerical",
+          "matching",
+          "essay"
+        ]
+      },
+      "QuestionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "version": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "defaultMark": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "categoryName",
+          "type",
+          "version",
+          "name",
+          "text",
+          "defaultMark",
+          "updatedAt"
+        ]
+      },
+      "QuestionPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionSummaryDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "ChoiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "text",
+          "correct",
+          "feedback"
+        ]
+      },
+      "MatchingPairResponseDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "answer"
+        ]
+      },
+      "QuestionResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "defaultMark": {
+            "type": "number"
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "choices": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceResponseDto"
+            }
+          },
+          "correct": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trueFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "falseFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptedAnswers": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "value": {
+            "type": "number",
+            "nullable": true
+          },
+          "tolerance": {
+            "type": "number",
+            "nullable": true
+          },
+          "pairs": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchingPairResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "name",
+          "text",
+          "defaultMark",
+          "generalFeedback",
+          "choices",
+          "correct",
+          "trueFeedback",
+          "falseFeedback",
+          "acceptedAnswers",
+          "caseSensitive",
+          "value",
+          "tolerance",
+          "pairs",
+          "createdAt",
+          "id",
+          "categoryId",
+          "categoryName",
+          "type"
+        ]
+      },
+      "QuestionVersionResponseDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "defaultMark": {
+            "type": "number"
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "choices": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceResponseDto"
+            }
+          },
+          "correct": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trueFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "falseFeedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptedAnswers": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "value": {
+            "type": "number",
+            "nullable": true
+          },
+          "tolerance": {
+            "type": "number",
+            "nullable": true
+          },
+          "pairs": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchingPairResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "name",
+          "text",
+          "defaultMark",
+          "generalFeedback",
+          "choices",
+          "correct",
+          "trueFeedback",
+          "falseFeedback",
+          "acceptedAnswers",
+          "caseSensitive",
+          "value",
+          "tolerance",
+          "pairs",
+          "createdAt"
+        ]
+      },
+      "QuestionVersionPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionVersionResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "ChoiceDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "text",
+          "correct"
+        ]
+      },
+      "MatchingPairDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "prompt",
+          "answer"
+        ]
+      },
+      "CreateQuestionDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "A short name to find it by in the bank."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "The question as the student reads it."
+          },
+          "defaultMark": {
+            "type": "number",
+            "maximum": 1000,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 5000
+          },
+          "choices": {
+            "nullable": true,
+            "description": "Single and multiple choice.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceDto"
+            }
+          },
+          "correct": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "True or false: whether the statement is true."
+          },
+          "trueFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "falseFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "acceptedAnswers": {
+            "nullable": true,
+            "description": "Short answer: every answer that earns the mark.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            }
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "value": {
+            "type": "number",
+            "nullable": true,
+            "description": "Numerical: the answer."
+          },
+          "tolerance": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Numerical: how far from the answer still earns the mark."
+          },
+          "pairs": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchingPairDto"
+            }
+          }
+        },
+        "required": [
+          "categoryId",
+          "type",
+          "name",
+          "text",
+          "defaultMark"
+        ]
+      },
+      "ReviseQuestionDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "A short name to find it by in the bank."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "The question as the student reads it."
+          },
+          "defaultMark": {
+            "type": "number",
+            "maximum": 1000,
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "generalFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 5000
+          },
+          "choices": {
+            "nullable": true,
+            "description": "Single and multiple choice.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceDto"
+            }
+          },
+          "correct": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "True or false: whether the statement is true."
+          },
+          "trueFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "falseFeedback": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "acceptedAnswers": {
+            "nullable": true,
+            "description": "Short answer: every answer that earns the mark.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            }
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "value": {
+            "type": "number",
+            "nullable": true,
+            "description": "Numerical: the answer."
+          },
+          "tolerance": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Numerical: how far from the answer still earns the mark."
+          },
+          "pairs": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchingPairDto"
+            }
+          }
+        },
+        "required": [
+          "categoryId",
+          "name",
+          "text",
+          "defaultMark"
+        ]
+      },
+      "CreateQuizDto": {
+        "type": "object",
+        "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
+              }
+            ]
+          },
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Week 1 quiz"
+          },
+          "brief": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20000,
+            "description": "What students read before they start."
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Attempts may start from this moment. Null: as soon as students can see it."
+          },
+          "closesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "No attempt runs past this moment. It is the quiz’s deadline."
+          },
+          "timeLimitMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 1440,
+            "description": "Minutes an attempt may last. Null: no limit."
+          },
+          "maxAttempts": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Null means unlimited. Defaults to one."
+          },
+          "gradingMethod": {
+            "description": "Which attempt’s mark goes to the gradebook when there are several.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizGradingMethod"
+              }
+            ]
+          },
+          "shuffleQuestions": {
+            "type": "boolean"
+          },
+          "shuffleChoices": {
+            "type": "boolean"
+          },
+          "maxPoints": {
+            "type": "number",
+            "maximum": 100000,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "default": 10,
+            "description": "What the quiz is worth in the gradebook; question marks are scaled to it."
+          },
+          "countsTowardFinalGrade": {
+            "type": "boolean"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateQuizDto": {
+        "type": "object",
+        "properties": {
+          "restriction": {
+            "nullable": true,
+            "description": "Locked until these conditions hold. Null removes the conditions; the groups it is for stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RestrictionDto"
+              }
+            ]
+          },
+          "audience": {
+            "nullable": true,
+            "description": "Only for these study groups, on top of any conditions. Null makes it for every group again; the conditions stay.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AudienceDto"
+              }
+            ]
+          },
+          "availableFrom": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students see it from this moment on. Null: from the start."
+          },
+          "availableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Students stop seeing it at this moment. Null: never."
+          },
+          "hiddenUntilAvailable": {
+            "type": "boolean",
+            "description": "Before it opens, show students nothing rather than its title and the opening date."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Week 1 quiz"
+          },
+          "brief": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20000,
+            "description": "What students read before they start."
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Attempts may start from this moment. Null: as soon as students can see it."
+          },
+          "closesAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "No attempt runs past this moment. It is the quiz’s deadline."
+          },
+          "timeLimitMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 1440,
+            "description": "Minutes an attempt may last. Null: no limit."
+          },
+          "maxAttempts": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Null means unlimited. Defaults to one."
+          },
+          "gradingMethod": {
+            "description": "Which attempt’s mark goes to the gradebook when there are several.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizGradingMethod"
+              }
+            ]
+          },
+          "shuffleQuestions": {
+            "type": "boolean"
+          },
+          "shuffleChoices": {
+            "type": "boolean"
+          },
+          "maxPoints": {
+            "type": "number",
+            "maximum": 100000,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "default": 10,
+            "description": "What the quiz is worth in the gradebook; question marks are scaled to it."
+          },
+          "countsTowardFinalGrade": {
+            "type": "boolean"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "sectionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "completionRule": {
+            "enum": [
+              "none",
+              "manual",
+              "submitted",
+              "marked",
+              "passed"
+            ],
+            "type": "string"
+          },
+          "completionPassPoints": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "QuizSlotKind": {
+        "type": "string",
+        "enum": [
+          "question",
+          "random"
+        ]
+      },
+      "SlotQuestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "version": {
+            "type": "number",
+            "description": "The latest version, which an attempt started now would ask."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "text",
+          "type",
+          "version"
+        ]
+      },
+      "QuizSlotResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "number"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizSlotKind"
+              }
+            ]
+          },
+          "mark": {
+            "type": "number"
+          },
+          "question": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SlotQuestionDto"
+              }
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickCount": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "kind",
+          "mark",
+          "question",
+          "categoryId",
+          "categoryName",
+          "pickCount"
+        ]
+      },
+      "QuizSlotPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizSlotResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          },
+          "questionCount": {
+            "type": "number",
+            "description": "How many questions an attempt asks, across every page."
+          },
+          "totalMarks": {
+            "type": "number",
+            "description": "The sum of the question marks, scaled to the quiz’s points."
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "questionCount",
+          "totalMarks"
+        ]
+      },
+      "AddQuizSlotsDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "description": "question: these questions, by hand; random: some drawn from a category.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuizSlotKind"
+              }
+            ]
+          },
+          "questionIds": {
+            "nullable": true,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "pickCount": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 50
+          },
+          "mark": {
+            "type": "number",
+            "nullable": true,
+            "maximum": 1000,
+            "minimum": 1,
+            "description": "The mark of each question. By hand it defaults to the question’s default mark; drawn at random, to 1."
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "UpdateQuizSlotDto": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Move it to this place, counted from 0."
+          },
+          "mark": {
+            "type": "number",
+            "maximum": 1000,
+            "minimum": 1
+          },
+          "pickCount": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
       },
       "CreateDemoRequestDto": {
         "type": "object",

@@ -1,10 +1,14 @@
 import { InvalidInputError } from '../../common/errors/domain.error';
-import type {
-  Condition,
-  LeafCondition,
-  RestrictedItemKind,
-  Restriction,
-  RestrictionMatch,
+import {
+  RESTRICTED_ITEM_KINDS,
+  type CompletedCondition,
+  type Condition,
+  type LeafCondition,
+  type MarkCondition,
+  type MarkedItemKind,
+  type RestrictedItemKind,
+  type Restriction,
+  type RestrictionMatch,
 } from '../../database/schema';
 
 export const MAX_CONDITIONS = 10;
@@ -61,17 +65,27 @@ function parseCondition(input: ConditionInput): Condition {
 function parseLeaf(input: ConditionInput): LeafCondition {
   switch (input.type) {
     case 'completed':
-      if ((input.itemKind !== 'material' && input.itemKind !== 'assignment') || !input.itemId) {
+      if (!isRestrictedKind(input.itemKind) || !input.itemId) {
         throw invalid('Completing something needs the item it is about', input);
       }
 
       return { type: 'completed', itemKind: input.itemKind, itemId: input.itemId };
     case 'mark':
-      if (!input.itemId || input.atLeast === null || input.atLeast === undefined) {
-        throw invalid('A mark condition needs an assignment and the points to reach', input);
+      if (
+        !input.itemId ||
+        input.atLeast === null ||
+        input.atLeast === undefined ||
+        input.itemKind === 'material'
+      ) {
+        throw invalid('A mark condition needs an assignment or a quiz and the points', input);
       }
 
-      return { type: 'mark', itemId: input.itemId, atLeast: input.atLeast };
+      return {
+        type: 'mark',
+        ...(input.itemKind === 'quiz' ? { itemKind: 'quiz' as const } : {}),
+        itemId: input.itemId,
+        atLeast: input.atLeast,
+      };
     case 'date':
       if (!input.from) throw invalid('A date condition needs the date it opens on', input);
 
@@ -120,7 +134,8 @@ export function referencesOf(
         items.set(`${leaf.itemKind}:${leaf.itemId}`, { kind: leaf.itemKind, id: leaf.itemId });
       }
       if (leaf.type === 'mark') {
-        items.set(`assignment:${leaf.itemId}`, { kind: 'assignment', id: leaf.itemId });
+        const kind = markedKindOf(leaf);
+        items.set(`${kind}:${leaf.itemId}`, { kind, id: leaf.itemId });
       }
       if (leaf.type === 'group') groupIds.add(leaf.groupId);
     }
@@ -128,6 +143,18 @@ export function referencesOf(
   }
 
   return { items: [...items.values()], groupIds: [...groupIds] };
+}
+
+export function markedKindOf(leaf: MarkCondition): MarkedItemKind {
+  return leaf.itemKind ?? 'assignment';
+}
+
+export function itemKeyOf(leaf: CompletedCondition | MarkCondition): string {
+  return `${leaf.type === 'mark' ? markedKindOf(leaf) : leaf.itemKind}:${leaf.itemId}`;
+}
+
+function isRestrictedKind(kind: string | null | undefined): kind is RestrictedItemKind {
+  return (RESTRICTED_ITEM_KINDS as readonly (string | null | undefined)[]).includes(kind);
 }
 
 function invalid(message: string, input: ConditionInput): InvalidInputError {

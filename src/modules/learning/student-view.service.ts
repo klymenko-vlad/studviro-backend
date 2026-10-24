@@ -14,6 +14,8 @@ import type { Gated } from './learning-availability.service';
 import { LearningMaterialsService } from './learning-materials.service';
 import { LearningSectionsService } from './learning-sections.service';
 import { MyProgressService, type Progress } from './my-progress.service';
+import type { QuizEntry } from './quizzes.repository';
+import { QuizzesService } from './quizzes.service';
 
 export const NOBODY = '00000000-0000-0000-0000-000000000000';
 
@@ -22,6 +24,7 @@ export interface StudentView {
   readonly sections: Gated<LearningSection>[];
   readonly materials: Gated<LearningMaterial>[];
   readonly assignments: Gated<AssignmentEntry>[];
+  readonly quizzes: Gated<QuizEntry>[];
   readonly progress: Progress;
 }
 
@@ -40,6 +43,7 @@ export class StudentViewService {
     private readonly sections: LearningSectionsService,
     private readonly materials: LearningMaterialsService,
     private readonly assignments: AssignmentsService,
+    private readonly quizzes: QuizzesService,
     private readonly progress: MyProgressService,
   ) {}
 
@@ -58,14 +62,15 @@ export class StudentViewService {
       userId: student?.userId ?? NOBODY,
     };
 
-    const [sections, materials, assignments, progress] = await Promise.all([
+    const [sections, materials, assignments, quizzes, progress] = await Promise.all([
       this.sections.listFor(context, now),
       this.materials.listFor(context),
       this.assignments.listFor(context),
+      this.quizzes.listFor(context),
       this.progress.forContext(context, now),
     ]);
 
-    return { student, sections, materials, assignments, progress };
+    return { student, sections, materials, assignments, quizzes, progress };
   }
 
   async studentPage(

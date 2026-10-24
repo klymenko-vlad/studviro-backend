@@ -14,6 +14,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { ACTIVITY_KINDS, activityKindOf } from './activity-kind';
 import { COMPLETE_STATES } from './completion-rule';
 import type { RestrictionReferences } from './restriction';
 import type { StudentFacts } from './restriction-verdict';
@@ -53,8 +54,8 @@ export class RestrictionFactsRepository {
     for (const row of completions) {
       const key = row.materialId
         ? `material:${row.materialId}`
-        : row.activityId
-          ? `assignment:${row.activityId}`
+        : row.activityId && row.activityType
+          ? `${activityKindOf(row.activityType)}:${row.activityId}`
           : null;
       if (key) byUser.get(row.userId)?.completed.add(key);
     }
@@ -75,7 +76,7 @@ export class RestrictionFactsRepository {
     const ids = (kind: string) =>
       references.items.filter((item) => item.kind === kind).map((item) => item.id);
     const materialIds = ids('material');
-    const assignmentIds = ids('assignment');
+    const activityIds = [...ids('assignment'), ...ids('quiz')];
 
     const [materials, activities, groups] = await Promise.all([
       materialIds.length === 0
@@ -90,16 +91,20 @@ export class RestrictionFactsRepository {
                 isNull(learningMaterials.deletedAt),
               ),
             ),
-      assignmentIds.length === 0
+      activityIds.length === 0
         ? []
         : this.reader
-            .select({ id: learningActivities.id, title: learningActivities.name })
+            .select({
+              id: learningActivities.id,
+              type: learningActivities.type,
+              title: learningActivities.name,
+            })
             .from(learningActivities)
             .where(
               and(
-                inArray(learningActivities.id, assignmentIds),
+                inArray(learningActivities.id, activityIds),
                 eq(learningActivities.learningSpaceId, scope.spaceId),
-                eq(learningActivities.type, 'assignment'),
+                inArray(learningActivities.type, ACTIVITY_KINDS),
                 isNull(learningActivities.deletedAt),
               ),
             ),
@@ -120,7 +125,7 @@ export class RestrictionFactsRepository {
     return {
       items: new Map([
         ...materials.map((row) => [`material:${row.id}`, row.title] as const),
-        ...activities.map((row) => [`assignment:${row.id}`, row.title] as const),
+        ...activities.map((row) => [`${row.type}:${row.id}`, row.title] as const),
       ]),
       groups: new Map(groups.map((row) => [row.id, row.name ?? row.code])),
     };
@@ -147,6 +152,7 @@ export class RestrictionFactsRepository {
         userId: activityCompletions.userId,
         materialId: learningMaterials.id,
         activityId: learningActivities.id,
+        activityType: learningActivities.type,
       })
       .from(activityCompletions)
       .leftJoin(

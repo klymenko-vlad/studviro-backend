@@ -123,7 +123,8 @@ const REPORT_TEMPLATE_OPENS_AFTER_DAYS = 42;
 const opensAfter = (space: PlannedSpace, days: number | null) =>
   days === null ? null : addDays(space.offering.term.startsAt, days);
 
-const sectionKey = (space: PlannedSpace, index: number) => `SEC-${space.key}-${index + 1}`;
+export const sectionKey = (space: PlannedSpace, index: number) =>
+  `SEC-${space.key}-${index + 1}`;
 
 export function planSections(spaces: readonly PlannedSpace[]): PlannedSection[] {
   return spaces.flatMap((space) =>

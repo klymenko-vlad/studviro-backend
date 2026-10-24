@@ -80,6 +80,7 @@ export const completionRule = pgEnum('completion_rule', COMPLETION_RULES);
 
 export const LEARNING_ACTIVITY_TYPES = [
   'assignment',
+  'quiz',
   'forum',
   'resource',
   'workshop',

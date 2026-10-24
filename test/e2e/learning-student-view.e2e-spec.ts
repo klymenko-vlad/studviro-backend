@@ -22,6 +22,7 @@ interface StudentView {
   sections: Row[];
   materials: Row[];
   assignments: Row[];
+  quizzes: Row[];
   progress: Progress;
 }
 
@@ -73,14 +74,15 @@ describe('View as a student (e2e)', () => {
   };
 
   const realView = async (actor: Actor) => {
-    const [sections, materials, assignments, progress] = await Promise.all([
+    const [sections, materials, assignments, quizzes, progress] = await Promise.all([
       read<Row[]>(actor, '/sections'),
       read<Row[]>(actor, '/materials'),
       read<Row[]>(actor, '/assignments'),
+      read<Row[]>(actor, '/quizzes'),
       read<Progress>(actor, '/my-progress'),
     ]);
 
-    return { sections, materials, assignments, progress };
+    return { sections, materials, assignments, quizzes, progress };
   };
 
   const addGroup = async (code: string) => {
@@ -161,6 +163,13 @@ describe('View as a student (e2e)', () => {
       completionRule: 'submitted',
       sectionId: week1.id,
     });
+    await created('/quizzes', {
+      name: 'Week 1 quiz',
+      closesAt: isoIn(48),
+      completionRule: 'marked',
+      sectionId: week1.id,
+    });
+    await created('/quizzes', { name: 'Hidden quiz', visible: false });
 
     return { notes, seminar };
   };
@@ -238,7 +247,8 @@ describe('View as a student (e2e)', () => {
       expect(student).toBeNull();
       expect(seen).toEqual(await realView(fixture.stranger));
       expect(seen.materials.map((row) => row.title)).toEqual(['Notes', 'Slides']);
-      expect(seen.progress).toMatchObject({ done: 0, total: 3 });
+      expect(seen.quizzes.map((row) => row.name)).toEqual(['Week 1 quiz']);
+      expect(seen.progress).toMatchObject({ done: 0, total: 4 });
     });
 
     it('hides what the author sees and blanks what has not opened', async () => {
@@ -261,6 +271,7 @@ describe('View as a student (e2e)', () => {
         sections: [],
         materials: [],
         assignments: [],
+        quizzes: [],
         progress: { done: 0, total: 0, sections: [], items: [] },
       });
     });

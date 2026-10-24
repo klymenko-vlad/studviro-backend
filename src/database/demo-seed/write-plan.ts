@@ -51,10 +51,12 @@ import {
   planSpaces,
   planSubmissions,
 } from './derive-learning';
+import { planQuizBank } from './derive-quiz-bank';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
 import { writeFolderFiles, type SeedObjectStore } from './write-folder-files';
+import { writeQuizBank } from './write-quiz-bank';
 
 export type SeedDatabase = Database;
 
@@ -678,6 +680,8 @@ export async function writePlan(
       if (row) assessmentIds.set(assignment.key, row.id);
     }
   }
+
+  await writeQuizBank(db, institutionId, planQuizBank(plannedSpaces), spaceIds, sectionIds);
 
   for (const planned of planRestrictions(plannedSpaces)) {
     const itemId = required(assignmentIds, planned.condition.assignmentKey, 'assignment');

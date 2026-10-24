@@ -1,6 +1,6 @@
 import type { Restriction } from '../../database/schema';
 
-import { leavesOf } from './restriction';
+import { itemKeyOf, leavesOf } from './restriction';
 
 export interface RestrictionNode {
   readonly key: string;
@@ -41,8 +41,7 @@ function dependenciesOf(node: RestrictionNode): string[] {
   return [
     ...placed,
     ...leavesOf(node.restriction).flatMap((leaf) => {
-      if (leaf.type === 'completed') return [`${leaf.itemKind}:${leaf.itemId}`];
-      if (leaf.type === 'mark') return [`assignment:${leaf.itemId}`];
+      if (leaf.type === 'completed' || leaf.type === 'mark') return [itemKeyOf(leaf)];
 
       return [];
     }),

@@ -12,6 +12,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { ACTIVITY_KINDS, activityKindOf } from './activity-kind';
 import type { StudentPageQuery } from './course-students.repository';
 import { LearningAccessService } from './learning-access.service';
 import { referencesOf } from './restriction';
@@ -210,6 +211,7 @@ export class GroupContentService {
       this.reader
         .select({
           id: learningActivities.id,
+          type: learningActivities.type,
           title: learningActivities.name,
           spaceId: learningActivities.learningSpaceId,
           sectionId: learningActivities.sectionId,
@@ -220,7 +222,7 @@ export class GroupContentService {
         .where(
           and(
             inArray(learningActivities.learningSpaceId, spaceIds),
-            eq(learningActivities.type, 'assignment'),
+            inArray(learningActivities.type, ACTIVITY_KINDS),
             isNull(learningActivities.deletedAt),
             naming(learningActivities.restriction, learningActivities.name),
           ),
@@ -230,7 +232,7 @@ export class GroupContentService {
     return [
       ...sections.map((row) => ({ ...row, kind: 'section' as const, sectionId: null })),
       ...materials.map((row) => ({ ...row, kind: 'material' as const })),
-      ...activities.map((row) => ({ ...row, kind: 'assignment' as const })),
+      ...activities.map(({ type, ...row }) => ({ ...row, kind: activityKindOf(type) })),
     ];
   }
 

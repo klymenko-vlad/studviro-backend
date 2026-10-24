@@ -1,7 +1,7 @@
 import { InvalidInputError } from '../../common/errors/domain.error';
 import type { ActivityCompletionState, CompletionRule } from '../../database/schema';
 
-export const COMPLETION_ITEM_KINDS = ['material', 'assignment'] as const;
+export const COMPLETION_ITEM_KINDS = ['material', 'assignment', 'quiz'] as const;
 export type CompletionItemKind = (typeof COMPLETION_ITEM_KINDS)[number];
 
 export interface CompletionItem {
@@ -18,9 +18,12 @@ export const ASSIGNMENT_COMPLETION_RULES = [
   'passed',
 ] as const;
 
+export const QUIZ_COMPLETION_RULES = ASSIGNMENT_COMPLETION_RULES;
+
 const RULES_BY_KIND: Record<CompletionItemKind, readonly CompletionRule[]> = {
   material: MATERIAL_COMPLETION_RULES,
   assignment: ASSIGNMENT_COMPLETION_RULES,
+  quiz: QUIZ_COMPLETION_RULES,
 };
 
 export interface CompletionRuleChoice {
@@ -66,7 +69,7 @@ export function assertCompletionRule(choice: CompletionRuleChoice): void {
   if (maxPoints !== null && passPoints > maxPoints) {
     throw new InvalidInputError(
       'COMPLETION_PASS_MARK_ABOVE_MAX',
-      'The pass mark is above what this assignment is worth',
+      `The pass mark is above what this ${choice.kind} is worth`,
       { passPoints, maxPoints },
     );
   }

@@ -1,6 +1,6 @@
 import type { Assessment, CompletionRule, LearningActivity } from '../../database/schema';
 
-import { assertCompletionRule } from './completion-rule';
+import { assertCompletionRule, type CompletionItemKind } from './completion-rule';
 
 export interface CompletionInput {
   readonly completionRule?: CompletionRule;
@@ -21,6 +21,7 @@ export interface CompletionColumns {
 export function assignmentCompletion(
   input: CompletionInput,
   stored?: Stored,
+  kind: Exclude<CompletionItemKind, 'material'> = 'assignment',
 ): CompletionColumns {
   const rule = input.completionRule ?? stored?.activity.completionRule ?? 'none';
   const passPoints =
@@ -34,7 +35,7 @@ export function assignmentCompletion(
       ? input.maxPoints
       : decimal(stored?.assessment.maxPoints ?? null);
 
-  assertCompletionRule({ kind: 'assignment', rule, passPoints, maxPoints });
+  assertCompletionRule({ kind, rule, passPoints, maxPoints });
 
   const untouched =
     input.completionRule === undefined && input.completionPassPoints === undefined;
