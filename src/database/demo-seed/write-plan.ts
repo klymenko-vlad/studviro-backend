@@ -43,6 +43,7 @@ import type { PlannedOffering } from './derive';
 import { planCompletions } from './derive-completion';
 import {
   planAssignments,
+  planFolderFiles,
   planGroupAudiences,
   planMaterials,
   planRestrictions,
@@ -53,6 +54,7 @@ import {
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
+import { writeFolderFiles, type SeedObjectStore } from './write-folder-files';
 
 export type SeedDatabase = Database;
 
@@ -121,6 +123,7 @@ export async function writePlan(
   options: DemoSeedOptions,
   passwordHash: string,
   accounts: NamedAccounts = DEFAULT_NAMED_ACCOUNTS,
+  store?: SeedObjectStore,
 ): Promise<SeedSummary> {
   await db.delete(institutions).where(eq(institutions.code, plan.university.code));
   await db.delete(users).where(like(users.email, `%@${options.emailDomain}`));
@@ -606,6 +609,14 @@ export async function writePlan(
     }
   }
 
+  const folderFiles = await writeFolderFiles(
+    db,
+    institutionId,
+    planFolderFiles(plannedSpaces),
+    materialIds,
+    store,
+  );
+
   const plannedAssignments = planAssignments(plannedSpaces);
   const assignmentIds = new Map<string, string>();
   const assessmentIds = new Map<string, string>();
@@ -775,6 +786,7 @@ export async function writePlan(
       learningSpaces: spaceIds.size,
       learningSections: sectionIds.size,
       learningMaterials: materialIds.size,
+      learningMaterialFiles: folderFiles,
       assignments: assignmentIds.size,
       submissions: submissionRows.length,
       marks: marks.length,

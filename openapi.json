@@ -5658,7 +5658,7 @@
             "access-token": []
           }
         ],
-        "summary": "The files, links and notes on a course page, in order",
+        "summary": "Everything on a course page, in order",
         "tags": [
           "learning"
         ]
@@ -5760,7 +5760,7 @@
             "access-token": []
           }
         ],
-        "summary": "Add a file, a link or a note to a course page",
+        "summary": "Add a file, link, note, page, label, video or folder to a course page",
         "tags": [
           "learning"
         ]
@@ -5977,7 +5977,7 @@
             "access-token": []
           }
         ],
-        "summary": "Retitle a material, move it, hide or show it",
+        "summary": "Retitle or rewrite a material, move it, hide or show it",
         "tags": [
           "learning"
         ]
@@ -6061,6 +6061,97 @@
           }
         ],
         "summary": "Take a material off the page",
+        "tags": [
+          "learning"
+        ]
+      },
+      "get": {
+        "description": "Answers 404 for anything the caller may not open. Reading it counts as opening it for a student on the course.",
+        "operationId": "getLearningMaterial",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningMaterialResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "One material, whole — the way to read a page",
         "tags": [
           "learning"
         ]
@@ -6239,6 +6330,434 @@
           }
         ],
         "summary": "A short-lived link to the file behind a material",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials/{materialId}/files": {
+      "get": {
+        "operationId": "listFolderFiles",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to files whose name contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderFilePageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The files in a folder, a page at a time, by name",
+        "tags": [
+          "learning"
+        ]
+      },
+      "post": {
+        "description": "Upload it first with a material upload ticket; a folder holds up to 100 files.",
+        "operationId": "addFolderFile",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFolderFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderFileResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with an existing record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Put an uploaded file in a folder",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials/{materialId}/files/{fileId}": {
+      "delete": {
+        "operationId": "removeFolderFile",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Take a file out of a folder",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/learning-spaces/{spaceId}/materials/{materialId}/files/{fileId}/download": {
+      "get": {
+        "description": "Counts as opening the folder for a student on the course.",
+        "operationId": "getFolderFileDownloadUrl",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A short-lived link to one file in a folder",
         "tags": [
           "learning"
         ]
@@ -19022,7 +19541,11 @@
             "enum": [
               "file",
               "link",
-              "text"
+              "text",
+              "page",
+              "label",
+              "video",
+              "folder"
             ],
             "type": "string"
           },
@@ -19035,11 +19558,13 @@
           },
           "body": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "A page’s body is left out of the list; read the page by id for it."
           },
           "url": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "For a video, the embed address to put in a frame."
           },
           "filename": {
             "type": "string",
@@ -19204,7 +19729,11 @@
             "enum": [
               "file",
               "link",
-              "text"
+              "text",
+              "page",
+              "label",
+              "video",
+              "folder"
             ],
             "type": "string"
           },
@@ -19212,7 +19741,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "example": "Lecture 1 — slides"
+            "example": "Lecture 1 — slides",
+            "description": "Required for every kind but a label, which takes its title from its text."
           },
           "description": {
             "type": "string",
@@ -19222,14 +19752,14 @@
           "body": {
             "type": "string",
             "nullable": true,
-            "maxLength": 20000,
-            "description": "Text materials only."
+            "maxLength": 100000,
+            "description": "A note (up to 20 000 characters), a page (Markdown, up to 100 000) or a label (up to 1 000)."
           },
           "url": {
             "type": "string",
             "nullable": true,
             "maxLength": 2048,
-            "description": "Link materials only."
+            "description": "A link, or a video: a YouTube or Vimeo address, stored as the provider’s privacy embed address."
           },
           "storageKey": {
             "type": "string",
@@ -19262,8 +19792,7 @@
           }
         },
         "required": [
-          "kind",
-          "title"
+          "kind"
         ]
       },
       "UpdateLearningMaterialDto": {
@@ -19309,7 +19838,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "example": "Lecture 1 — slides"
+            "example": "Lecture 1 — slides",
+            "description": "Required for every kind but a label, which takes its title from its text."
           },
           "description": {
             "type": "string",
@@ -19319,14 +19849,14 @@
           "body": {
             "type": "string",
             "nullable": true,
-            "maxLength": 20000,
-            "description": "Text materials only."
+            "maxLength": 100000,
+            "description": "A note (up to 20 000 characters), a page (Markdown, up to 100 000) or a label (up to 1 000)."
           },
           "url": {
             "type": "string",
             "nullable": true,
             "maxLength": 2048,
-            "description": "Link materials only."
+            "description": "A link, or a video: a YouTube or Vimeo address, stored as the provider’s privacy embed address."
           },
           "storageKey": {
             "type": "string",
@@ -19373,6 +19903,86 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "FolderFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "nullable": true
+          },
+          "scanStatus": {
+            "enum": [
+              "unscanned",
+              "pending",
+              "clean",
+              "infected"
+            ],
+            "type": "string",
+            "description": "`pending`: usable, not yet checked for malware. `clean`: checked. `infected`: deleted, cannot be downloaded. `unscanned`: uploaded while scanning was off."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "contentType",
+          "sizeBytes",
+          "scanStatus",
+          "createdAt"
+        ]
+      },
+      "FolderFilePageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderFileResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "AddFolderFileDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "The key returned with a material upload ticket."
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "worksheet-1.pdf"
+          }
+        },
+        "required": [
+          "storageKey",
+          "filename"
         ]
       },
       "AssignmentResponseDto": {

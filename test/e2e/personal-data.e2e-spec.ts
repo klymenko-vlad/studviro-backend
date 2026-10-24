@@ -17,6 +17,7 @@ import {
   institutions,
   invitations,
   learningActivities,
+  learningMaterialFiles,
   learningMaterials,
   learningSpaces,
   notificationDeliveries,
@@ -559,6 +560,48 @@ describe('Personal data export and erasure (e2e)', () => {
           .from(submissionFiles)
           .where(eq(submissionFiles.storageKey, storageKey)),
       ).toEqual([]);
+    });
+
+    it('keeps the folder files a person put on a course page, which are the course’s', async () => {
+      const [space] = await harness.db
+        .select({ id: learningSpaces.id })
+        .from(learningSpaces)
+        .where(eq(learningSpaces.institutionId, institutionId));
+      const [folder] = await harness.db
+        .insert(learningMaterials)
+        .values({
+          institutionId,
+          learningSpaceId: space!.id,
+          kind: 'folder',
+          title: 'Handouts',
+          createdById: classmate.user.id,
+        })
+        .returning();
+      const ticket = await storage.createUploadTicket({
+        institutionId,
+        purpose: 'materials',
+        filename: 'sheet.pdf',
+        contentType: 'application/pdf',
+      });
+      await fetch(ticket.url, { method: 'PUT', headers: ticket.headers, body: 'handout' });
+      await harness.db.insert(learningMaterialFiles).values({
+        institutionId,
+        learningMaterialId: folder!.id,
+        storageKey: ticket.key,
+        filename: 'sheet.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 7,
+      });
+
+      expect((await eraseAs(admin, classmate.user.id)).statusCode).toBe(200);
+
+      expect(await storage.head(ticket.key)).toBeDefined();
+      expect(
+        await harness.db
+          .select({ filename: learningMaterialFiles.filename })
+          .from(learningMaterialFiles)
+          .where(eq(learningMaterialFiles.learningMaterialId, folder!.id)),
+      ).toEqual([{ filename: 'sheet.pdf' }]);
     });
 
     it('refuses while another institution still has an active relationship', async () => {

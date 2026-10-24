@@ -11,6 +11,7 @@ import {
   DEFAULT_NAMED_ACCOUNTS,
   writePlan,
 } from './demo-seed';
+import { s3ObjectStoreFromEnv } from './demo-seed/s3-object-store';
 import * as schema from './schema';
 
 const DEMO_PASSWORD = 'correct horse battery staple';
@@ -48,7 +49,14 @@ async function main(): Promise<void> {
     const plan = buildPlan(options);
 
     const started = Date.now();
-    const summary = await writePlan(db, plan, options, passwordHash);
+    const summary = await writePlan(
+      db,
+      plan,
+      options,
+      passwordHash,
+      DEFAULT_NAMED_ACCOUNTS,
+      s3ObjectStoreFromEnv(process.env),
+    );
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
     console.log(`seeded ${options.universityName} (${summary.institutionId}) in ${seconds}s`);

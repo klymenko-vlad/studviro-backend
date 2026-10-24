@@ -21,6 +21,7 @@ import { AvailabilityService, type Gated } from './learning-availability.service
 import { assertPayloadMatchesKind } from './learning-material-payload';
 import { LearningMaterialsRepository } from './learning-materials.repository';
 import { LearningOutlineService } from './learning-outline.service';
+import { contentColumns } from './material-content';
 import type { RestrictionInput } from './restriction';
 import type { AudienceInput } from './restriction-audience';
 import { RestrictionRulesService } from './restriction-rules.service';
@@ -39,7 +40,7 @@ const MATERIAL_CONTENT = [
 
 export interface NewLearningMaterial {
   readonly kind: LearningMaterialKind;
-  readonly title: string;
+  readonly title?: string;
   readonly description?: string | null;
   readonly body?: string | null;
   readonly url?: string | null;
@@ -85,10 +86,12 @@ export class LearningMaterialsService {
   async listFor(context: LearningSpaceContext): Promise<Gated<LearningMaterial>[]> {
     const rows = await this.materials.listLive(context.space.id);
 
-    return this.availability.sift(context, rows, {
+    const sifted = await this.availability.sift(context, rows, {
       itemOf: (row) => row,
       teaser: (row) => teaserOf(row, MATERIAL_CONTENT),
     });
+
+    return sifted.map((row) => (row.kind === 'page' ? { ...row, body: null } : row));
   }
 
   async createUploadTicket(
@@ -136,10 +139,11 @@ export class LearningMaterialsService {
         institutionId,
         learningSpaceId: spaceId,
         kind: input.kind,
-        title: input.title,
+        title: '',
         description: input.description ?? null,
-        body: input.kind === 'text' ? (input.body ?? null) : null,
-        url: input.kind === 'link' ? (input.url ?? null) : null,
+        body: null,
+        url: null,
+        ...contentColumns(input.kind, input),
         storageKey: stored?.key ?? null,
         filename: stored === undefined ? null : (input.filename ?? null),
         contentType: stored?.contentType ?? null,
@@ -196,10 +200,8 @@ export class LearningMaterialsService {
       changes.completionRule !== existing.completionRule;
 
     const set = {
-      ...(changes.title === undefined ? {} : { title: changes.title }),
+      ...contentColumns(existing.kind, changes),
       ...(changes.description === undefined ? {} : { description: changes.description }),
-      ...(changes.body === undefined || existing.kind !== 'text' ? {} : { body: changes.body }),
-      ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
       ...(changes.completionRule === undefined
         ? {}

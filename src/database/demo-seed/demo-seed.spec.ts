@@ -15,6 +15,7 @@ import {
   EXTENSION_MARK,
   planAssignments,
   planGroupAudiences,
+  planFolderFiles,
   planMaterials,
   planRestrictions,
   planSections,
@@ -164,8 +165,27 @@ describe('the learning half it seeds', () => {
   });
 
   it('gives every space materials and two assignments', () => {
-    expect(planMaterials(spaces)).toHaveLength(spaces.length * 8);
+    expect(planMaterials(spaces)).toHaveLength(spaces.length * 12);
     expect(assignments).toHaveLength(spaces.length * 2);
+  });
+
+  it('puts a page, a label, a video and a folder of two files on every space', () => {
+    const materials = planMaterials(spaces);
+    const space = spaces[0]!;
+    const kinds = materials.filter((m) => m.spaceKey === space.key).map((m) => m.kind);
+
+    expect(kinds).toEqual(expect.arrayContaining(['page', 'label', 'video', 'folder']));
+    const folder = materials.find((m) => m.spaceKey === space.key && m.kind === 'folder');
+    const files = planFolderFiles(spaces).filter((file) => file.materialKey === folder!.key);
+    expect(files.map((file) => file.filename)).toEqual([
+      'exercise-sheet.txt',
+      'week-1-notes.txt',
+    ]);
+    expect(
+      materials
+        .find((m) => m.kind === 'video')!
+        .url!.startsWith('https://www.youtube-nocookie.com/embed/'),
+    ).toBe(true);
   });
 
   it('lays every space out in three sections, with the course rules above them', () => {
@@ -182,6 +202,7 @@ describe('the learning half it seeds', () => {
     expect(sections).toHaveLength(spaces.length * 3);
     expect(outline.filter((item) => item.sectionKey === null).map((i) => i.title)).toEqual([
       'How this course runs',
+      'Study guide',
     ]);
     expect(
       outline.filter((item) => item.sectionKey === first!.key).map((i) => i.title),
@@ -192,6 +213,9 @@ describe('the learning half it seeds', () => {
       'Extension exercises',
       'Seminar S1 worksheet',
       'Seminar S2 worksheet',
+      'Before the seminar: watch the first lecture and bring the handouts below.',
+      'Lecture 1 recording',
+      'Week 1 handouts',
     ]);
     expect(
       outline.filter((item) => item.sectionKey === second!.key).map((i) => i.title),

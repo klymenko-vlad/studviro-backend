@@ -34,7 +34,7 @@ import {
 
 const MAX_TITLE = 200;
 const MAX_DESCRIPTION = 2000;
-const MAX_BODY = 20_000;
+const MAX_BODY = 100_000;
 const MAX_URL = 2048;
 const MAX_FILENAME = 255;
 const MAX_STORAGE_KEY = 1024;
@@ -44,11 +44,16 @@ export class CreateLearningMaterialDto extends AvailabilityDto {
   @IsIn(LEARNING_MATERIAL_KINDS)
   kind!: LearningMaterialKind;
 
-  @ApiProperty({ maxLength: MAX_TITLE, example: 'Lecture 1 — slides' })
+  @ApiPropertyOptional({
+    maxLength: MAX_TITLE,
+    example: 'Lecture 1 — slides',
+    description: 'Required for every kind but a label, which takes its title from its text.',
+  })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(MAX_TITLE)
-  title!: string;
+  title?: string;
 
   @ApiPropertyOptional({ type: String, nullable: true, maxLength: MAX_DESCRIPTION })
   @IsOptional()
@@ -61,7 +66,8 @@ export class CreateLearningMaterialDto extends AvailabilityDto {
     type: String,
     nullable: true,
     maxLength: MAX_BODY,
-    description: 'Text materials only.',
+    description:
+      'A note (up to 20 000 characters), a page (Markdown, up to 100 000) or a label (up to 1 000).',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -73,7 +79,8 @@ export class CreateLearningMaterialDto extends AvailabilityDto {
     type: String,
     nullable: true,
     maxLength: MAX_URL,
-    description: 'Link materials only.',
+    description:
+      'A link, or a video: a YouTube or Vimeo address, stored as the provider’s privacy embed address.',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -142,8 +149,20 @@ export class LearningMaterialResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty({ enum: LEARNING_MATERIAL_KINDS }) kind!: LearningMaterialKind;
   @Expose() @ApiProperty() title!: string;
   @Expose() @ApiProperty({ type: String, nullable: true }) description!: string | null;
-  @Expose() @ApiProperty({ type: String, nullable: true }) body!: string | null;
-  @Expose() @ApiProperty({ type: String, nullable: true }) url!: string | null;
+  @Expose()
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'A page’s body is left out of the list; read the page by id for it.',
+  })
+  body!: string | null;
+  @Expose()
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'For a video, the embed address to put in a frame.',
+  })
+  url!: string | null;
   @Expose() @ApiProperty({ type: String, nullable: true }) filename!: string | null;
   @Expose() @ApiProperty({ type: String, nullable: true }) contentType!: string | null;
   @Expose() @ApiProperty({ type: Number, nullable: true }) sizeBytes!: number | null;

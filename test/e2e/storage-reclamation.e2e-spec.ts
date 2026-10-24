@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { learningMaterials } from '../../src/database/schema';
+import { learningMaterialFiles, learningMaterials } from '../../src/database/schema';
 import { OrphanedObjectSweepService } from '../../src/modules/storage/orphaned-object-sweep.service';
 import { StorageReclamationService } from '../../src/modules/storage/storage-reclamation.service';
 import { StorageService } from '../../src/modules/storage/storage.service';
@@ -175,6 +175,86 @@ describe('Storage reclamation (e2e)', () => {
     });
 
     expect(listed.json()).toEqual([]);
+  });
+
+  describe('a folder', () => {
+    const addFolderFile = async () => {
+      const folder = await harness.inject({
+        method: 'POST',
+        url: materialsUrl(),
+        headers: fixture.admin.headers,
+        payload: { kind: 'folder', title: 'Handouts' },
+      });
+      const key = await uploadWithoutClaiming();
+      const file = await harness.inject({
+        method: 'POST',
+        url: `${materialsUrl()}/${folder.json().id}/files`,
+        headers: fixture.admin.headers,
+        payload: { storageKey: key, filename: 'sheet.pdf' },
+      });
+      expect(file.statusCode).toBe(201);
+
+      return { folderId: folder.json().id as string, fileId: file.json().id as string, key };
+    };
+
+    const fileKeyOf = async (fileId: string) => {
+      const [row] = await harness.db
+        .select({ storageKey: learningMaterialFiles.storageKey })
+        .from(learningMaterialFiles)
+        .where(eq(learningMaterialFiles.id, fileId));
+
+      return row?.storageKey ?? null;
+    };
+
+    it('drops a file taken out of a folder once the grace period runs out', async () => {
+      const { folderId, fileId, key } = await addFolderFile();
+      await harness.inject({
+        method: 'DELETE',
+        url: `${materialsUrl()}/${folderId}/files/${fileId}`,
+        headers: fixture.admin.headers,
+      });
+      await harness.db
+        .update(learningMaterialFiles)
+        .set({ deletedAt: new Date(Date.now() - 90 * DAY) })
+        .where(eq(learningMaterialFiles.id, fileId));
+
+      const result = await reclamation.reclaim();
+
+      expect(result.failed).toBe(0);
+      expect(await storage.head(key)).toBeUndefined();
+      expect(await fileKeyOf(fileId)).toBeNull();
+      await expect(reclamation.reclaim()).resolves.toEqual({ reclaimed: 0, failed: 0 });
+    });
+
+    it('drops every file of a folder removed longer ago than the grace period', async () => {
+      const { folderId, fileId, key } = await addFolderFile();
+      await remove(folderId);
+      await tombstonedDaysAgo(folderId, 90);
+
+      await reclamation.reclaim();
+
+      expect(await storage.head(key)).toBeUndefined();
+      expect(await fileKeyOf(fileId)).toBeNull();
+    });
+
+    it('keeps the files of a folder on the page, and of one removed just now', async () => {
+      const live = await addFolderFile();
+      const removed = await addFolderFile();
+      await remove(removed.folderId);
+
+      await reclamation.reclaim();
+
+      expect(await storage.head(live.key)).toBeDefined();
+      expect(await storage.head(removed.key)).toBeDefined();
+    });
+
+    it('is never mistaken for an abandoned upload', async () => {
+      const { key } = await addFolderFile();
+
+      await orphans.sweep(tomorrowButOne());
+
+      expect(await storage.head(key)).toBeDefined();
+    });
   });
 
   describe('an abandoned upload', () => {

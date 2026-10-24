@@ -7,7 +7,7 @@ import { StorageService } from '../storage/storage.service';
 
 import { CompletionService } from './completion.service';
 import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
-import { AvailabilityService } from './learning-availability.service';
+import { AvailabilityService, type Gated } from './learning-availability.service';
 import { LearningMaterialsRepository } from './learning-materials.repository';
 
 export interface OpenedMaterial {
@@ -38,6 +38,18 @@ export class MaterialOpeningService {
     }
 
     return { context, material };
+  }
+
+  async read(
+    institutionId: string,
+    spaceId: string,
+    materialId: string,
+    userId: string,
+  ): Promise<Gated<LearningMaterial>> {
+    const opened = await this.open(institutionId, spaceId, materialId, userId);
+    await this.recordView(institutionId, opened);
+
+    return this.availability.gated(opened.context, opened.material);
   }
 
   async view(

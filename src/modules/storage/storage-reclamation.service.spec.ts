@@ -10,6 +10,7 @@ import type { StorageKey } from './storage.types';
 const NOW = new Date('2026-09-21T04:00:00.000Z');
 
 const object = (id: string) => ({
+  source: 'material' as const,
   id,
   institutionId: 'institution-1',
   storageKey: `institutions/institution-1/materials/${id}` satisfies StorageKey,
@@ -56,7 +57,7 @@ describe(StorageReclamationService.name, () => {
     await expect(service.reclaim(NOW)).resolves.toEqual({ reclaimed: 1, failed: 0 });
 
     expect(remove).toHaveBeenCalledWith(object('m1').storageKey, 'institution-1');
-    expect(markReclaimed).toHaveBeenCalledWith('m1');
+    expect(markReclaimed).toHaveBeenCalledWith(object('m1'));
   });
 
   it('asks only for rows whose grace period has run out', async () => {
@@ -86,7 +87,7 @@ describe(StorageReclamationService.name, () => {
     await expect(service.reclaim(NOW)).resolves.toEqual({ reclaimed: 1, failed: 1 });
 
     expect(markReclaimed).toHaveBeenCalledTimes(1);
-    expect(markReclaimed).toHaveBeenCalledWith('m2');
+    expect(markReclaimed).toHaveBeenCalledWith(object('m2'));
   });
 
   it('does nothing at all when object storage is switched off', async () => {

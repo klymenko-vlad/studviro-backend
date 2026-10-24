@@ -22,6 +22,7 @@ import {
   assessmentResults,
   assessments,
   learningActivities,
+  learningMaterialFiles,
   learningMaterials,
   learningSpaces,
   submissionFiles,
@@ -248,6 +249,14 @@ export const learningMaterialsRelations = relations(learningMaterials, ({ one, m
     references: [learningSpaces.id],
   }),
   completions: many(activityCompletions),
+  files: many(learningMaterialFiles),
+}));
+
+export const learningMaterialFilesRelations = relations(learningMaterialFiles, ({ one }) => ({
+  material: one(learningMaterials, {
+    fields: [learningMaterialFiles.learningMaterialId],
+    references: [learningMaterials.id],
+  }),
 }));
 
 export const learningActivitiesRelations = relations(learningActivities, ({ one, many }) => ({

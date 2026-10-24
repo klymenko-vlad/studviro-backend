@@ -58,14 +58,14 @@ export class StorageReclamationService {
       for (const object of due) {
         try {
           await this.storage.delete(object.storageKey, object.institutionId);
-          await this.repository.markReclaimed(object.id);
+          await this.repository.markReclaimed(object);
           reclaimed += 1;
         } catch (error) {
           // One unreachable object must not stop the rest of the batch; the
           // row keeps its key, so tomorrow's sweep tries it again.
           failed += 1;
           this.logger.warn(
-            { err: error, materialId: object.id },
+            { err: error, source: object.source, id: object.id },
             'storage object could not be reclaimed',
           );
         }

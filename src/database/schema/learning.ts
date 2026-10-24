@@ -132,7 +132,15 @@ export const learningActivities = pgTable(
   ],
 );
 
-export const LEARNING_MATERIAL_KINDS = ['file', 'link', 'text'] as const;
+export const LEARNING_MATERIAL_KINDS = [
+  'file',
+  'link',
+  'text',
+  'page',
+  'label',
+  'video',
+  'folder',
+] as const;
 export type LearningMaterialKind = (typeof LEARNING_MATERIAL_KINDS)[number];
 export const learningMaterialKind = pgEnum('learning_material_kind', LEARNING_MATERIAL_KINDS);
 
@@ -174,6 +182,32 @@ export const learningMaterials = pgTable(
       .where(sql`${table.scanStatus} = 'pending'`),
     index('learning_materials_space_idx')
       .on(table.learningSpaceId, table.position)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
+export const learningMaterialFiles = pgTable(
+  'learning_material_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    learningMaterialId: uuid('learning_material_id')
+      .notNull()
+      .references(() => learningMaterials.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key'),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes'),
+    scanStatus: scanStatusColumn(),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('learning_material_files_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
+    index('learning_material_files_material_idx')
+      .on(table.learningMaterialId, table.filename)
       .where(isNull(table.deletedAt)),
   ],
 );
@@ -337,6 +371,7 @@ export const submissionFiles = pgTable(
 export type LearningSpace = typeof learningSpaces.$inferSelect;
 export type NewLearningSpace = typeof learningSpaces.$inferInsert;
 export type LearningSection = typeof learningSections.$inferSelect;
+export type LearningMaterialFile = typeof learningMaterialFiles.$inferSelect;
 export type LearningActivity = typeof learningActivities.$inferSelect;
 export type NewLearningActivity = typeof learningActivities.$inferInsert;
 export type LearningMaterial = typeof learningMaterials.$inferSelect;

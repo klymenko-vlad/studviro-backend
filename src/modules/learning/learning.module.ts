@@ -13,6 +13,9 @@ import { CompletionController } from './completion.controller';
 import { CompletionRepository } from './completion.repository';
 import { CompletionService } from './completion.service';
 import { CourseStudentsRepository } from './course-students.repository';
+import { FolderFilesController } from './folder-files.controller';
+import { FolderFilesRepository } from './folder-files.repository';
+import { FolderFilesService } from './folder-files.service';
 import { GroupContentService } from './group-content.service';
 import { LearningAccessService } from './learning-access.service';
 import { AvailabilityService } from './learning-availability.service';
@@ -55,6 +58,7 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     LearningSpaceAuthoringController,
     LearningSectionsController,
     LearningMaterialsController,
+    FolderFilesController,
     AssignmentsController,
     SubmissionsController,
     SubmissionMarkingController,
@@ -78,6 +82,8 @@ import { TrackedItemsRepository } from './tracked-items.repository';
     LearningMaterialsService,
     LearningMaterialsRepository,
     MaterialOpeningService,
+    FolderFilesService,
+    FolderFilesRepository,
     AssignmentsService,
     AssignmentAnnouncementsRepository,
     AssignmentAnnouncementsService,

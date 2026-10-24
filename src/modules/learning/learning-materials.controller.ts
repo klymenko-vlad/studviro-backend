@@ -54,7 +54,7 @@ export class LearningMaterialsController {
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'listLearningMaterials',
-    summary: 'The files, links and notes on a course page, in order',
+    summary: 'Everything on a course page, in order',
     description:
       'A hidden or ended material is omitted for anybody who cannot unhide it. One that has not opened yet shows only its title, unless it is hidden until then.',
   })
@@ -95,7 +95,7 @@ export class LearningMaterialsController {
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'createLearningMaterial',
-    summary: 'Add a file, a link or a note to a course page',
+    summary: 'Add a file, link, note, page, label, video or folder to a course page',
   })
   @ApiCreatedResponse({ type: LearningMaterialResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
@@ -114,7 +114,7 @@ export class LearningMaterialsController {
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'updateLearningMaterial',
-    summary: 'Retitle a material, move it, hide or show it',
+    summary: 'Retitle or rewrite a material, move it, hide or show it',
   })
   @ApiOkResponse({ type: LearningMaterialResponseDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
@@ -146,6 +146,27 @@ export class LearningMaterialsController {
     @CurrentUser('id') userId: string,
   ): Promise<void> {
     await this.materials.remove(institutionId, spaceId, materialId, userId);
+  }
+
+  @Get(':materialId')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'getLearningMaterial',
+    summary: 'One material, whole — the way to read a page',
+    description:
+      'Answers 404 for anything the caller may not open. Reading it counts as opening it for a student on the course.',
+  })
+  @ApiOkResponse({ type: LearningMaterialResponseDto })
+  @ApiErrorResponses({ notFound: true })
+  async read(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @Param('materialId', ParseUUIDPipe) materialId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<LearningMaterialResponseDto> {
+    return LearningMaterialResponseDto.from(
+      await this.opening.read(institutionId, spaceId, materialId, userId),
+    );
   }
 
   @Post(':materialId/views')

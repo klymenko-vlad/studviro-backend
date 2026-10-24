@@ -23,13 +23,20 @@ export interface PlannedMaterial {
   readonly key: string;
   readonly spaceKey: string;
   readonly sectionKey: string | null;
-  readonly kind: 'link' | 'text';
+  readonly kind: 'link' | 'text' | 'page' | 'label' | 'video' | 'folder';
   readonly title: string;
   readonly body: string | null;
   readonly url: string | null;
   readonly position: number;
   readonly availableFrom: Date | null;
   readonly completionRule: 'none' | 'manual' | 'viewed';
+}
+
+export interface PlannedFolderFile {
+  readonly materialKey: string;
+  readonly spaceKey: string;
+  readonly filename: string;
+  readonly body: string;
 }
 
 export interface PlannedAssignment {
@@ -188,6 +195,7 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       availableFrom: null,
       completionRule: 'none' as const,
     })),
+    ...newKindsFor(space),
     {
       key: materialKey(space, 'template'),
       spaceKey: space.key,
@@ -211,6 +219,93 @@ export function planMaterials(spaces: readonly PlannedSpace[]): PlannedMaterial[
       position: 0,
       availableFrom: null,
       completionRule: 'viewed' as const,
+    },
+  ]);
+}
+
+const STUDY_GUIDE = `## How to use this course
+
+Each week has **one lecture**, a seminar and some reading. Work in this order:
+
+1. Watch or attend the lecture.
+2. Read the chapter it names.
+3. Try the seminar worksheet *before* the seminar.
+
+### What to bring
+
+- Your worksheet answers, even the wrong ones
+- Questions about the lecture
+
+Write pseudocode the way the lectures do, for example \`for i in 1..n\`.
+
+> Stuck for more than an hour? Ask in the course discussion.
+
+The [course handbook](https://example.edu/handbook) has the rules on deadlines.`;
+
+const LECTURE_ONE = 'https://www.youtube-nocookie.com/embed/ZA-tUyM_y7s';
+const SEMINAR_NOTE =
+  'Before the seminar: watch the first lecture and bring the handouts below.';
+
+function newKindsFor(space: PlannedSpace): PlannedMaterial[] {
+  const common = { spaceKey: space.key, availableFrom: null, body: null, url: null };
+  const firstSection = sectionKey(space, 0);
+
+  return [
+    {
+      ...common,
+      key: materialKey(space, 'guide'),
+      sectionKey: null,
+      kind: 'page',
+      title: 'Study guide',
+      body: STUDY_GUIDE,
+      position: 1,
+      completionRule: 'viewed',
+    },
+    {
+      ...common,
+      key: materialKey(space, 'seminar-note'),
+      sectionKey: firstSection,
+      kind: 'label',
+      title: SEMINAR_NOTE,
+      body: SEMINAR_NOTE,
+      position: MATERIALS_PER_SPACE + SEMINAR_GROUPS.length + 1,
+      completionRule: 'none',
+    },
+    {
+      ...common,
+      key: materialKey(space, 'recording'),
+      sectionKey: firstSection,
+      kind: 'video',
+      title: 'Lecture 1 recording',
+      url: LECTURE_ONE,
+      position: MATERIALS_PER_SPACE + SEMINAR_GROUPS.length + 2,
+      completionRule: 'none',
+    },
+    {
+      ...common,
+      key: materialKey(space, 'handouts'),
+      sectionKey: firstSection,
+      kind: 'folder',
+      title: 'Week 1 handouts',
+      position: MATERIALS_PER_SPACE + SEMINAR_GROUPS.length + 3,
+      completionRule: 'viewed',
+    },
+  ];
+}
+
+export function planFolderFiles(spaces: readonly PlannedSpace[]): PlannedFolderFile[] {
+  return spaces.flatMap((space) => [
+    {
+      materialKey: materialKey(space, 'handouts'),
+      spaceKey: space.key,
+      filename: 'exercise-sheet.txt',
+      body: `Exercise sheet, week 1 — ${space.offering.course.title}\n\n1. Sort 5 3 8 1 by hand.\n2. Count the comparisons.\n`,
+    },
+    {
+      materialKey: materialKey(space, 'handouts'),
+      spaceKey: space.key,
+      filename: 'week-1-notes.txt',
+      body: `Notes, week 1 — ${space.offering.course.title}\n\nWhat an algorithm is, and how we measure one.\n`,
     },
   ]);
 }
