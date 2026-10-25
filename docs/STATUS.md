@@ -131,8 +131,9 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 707 kB and measures 706.56 kB after CB10** (`.size-limit.mjs`; CB10 cost 3.76 kB: the
-import panel, its picker and report, and the generated client). Keep features that a route does
+is 718 kB and measures 717.36 kB with `dev` merged into the course builder branch**
+(`.size-limit.mjs`; CB10 cost 3.76 kB, and the five frontend `dev` commits since `5dfccf9`
+another 10.8 kB that `dev` never recorded against its 605 kB entry). Keep features that a route does
 not render out of its barrel imports, and prefer an existing route to a new one.
 
 Noticed while walking, not fixed:
