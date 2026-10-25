@@ -227,12 +227,28 @@ badge, a _Who can see_ table per section and item (every enrolled student, can o
 content is, linked to its place in the outline. A removed group fails closed and is flagged.
 The demo seed gives each seminar group a worksheet: S1's hidden from S2, S2's shown locked.
 
-### CB10 — Reuse last year's course · M
+### CB10 — Reuse last year's course · M · **Done 2026-10-24**
 
 Copy the outline of another offering the teacher authors — sections, materials (files
 copied in the store, not shared), assignments, quizzes and their questions — into this one,
 with every date shifted by the gap between the two terms. Nothing student-owned is copied.
 Moodle's _import_; the thing that makes the second year cheap.
+
+Shipped as **ADR 0053**: _Import from another course_ on the Content tab picks one of the
+author's other course pages (paged, filtered, the same course first), previews the exact
+report and copies on confirm. Sections, every material kind, folder files, assignments with
+new gradebook columns, quizzes with settings and slots, and the bank (each question's latest
+version as version 1 of a new question) are copied; files are copied in the store to new
+keys, only `clean` or `unscanned` ones — `pending` and `infected` are left out and flagged.
+Every date, date conditions included, moves by the gap between the two terms' starts; a page
+with no term moves nothing. Conditions point at the copies; one naming something not copied
+fails closed; groups are matched by code, then name, and an item that loses a group is hidden
+and flagged. Copies are appended, never overwriting, and arrive hidden (every section and
+everything outside a section) unless the author keeps the source's visibility. Objects are
+copied first, rows in one transaction, and the copies removed if either fails; synchronous,
+since a large page is a few hundred objects copied server-side. Nothing a student did is
+copied. Audited as `learning_space.imported`. The demo seed gives last year's Algorithms a
+page, bank and quiz to import from.
 
 ### CB11 — View as a student · S · **Done 2026-10-23**
 
@@ -249,6 +265,8 @@ _Back to editing_.
 
 ## Checklist
 
+**The plan is complete (2026-10-24): every step shipped, both halves.**
+
 - [x] CB1 — Sections and one course outline
 - [x] CB2 — Available from, available until
 - [x] CB3 — Completion and progress
@@ -258,7 +276,7 @@ _Back to editing_.
 - [x] CB7 — Taking a quiz
 - [x] CB8 — Quiz review and marking
 - [x] CB9 — Content for one group
-- [ ] CB10 — Reuse last year's course
+- [x] CB10 — Reuse last year's course
 - [x] CB11 — View as a student
 
 ## Noticed
@@ -368,3 +386,12 @@ _Back to editing_.
   across a course.
 - The personal-data export lists a quiz grade the review options still keep back; it is
   the record of what is held (ADR 0052).
+- A second import of the same page adds a second copy; nothing warns that the page already
+  holds one (ADR 0053).
+- The backend e2e suite shares the dev store's bucket, and its orphan-sweep tests delete
+  every object the test database does not name — including the demo seed's files. Re-seed
+  after `pnpm test:cov`, or give the tests a bucket of their own.
+- The import report is shown once; the audit log keeps the counts, but there is no screen
+  listing past imports of a page.
+- A file still waiting for its malware scan is left out of an import; the author must import
+  again (adding a second copy of everything) or upload it by hand.

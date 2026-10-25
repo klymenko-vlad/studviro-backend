@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-24 (CB8)
+Last updated: 2026-10-24 (CB10)
 
 ## What this is
 
@@ -92,51 +92,25 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: CB10 of `docs/Course Builder Plan.md` — reuse last year's course.** Copy an
-outline, its materials (files copied in the store), assignments, quizzes and the question
-bank (ADR 0050 says how) with dates shifted. It is the last step of the plan. On
-2026-10-22 the user asked for Moodle-style courses — built step by step, things hidden,
-tests and quizzes — and that plan (CB1–CB11) is now the priority track. **CB1** (2026-10-22)
-made a course page an outline of sections (ADR 0043). **CB2** (2026-10-23) added _available
-from / until_, decided on the server's clock on every read path (ADR 0044). **CB3**
-(2026-10-23) writes `activity_completions` for materials and assignments: the author picks a
-rule per item, the server records completion when the event happens, a student gets a tick
-per item and progress bars per course and section, and teachers a _Progress_ tab with a
-students × items table (ADR 0045). **CB4** (2026-10-23) locks a section, material or
-assignment until conditions hold — another item complete, a mark of at least N, a date, a
-study group — combined with all/any and one level of grouping; a locked student sees the
-title and what unlocks it, or nothing. One `AvailabilityService` decides every read path
-(ADR 0046). **CB9** (2026-10-23, ahead of CB5) adds a _Groups_ control that makes a section
-or item only for some study groups — hidden from or shown locked to the rest, ANDed with the
-conditions — a _Who can see_ table per item and each group's content on the People tab
-(ADR 0047). **CB11** (2026-10-23, ahead of CB5) lets an author view the Content tab as one
-enrolled student or as a new student with no progress and no group: read-only, through the
-same service methods the student's own reads call, with a paged picker (ADR 0048). **CB5**
-(2026-10-24) adds pages (Markdown on a route of their own, rendered on the server with no
-dependency), labels, YouTube/Vimeo videos as privacy embeds allowed by `frame-src`, and
-folders of up to 100 files, paged and filtered; every material can be edited (ADR 0049).
-**CB6** (2026-10-24) brings quizzes back (ADR 0050, superseding ADR 0028's L7): a question
-bank per course page in flat categories, seven question types with server-checked answer
-keys, versioned on every edit; a quiz is a `learning_activities` row of type `quiz` with its
-own gradebook column, settings and slots (questions by hand, or N at random from a
-category), placed in the outline like an assignment. The bank and the quiz editor are routes of their
-own. **CB7** (2026-10-24) lets a student take one (ADR 0051): an attempt fixed at start
-(versions, draws, shuffles), autosaved answer by answer, closed at submit or at the earlier
-of the time limit and the close on the server's clock — no grace, refused after, and swept
-every minute — marked on close with partial credit, scaled to the gradebook column and
-graded by highest / last / average over final attempts. Students get Start / Continue, their
-paged attempts and an attempt route; authors a paged, filtered attempts table on the quiz
-page. **CB8** (2026-10-24) adds review and marking (ADR 0052): five review options (answers,
-right or wrong, right answers, feedback, the mark), each at once, once the quiz closes or
-never, applied by the server on its clock to the review and to the student's gradebook; the
-attempt route opens as a marking screen for authors (essays, and automatic marks changed
-with a reason, which stand over the key); a regrade with a preview after a key changes;
-grading-method and maximum changes recompute every grade; results by question. The client half is on branch
-`feat/course-sections` in `../frontend-sections` (a worktree) until `dev` is free of the
-uncommitted interface work in `../frontend`; merge it to `dev` first.
+**`Course Builder Plan.md` is complete (2026-10-24), CB1–CB11, both halves.** The user
+asked on 2026-10-22 for Moodle-style courses; a course page is now an outline of sections
+(ADR 0043) with availability windows (0044), completion and progress (0045), restrictions
+(0046), content for some groups (0047), a student view (0048), pages, labels, videos and
+folders (0049), quizzes with a versioned bank (0050), attempts (0051), review and marking
+(0052), and **import from another course page (CB10, ADR 0053)**: an author copies a page
+they also teach — sections, materials and their files copied in the store, assignments with
+new gradebook columns, quizzes and the bank — appended after what is there, hidden by
+default, every date moved by the gap between the two terms' starts, groups matched by code
+or name, nothing a student did copied; a preview gives the same report first. The client
+half is on branch `feat/course-sections` in `../frontend-sections` (a worktree), the server
+half on `feat/course-builder` in `../backend-course-builder`, until `dev` is free of the
+uncommitted interface work in `../frontend`; **merge both to `dev` first**.
 
-The UI Work Plan resumes after, or between, CB steps: its next step is **U1 —
-`ConfirmAction` and every destructive action behind it** (tracker B41). Phase N (information architecture, N1–N4) shipped on 2026-10-22:
+**Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
+behind it** (tracker B41). `Product Plan.md` is complete, so the UI Work Plan is the live
+track again.
+
+Phase N (information architecture, N1–N4) shipped on 2026-10-22:
 students have five menu entries, search and notifications live in the header, course tabs
 are Overview · Content · Assignments · Schedule · Grades · Discussion · People, and
 administration is four hubs (Structure, Teaching offer, People, Institution) whose tabs
@@ -157,9 +131,8 @@ to do before building it.
 motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
 version as not premium), a phone bottom tab bar, and search that offers only course pages
 the caller can open, starting from their own courses and history. **The client JS budget
-is 703 kB and measures 702.8 kB after CB8** (`.size-limit.mjs`; CB8 cost 10.78 kB, measured
-slice by slice against a build of the CB7 commit; a route of its own for marking cost 4.29 kB
-more than putting it on the attempt route, so it is not one). Keep features that a route does
+is 707 kB and measures 706.56 kB after CB10** (`.size-limit.mjs`; CB10 cost 3.76 kB: the
+import panel, its picker and report, and the generated client). Keep features that a route does
 not render out of its barrel imports, and prefer an existing route to a new one.
 
 Noticed while walking, not fixed:
@@ -168,6 +141,9 @@ Noticed while walking, not fixed:
   session records the BFF's IP and the credential throttle counts all sign-ins through one
   BFF instance together. Forwarding `X-Forwarded-For` as-is would let a caller pick their
   throttle key; it needs the API to trust the BFF as a proxy hop (ADR 0037).
+- **The backend e2e suite deletes the demo seed's stored files.** It shares the dev bucket,
+  and its orphan-sweep tests remove every object the test database does not name. Run
+  `pnpm db:seed` after `pnpm test:cov` before walking anything with files.
 - **This machine's disk is full** (5.8 GB free of 687 GB). MinIO answers every upload
   `507`, so the storage, submissions, materials and personal-data e2e suites fail locally.
   They pass against a MinIO with room (`STORAGE_ENDPOINT=…`).
