@@ -29,6 +29,19 @@ interface PostBody {
   editedAt: string | null;
   attachments: { id: string; filename: string; sizeBytes: number }[];
   author: { displayName: string; isTeacher: boolean };
+  parentPostId: string | null;
+  replyCount: number;
+  quote: {
+    postId: string;
+    excerpt: string | null;
+    state: string;
+    author: { displayName: string };
+  } | null;
+}
+
+interface Page<T> {
+  items: T[];
+  meta: { hasNextPage: boolean; nextCursor: string | null };
 }
 
 interface ThreadBody {
@@ -37,7 +50,6 @@ interface ThreadBody {
   postCount: number;
   hidden: boolean;
   canModerate: boolean;
-  posts: PostBody[];
 }
 
 describe('Course discussion (e2e)', () => {
@@ -83,11 +95,46 @@ describe('Course discussion (e2e)', () => {
       ...(payload ? { payload } : {}),
     });
 
+  const postsOf = async (actor: Actor, threadId: string, query = '') => {
+    const response = await call(actor, 'GET', `${base()}/${threadId}/posts${query}`);
+    expect(response.statusCode, response.body).toBe(200);
+    return response.json<Page<PostBody>>();
+  };
+
+  const repliesTo = async (actor: Actor, threadId: string, postId: string, query = '') => {
+    const response = await call(
+      actor,
+      'GET',
+      `${base()}/${threadId}/posts/${postId}/replies${query}`,
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    return response.json<Page<PostBody>>();
+  };
+
+  const read = async (actor: Actor, threadId: string) => {
+    const response = await call(actor, 'GET', `${base()}/${threadId}`);
+    expect(response.statusCode, response.body).toBe(200);
+    return { ...response.json<ThreadBody>(), posts: (await postsOf(actor, threadId)).items };
+  };
+
+  const answer = async (
+    actor: Actor,
+    threadId: string,
+    body: string,
+    replyToPostId?: string,
+  ) => {
+    const response = await call(actor, 'POST', `${base()}/${threadId}/posts`, {
+      body,
+      ...(replyToPostId ? { replyToPostId } : {}),
+    });
+    expect(response.statusCode, response.body).toBe(201);
+    return response.json<PostBody>();
+  };
+
   const start = async (actor: Actor, title = 'Question 3', body = 'What does stable mean?') => {
     const response = await call(actor, 'POST', base(), { title, body });
     expect(response.statusCode, response.body).toBe(201);
-
-    return response.json<ThreadBody>();
+    return read(actor, response.json<ThreadBody>().id);
   };
 
   const inbox = async (actor: Actor) =>
@@ -169,18 +216,18 @@ describe('Course discussion (e2e)', () => {
 
     await call(teacher, 'POST', `${base()}/${thread.id}/posts`, { body: 'Yes, exactly.' });
 
-    const read = (await call(student, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
-    expect(read.posts.map((post) => post.author.isTeacher)).toEqual([false, false, true]);
-    expect(read.posts.map((post) => post.body)).toEqual([
+    const seen = await read(student, thread.id);
+    expect(seen.posts.map((post) => post.author.isTeacher)).toEqual([false, false, true]);
+    expect(seen.posts.map((post) => post.body)).toEqual([
       'What does stable mean?',
       'It keeps equal keys in their original order.',
       'Yes, exactly.',
     ]);
-    expect(read.posts[0]!.mine).toBe(true);
-    expect(read.canModerate).toBe(false);
+    expect(seen.posts[0]!.mine).toBe(true);
+    expect(seen.canModerate).toBe(false);
 
-    const list = (await call(classmate, 'GET', base())).json<{ threads: ThreadBody[] }>();
-    expect(list.threads).toMatchObject([{ title: 'Question 3', postCount: 3 }]);
+    const list = (await call(classmate, 'GET', base())).json<Page<ThreadBody>>();
+    expect(list.items).toMatchObject([{ title: 'Question 3', postCount: 3 }]);
   });
 
   it('tells the teacher about a new thread and the people in it about a reply', async () => {
@@ -202,6 +249,8 @@ describe('Course discussion (e2e)', () => {
     for (const [method, path, payload] of [
       ['GET', base(), undefined],
       ['GET', `${base()}/${thread.id}`, undefined],
+      ['GET', `${base()}/${thread.id}/posts`, undefined],
+      ['GET', `${base()}/${thread.id}/posts/${thread.posts[0]!.id}/replies`, undefined],
       ['POST', base(), { title: 'x', body: 'y' }],
       ['POST', `${base()}/${thread.id}/posts`, { body: 'y' }],
     ] as const) {
@@ -231,8 +280,8 @@ describe('Course discussion (e2e)', () => {
       (await call(student, 'DELETE', `${base()}/${thread.id}/posts/${opening.id}`)).statusCode,
     ).toBe(204);
 
-    const read = (await call(teacher, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
-    expect(read.posts[0]).toMatchObject({ state: 'deleted', body: null });
+    const seen = await read(teacher, thread.id);
+    expect(seen.posts[0]).toMatchObject({ state: 'deleted', body: null });
   });
 
   it('lets an author correct their own post and thread title, marked as edited', async () => {
@@ -247,7 +296,7 @@ describe('Course discussion (e2e)', () => {
 
     const edited = await call(student, 'PATCH', post, { body: 'What does stable mean here?' });
     expect(edited.statusCode, edited.body).toBe(200);
-    expect(edited.json<ThreadBody>().posts[0]).toMatchObject({
+    expect(edited.json<PostBody>()).toMatchObject({
       body: 'What does stable mean here?',
       editedAt: expect.any(String),
     });
@@ -307,7 +356,7 @@ describe('Course discussion (e2e)', () => {
         attachments: [file],
       });
       expect(created.statusCode, created.body).toBe(201);
-      const thread = created.json<ThreadBody>();
+      const thread = await read(student, created.json<ThreadBody>().id);
       expect(thread.posts[0]!.attachments).toMatchObject([
         { filename: 'graf.png', sizeBytes: 9 },
       ]);
@@ -321,7 +370,7 @@ describe('Course discussion (e2e)', () => {
         body: 'A ešte jeden',
         attachments: [await upload(student, 'druhy.png')],
       });
-      expect(reply.json<ThreadBody>().posts[1]!.attachments).toHaveLength(1);
+      expect(reply.json<PostBody>().attachments).toHaveLength(1);
     });
 
     it('accepts only keys issued for the discussion of this institution', async () => {
@@ -350,17 +399,18 @@ describe('Course discussion (e2e)', () => {
 
     it('withholds the file of a hidden post from students, and deletes it with the post', async () => {
       const file = await upload(student);
-      const thread = (
-        await call(student, 'POST', base(), { title: 'T', body: 'B', attachments: [file] })
-      ).json<ThreadBody>();
+      const thread = await read(
+        student,
+        (
+          await call(student, 'POST', base(), { title: 'T', body: 'B', attachments: [file] })
+        ).json<ThreadBody>().id,
+      );
       const post = thread.posts[0]!;
 
       await call(teacher, 'PUT', `${base()}/${thread.id}/posts/${post.id}/visibility`, {
         hidden: true,
       });
-      const asClassmate = (
-        await call(classmate, 'GET', `${base()}/${thread.id}`)
-      ).json<ThreadBody>();
+      const asClassmate = await read(classmate, thread.id);
       expect(asClassmate.posts[0]!.attachments).toEqual([]);
       expect((await download(classmate, thread.id, post)).statusCode).toBe(404);
       expect((await download(teacher, thread.id, post)).statusCode).toBe(200);
@@ -393,16 +443,16 @@ describe('Course discussion (e2e)', () => {
     expect((await call(classmate, 'PUT', visibility, { hidden: true })).statusCode).toBe(403);
     expect((await call(teacher, 'PUT', visibility, { hidden: true })).statusCode).toBe(204);
 
-    const asStudent = (await call(student, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
+    const asStudent = await read(student, thread.id);
     expect(asStudent.posts[0]).toMatchObject({ state: 'hidden', body: null });
-    const asTeacher = (await call(teacher, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
+    const asTeacher = await read(teacher, thread.id);
     expect(asTeacher.posts[0]).toMatchObject({
       state: 'hidden',
       body: 'What does stable mean?',
     });
 
     await call(teacher, 'PUT', visibility, { hidden: false });
-    const restored = (await call(student, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
+    const restored = await read(student, thread.id);
     expect(restored.posts[0]).toMatchObject({ state: 'visible' });
 
     const audited = await harness.db
@@ -419,16 +469,170 @@ describe('Course discussion (e2e)', () => {
     const thread = await start(student);
     await call(teacher, 'PUT', `${base()}/${thread.id}/visibility`, { hidden: true });
 
-    expect(
-      (await call(classmate, 'GET', base())).json<{ threads: unknown[] }>().threads,
-    ).toEqual([]);
+    expect((await call(classmate, 'GET', base())).json<Page<unknown>>().items).toEqual([]);
     expect((await call(classmate, 'GET', `${base()}/${thread.id}`)).statusCode).toBe(404);
-    expect(
-      (await call(teacher, 'GET', base())).json<{ threads: ThreadBody[] }>().threads,
-    ).toMatchObject([{ hidden: true }]);
+    expect((await call(teacher, 'GET', base())).json<Page<ThreadBody>>().items).toMatchObject([
+      { hidden: true },
+    ]);
     expect(
       (await call(teacher, 'POST', `${base()}/${thread.id}/posts`, { body: 'x' })).statusCode,
     ).toBe(409);
+  });
+
+  describe('replies', () => {
+    it('gathers an answer under the post it answers', async () => {
+      const thread = await start(student);
+      const opening = thread.posts[0]!;
+
+      const reply = await answer(
+        classmate,
+        thread.id,
+        'Equal keys keep their order.',
+        opening.id,
+      );
+
+      expect(reply).toMatchObject({ parentPostId: opening.id, quote: null, replyCount: 0 });
+      expect((await postsOf(student, thread.id)).items).toMatchObject([
+        { id: opening.id, replyCount: 1, parentPostId: null },
+      ]);
+      expect((await repliesTo(student, thread.id, opening.id)).items).toMatchObject([
+        { id: reply.id, body: 'Equal keys keep their order.' },
+      ]);
+    });
+
+    it('keeps an answer to a reply in the same group and quotes it', async () => {
+      const thread = await start(student);
+      const opening = thread.posts[0]!;
+      const reply = await answer(
+        classmate,
+        thread.id,
+        'Equal keys keep their order.',
+        opening.id,
+      );
+
+      const followUp = await answer(teacher, thread.id, 'Exactly, see week 3.', reply.id);
+
+      expect(followUp).toMatchObject({
+        parentPostId: opening.id,
+        quote: { postId: reply.id, excerpt: 'Equal keys keep their order.', state: 'visible' },
+      });
+      expect((await postsOf(student, thread.id)).items[0]).toMatchObject({ replyCount: 2 });
+      expect(
+        (await repliesTo(student, thread.id, opening.id)).items.map((post) => post.id),
+      ).toEqual([reply.id, followUp.id]);
+    });
+
+    it('withholds a quote’s words from a reader who may not see the quoted reply', async () => {
+      const thread = await start(student);
+      const opening = thread.posts[0]!;
+      const reply = await answer(classmate, thread.id, 'Something off-topic.', opening.id);
+      await answer(student, thread.id, 'Why?', reply.id);
+      await call(teacher, 'PUT', `${base()}/${thread.id}/posts/${reply.id}/visibility`, {
+        hidden: true,
+      });
+
+      const asStudent = (await repliesTo(student, thread.id, opening.id)).items;
+      const asTeacher = (await repliesTo(teacher, thread.id, opening.id)).items;
+
+      expect(asStudent[1]!.quote).toMatchObject({ state: 'hidden', excerpt: null });
+      expect(asTeacher[1]!.quote).toMatchObject({
+        state: 'hidden',
+        excerpt: 'Something off-topic.',
+      });
+      expect((await postsOf(student, thread.id)).items[0]).toMatchObject({ replyCount: 1 });
+      expect((await postsOf(teacher, thread.id)).items[0]).toMatchObject({ replyCount: 2 });
+    });
+
+    it('refuses to answer a post that is gone, hidden or in another thread', async () => {
+      const thread = await start(student);
+      const other = await start(student, 'Another');
+      const reply = await answer(classmate, thread.id, 'To be removed.', thread.posts[0]!.id);
+      const hidden = await answer(classmate, thread.id, 'To be hidden.', thread.posts[0]!.id);
+      await call(classmate, 'DELETE', `${base()}/${thread.id}/posts/${reply.id}`);
+      await call(teacher, 'PUT', `${base()}/${thread.id}/posts/${hidden.id}/visibility`, {
+        hidden: true,
+      });
+      const post = (replyToPostId: string) =>
+        call(student, 'POST', `${base()}/${thread.id}/posts`, { body: 'x', replyToPostId });
+
+      expect((await post(reply.id)).statusCode).toBe(404);
+      expect((await post(hidden.id)).statusCode).toBe(409);
+      expect((await post(other.posts[0]!.id)).statusCode).toBe(404);
+      expect((await post('not-a-uuid')).statusCode).toBe(400);
+    });
+
+    it('lists replies only under a top-level post of the thread', async () => {
+      const thread = await start(student);
+      const reply = await answer(classmate, thread.id, 'An answer.', thread.posts[0]!.id);
+
+      expect(
+        (await call(student, 'GET', `${base()}/${thread.id}/posts/${reply.id}/replies`))
+          .statusCode,
+      ).toBe(404);
+    });
+  });
+
+  describe('pages', () => {
+    it('pages through threads, most recently active first, and filters them by title', async () => {
+      for (const title of ['Sorting', 'Graphs', 'Sorting again']) await start(student, title);
+
+      const first = (await call(student, 'GET', `${base()}?limit=2`)).json<Page<ThreadBody>>();
+      const second = (
+        await call(student, 'GET', `${base()}?limit=2&cursor=${first.meta.nextCursor}`)
+      ).json<Page<ThreadBody>>();
+      const filtered = (await call(student, 'GET', `${base()}?q=sort`)).json<
+        Page<ThreadBody>
+      >();
+
+      expect(first.items.map((thread) => thread.title)).toEqual(['Sorting again', 'Graphs']);
+      expect(first.meta.hasNextPage).toBe(true);
+      expect(second.items.map((thread) => thread.title)).toEqual(['Sorting']);
+      expect(second.meta).toMatchObject({ hasNextPage: false, nextCursor: null });
+      expect(filtered.items.map((thread) => thread.title)).toEqual([
+        'Sorting again',
+        'Sorting',
+      ]);
+    });
+
+    it('pages through posts and through replies, oldest first', async () => {
+      const thread = await start(student);
+      const opening = thread.posts[0]!;
+      const second = await answer(classmate, thread.id, 'Second.');
+      const replies = [
+        await answer(teacher, thread.id, 'First reply.', opening.id),
+        await answer(classmate, thread.id, 'Second reply.', opening.id),
+      ];
+
+      const posts = await postsOf(student, thread.id, '?limit=1');
+      const morePosts = await postsOf(
+        student,
+        thread.id,
+        `?limit=1&cursor=${posts.meta.nextCursor}`,
+      );
+      const firstReplies = await repliesTo(student, thread.id, opening.id, '?limit=1');
+      const moreReplies = await repliesTo(
+        student,
+        thread.id,
+        opening.id,
+        `?limit=1&cursor=${firstReplies.meta.nextCursor}`,
+      );
+
+      expect(posts.items.map((post) => post.id)).toEqual([opening.id]);
+      expect(morePosts.items.map((post) => post.id)).toEqual([second.id]);
+      expect(morePosts.meta.hasNextPage).toBe(false);
+      expect([...firstReplies.items, ...moreReplies.items].map((post) => post.id)).toEqual(
+        replies.map((reply) => reply.id),
+      );
+    });
+
+    it('refuses a cursor it did not issue', async () => {
+      const thread = await start(student);
+
+      expect((await call(student, 'GET', `${base()}?cursor=nonsense`)).statusCode).toBe(400);
+      expect(
+        (await call(student, 'GET', `${base()}/${thread.id}/posts?cursor=nonsense`)).statusCode,
+      ).toBe(400);
+    });
   });
 
   it('refuses an empty or oversized message', async () => {
@@ -463,9 +667,9 @@ describe('Course discussion (e2e)', () => {
     expect(erased.statusCode, erased.body).toBe(200);
     expect(erased.json()).toMatchObject({ tally: { discussionPosts: 1 } });
 
-    const read = (await call(classmate, 'GET', `${base()}/${thread.id}`)).json<ThreadBody>();
-    expect(read.title).toBe('');
-    expect(read.posts.map((post) => post.state)).toEqual(['deleted', 'visible']);
-    expect(JSON.stringify(read)).not.toContain('Personal words');
+    const seen = await read(classmate, thread.id);
+    expect(seen.title).toBe('');
+    expect(seen.posts.map((post) => post.state)).toEqual(['deleted', 'visible']);
+    expect(JSON.stringify(seen)).not.toContain('Personal words');
   });
 });

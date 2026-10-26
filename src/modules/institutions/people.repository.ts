@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import { decodeCursor } from '../../database/repository/cursor';
+import { escapeLike } from '../../database/repository/escape-like';
 import {
   programMemberships,
   roleAssignments,
@@ -140,12 +141,4 @@ export class PeopleRepository {
   private get reader() {
     return this.txHost.reader();
   }
-}
-
-/**
- * `%` and `_` are wildcards to `ilike`, so a search for "a_b" would otherwise
- * match "axb". Escaped with a backslash, which is Postgres's default.
- */
-function escapeLike(value: string): string {
-  return value.replaceAll(/[\\%_]/gu, (match) => `\\${match}`);
 }

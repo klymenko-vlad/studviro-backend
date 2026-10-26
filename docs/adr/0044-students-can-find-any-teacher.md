@@ -23,8 +23,10 @@ year.
 - **A reader who already searches `person` does not also search `teacher`**, so an
   administrator does not get the same teacher twice.
 - **A teacher profile**, `GET /institutions/:id/teachers/:userId`, also for `course:read`:
-  name, e-mail, the departments of the courses they teach, and those courses with the
-  newest term first, at most 50. It answers 404 for anybody who teaches nothing here,
+  name, e-mail and the departments of the courses they teach. The courses themselves are
+  `GET …/teachers/:userId/offerings`: newest term first, keyset-paged and filtered by
+  title or code (`q`), since a long-serving teacher's list has no natural end. Both
+  answer 404 for anybody who teaches nothing here,
   including a user who exists, so it cannot be used to test whether an account exists.
 - **Each course says whether the reader can open it** (`viewerCanOpen`): the same rule
   as the course page, i.e. they teach it, hold a recorded enrolment on it, or administer

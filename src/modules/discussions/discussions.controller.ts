@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 
 import { ApiErrorResponses } from '../../common/decorators/api-error-responses.decorator';
+import { CursorPaginationQueryDto } from '../../common/dto/pagination.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermission } from '../authorization/decorators/require-permission.decorator';
 import {
@@ -31,6 +33,7 @@ import {
 
 import type { DiscussionCaller } from './discussion-access.service';
 import { DiscussionModerationService } from './discussion-moderation.service';
+import { DiscussionPostsService } from './discussion-posts.service';
 import { DiscussionsService } from './discussions.service';
 import {
   CreateDiscussionPostDto,
@@ -39,7 +42,13 @@ import {
   EditDiscussionPostDto,
   EditDiscussionThreadDto,
 } from './dto/discussion-input.dto';
-import { DiscussionThreadDto, DiscussionThreadListDto } from './dto/discussion-response.dto';
+import { ListDiscussionThreadsQueryDto } from './dto/discussion-query.dto';
+import {
+  DiscussionPostDto,
+  DiscussionPostPageDto,
+  DiscussionThreadDto,
+  DiscussionThreadListDto,
+} from './dto/discussion-response.dto';
 
 const INSTITUTION_SCOPE = { type: 'institution', param: 'institutionId' } as const;
 
@@ -53,23 +62,27 @@ export class DiscussionsController {
   constructor(
     private readonly discussions: DiscussionsService,
     private readonly moderation: DiscussionModerationService,
+    private readonly posts: DiscussionPostsService,
   ) {}
 
   @Get()
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
   @ApiOperation({
     operationId: 'listDiscussionThreads',
-    summary: 'The threads of a course’s discussion, most recently active first',
+    summary:
+      'The threads of a course’s discussion, most recently active first, a page at a time',
   })
   @ApiOkResponse({ type: DiscussionThreadListDto })
   @ApiErrorResponses({ notFound: true })
   async list(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
     @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Query() query: ListDiscussionThreadsQueryDto,
     @CurrentUser('id') userId: string,
   ): Promise<DiscussionThreadListDto> {
-    return DiscussionThreadListDto.from(
-      await this.discussions.listThreads({ institutionId, offeringId, userId }),
+    return new DiscussionThreadListDto(
+      await this.discussions.listThreads({ institutionId, offeringId, userId }, query),
+      query.limit,
     );
   }
 
@@ -138,7 +151,7 @@ export class DiscussionsController {
 
   @Get(':threadId')
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
-  @ApiOperation({ operationId: 'getDiscussionThread', summary: 'A thread with its posts' })
+  @ApiOperation({ operationId: 'getDiscussionThread', summary: 'A thread, without its posts' })
   @ApiOkResponse({ type: DiscussionThreadDto })
   @ApiErrorResponses({ notFound: true })
   async thread(
@@ -152,10 +165,56 @@ export class DiscussionsController {
     );
   }
 
+  @Get(':threadId/posts')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'listDiscussionPosts',
+    summary: 'The top-level posts of a thread, oldest first, each with its reply count',
+  })
+  @ApiOkResponse({ type: DiscussionPostPageDto })
+  @ApiErrorResponses({ notFound: true })
+  async listPosts(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Param('threadId', ParseUUIDPipe) threadId: string,
+    @Query() query: CursorPaginationQueryDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<DiscussionPostPageDto> {
+    return new DiscussionPostPageDto(
+      await this.posts.topLevel({ institutionId, offeringId, userId }, threadId, query),
+      query.limit,
+    );
+  }
+
+  @Get(':threadId/posts/:postId/replies')
+  @RequirePermission('offering:read', INSTITUTION_SCOPE)
+  @ApiOperation({
+    operationId: 'listDiscussionReplies',
+    summary: 'The replies gathered under a top-level post, oldest first',
+  })
+  @ApiOkResponse({ type: DiscussionPostPageDto })
+  @ApiErrorResponses({ notFound: true })
+  async listReplies(
+    @Param('institutionId', ParseUUIDPipe) institutionId: string,
+    @Param('offeringId', ParseUUIDPipe) offeringId: string,
+    @Param('threadId', ParseUUIDPipe) threadId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Query() query: CursorPaginationQueryDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<DiscussionPostPageDto> {
+    return new DiscussionPostPageDto(
+      await this.posts.replies({ institutionId, offeringId, userId }, threadId, postId, query),
+      query.limit,
+    );
+  }
+
   @Post(':threadId/posts')
   @RequirePermission('offering:read', INSTITUTION_SCOPE)
-  @ApiOperation({ operationId: 'replyToDiscussionThread', summary: 'Reply in a thread' })
-  @ApiCreatedResponse({ type: DiscussionThreadDto })
+  @ApiOperation({
+    operationId: 'replyToDiscussionThread',
+    summary: 'Post in a thread, or answer a post in it',
+  })
+  @ApiCreatedResponse({ type: DiscussionPostDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   async reply(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
@@ -163,8 +222,8 @@ export class DiscussionsController {
     @Param('threadId', ParseUUIDPipe) threadId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreateDiscussionPostDto,
-  ): Promise<DiscussionThreadDto> {
-    return DiscussionThreadDto.from(
+  ): Promise<DiscussionPostDto> {
+    return DiscussionPostDto.from(
       await this.discussions.reply({ institutionId, offeringId, userId }, threadId, dto),
     );
   }
@@ -201,7 +260,7 @@ export class DiscussionsController {
     description:
       'Readers see that the post was edited. A hidden post or a post in a hidden thread is refused.',
   })
-  @ApiOkResponse({ type: DiscussionThreadDto })
+  @ApiOkResponse({ type: DiscussionPostDto })
   @ApiErrorResponses({ notFound: true, conflict: true })
   async editPost(
     @Param('institutionId', ParseUUIDPipe) institutionId: string,
@@ -210,8 +269,8 @@ export class DiscussionsController {
     @Param('postId', ParseUUIDPipe) postId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: EditDiscussionPostDto,
-  ): Promise<DiscussionThreadDto> {
-    return DiscussionThreadDto.from(
+  ): Promise<DiscussionPostDto> {
+    return DiscussionPostDto.from(
       await this.discussions.editPost(
         { institutionId, offeringId, userId },
         threadId,

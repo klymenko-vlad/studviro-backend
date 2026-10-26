@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
   ValidateNested,
@@ -72,6 +73,16 @@ export class CreateDiscussionPostDto extends WithAttachments {
   @MinLength(1)
   @MaxLength(MAX_POST_BODY)
   body!: string;
+
+  @ApiProperty({
+    format: 'uuid',
+    required: false,
+    description:
+      'Answer this post. A top-level post gathers the reply under it; a reply keeps the new one in the same group and quotes it.',
+  })
+  @IsOptional()
+  @IsUUID()
+  replyToPostId?: string;
 }
 
 export class DiscussionVisibilityDto {
