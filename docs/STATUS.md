@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-24 (CB10)
+Last updated: 2026-10-26 (course builder merged to dev)
 
 ## What this is
 
@@ -102,10 +102,12 @@ folders (0049), quizzes with a versioned bank (0050), attempts (0051), review an
 they also teach — sections, materials and their files copied in the store, assignments with
 new gradebook columns, quizzes and the bank — appended after what is there, hidden by
 default, every date moved by the gap between the two terms' starts, groups matched by code
-or name, nothing a student did copied; a preview gives the same report first. The client
-half is on branch `feat/course-sections` in `../frontend-sections` (a worktree), the server
-half on `feat/course-builder` in `../backend-course-builder`, until `dev` is free of the
-uncommitted interface work in `../frontend`; **merge both to `dev` first**.
+or name, nothing a student did copied; a preview gives the same report first. Both halves
+were merged to `dev` on 2026-10-26, together with the discussion-replies work (B65) and the
+dashboard's at-a-glance strip that had been left uncommitted in `../backend` and
+`../frontend`; its migration is now `0043_discussion_replies`. The Slovak catalogue is
+complete again (741 course-builder strings translated) and the client budget is 728 kB,
+measured 726.95 kB.
 
 **Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
 behind it** (tracker B41). `Product Plan.md` is complete, so the UI Work Plan is the live
