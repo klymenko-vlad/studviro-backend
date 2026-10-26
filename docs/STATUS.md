@@ -109,9 +109,9 @@ dashboard's at-a-glance strip that had been left uncommitted in `../backend` and
 complete again (741 course-builder strings translated) and the client budget is 728 kB,
 measured 726.95 kB.
 
-**Next task: U1 of `docs/UI Work Plan.md` — `ConfirmAction` and every destructive action
-behind it** (tracker B41). `Product Plan.md` is complete, so the UI Work Plan is the live
-track again.
+**Next task: W1 of `Product Plan.md` Phase 5 — the personal planner.** Phase 5 (2026-10-26)
+is the order the student chose after checking the diploma against its zadanie and AIS2:
+W1–W11, then _Later_. The UI Work Plan (U1 onwards) waits behind it; its B41 is listed there.
 
 Phase N (information architecture, N1–N4) shipped on 2026-10-22:
 students have five menu entries, search and notifications live in the header, course tabs

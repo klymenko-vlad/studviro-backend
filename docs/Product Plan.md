@@ -1,8 +1,7 @@
 # Product Plan
 
-**Every step in this plan is done.** Phases 0 to 4, thirty-three items, both halves of each.
-What follows is the record of what was built and why, not a queue. New work belongs in a
-new phase below, with `STATUS.md` pointing at it.
+**Phases 0 to 4 are done**, thirty-three items, both halves of each, and are the record of
+what was built and why. **Phase 5 is the live queue.**
 
 The backlog, rewritten for what StudViro is: **one academic platform that does the job AIS2
 and Moodle do between them, entered and owned by the institution itself.** ADR 0024 records
@@ -157,6 +156,40 @@ deliberately marked `TODO(institution)` rather than invented.
 the upstream: on a system of record there is nothing to be stale relative to. It is now
 operational liveness — queue lag, the age of the oldest waiting job, migration drift —
 measured and documented in `docs/Observability.md`.
+
+## Phase 5 — What the thesis review found (2026-10-26)
+
+**Open.** The diploma was checked against its zadanie and against what AIS2 does on
+2026-10-26, and the student chose this order. Take W1 first, one step per session, both
+halves of each; the items under _Later_ are recorded so nothing is lost, not scheduled.
+
+| #   | Step                                                                                                                                                                                                                            | Status |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| W1  | Personal planner: a student's own tasks (with a due time) and events, private to them, shown in the calendar, on the dashboard and in the iCalendar feed                                                                        | Open   |
+| W2  | B43 — a teacher reads another course's learning space through the API                                                                                                                                                           | Open   |
+| W3  | B48 — withdrawing a graded student erases their published grade                                                                                                                                                                 | Open   |
+| W4  | B49 — a sat exam loses its registration and its seat count                                                                                                                                                                      | Open   |
+| W5  | Course announcements: a teacher writes to all students of an offering, a group or selected students; in-app plus e-mail (important ones always mailed, Reply-To the teacher), kept on the course page, rate-limited and audited | Open   |
+| W6  | Zápisný list: the year's enrolled courses and credits as a PDF                                                                                                                                                                  | Open   |
+| W7  | Confirmation of study (potvrdenie o štúdiu) as a PDF with a code anyone can verify on a public page                                                                                                                             | Open   |
+| W8  | Transcript (výpis výsledkov) as a PDF, by term                                                                                                                                                                                  | Open   |
+| W9  | One-click subscribe (Google, Outlook, Apple / `webcal://`) and _Add to calendar_ on a single exam, deadline or class                                                                                                            | Open   |
+| W10 | A better feed: choose classes / exams / deadlines, reminders (`VALARM`), course codes and links back                                                                                                                            | Open   |
+| W11 | Deadline reminders: a notification and optional e-mail before a deadline or exam, set in account settings                                                                                                                       | Open   |
+
+**Later**, in rough order of value:
+
+- weekly workload view; grade forecast from the gradebook weights; a meeting link on a class
+  or exam; installable app with push notifications;
+- a personal document store; a request workflow (žiadosti) for the study office, then
+  scholarships on top of it (applications, awards, IBAN — sensitive data, GDPR inventory
+  first); fees with a PAY by square QR code; thesis registration; a course evaluation survey;
+- two-way sync with Google Calendar / Microsoft Graph and attaching submissions from Google
+  Drive / OneDrive — both need OAuth credentials and hosted resources, against the
+  local-only standing decision;
+- the open tracker rows not above: B34, B35 (needs a product answer), B36, B39, B40, B41
+  (U1 of `UI Work Plan.md`), B42, B46, B51, B52; discussion that updates without a reload;
+  _Account_ and _Account settings_ as one menu entry.
 
 ## Void
 
