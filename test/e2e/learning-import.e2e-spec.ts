@@ -896,7 +896,7 @@ describe('Reuse last year’s course (e2e)', () => {
       const response = await importInto(targetId, { from: databases });
 
       expect(response.statusCode).toBe(403);
-      expect(response.json().code).toBe('LEARNING_AUTHORING_DENIED');
+      expect(response.json().code).toBe('LEARNING_SPACE_NOT_YOURS');
     });
 
     it('does not find a page of another institution, or one that does not exist', async () => {
