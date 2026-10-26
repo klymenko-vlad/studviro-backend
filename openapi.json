@@ -12365,6 +12365,44 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to threads whose title contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12424,7 +12462,7 @@
             "access-token": []
           }
         ],
-        "summary": "The threads of a course’s discussion, most recently active first",
+        "summary": "The threads of a course’s discussion, most recently active first, a page at a time",
         "tags": [
           "learning"
         ]
@@ -12821,7 +12859,7 @@
             "access-token": []
           }
         ],
-        "summary": "A thread with its posts",
+        "summary": "A thread, without its posts",
         "tags": [
           "learning"
         ]
@@ -12938,6 +12976,124 @@
       }
     },
     "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts": {
+      "get": {
+        "operationId": "listDiscussionPosts",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionPostPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The top-level posts of a thread, oldest first, each with its reply count",
+        "tags": [
+          "learning"
+        ]
+      },
       "post": {
         "operationId": "replyToDiscussionThread",
         "parameters": [
@@ -12982,7 +13138,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DiscussionThreadDto"
+                  "$ref": "#/components/schemas/DiscussionPostDto"
                 }
               }
             }
@@ -13043,7 +13199,135 @@
             "access-token": []
           }
         ],
-        "summary": "Reply in a thread",
+        "summary": "Post in a thread, or answer a post in it",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/course-offerings/{offeringId}/discussion/threads/{threadId}/posts/{postId}/replies": {
+      "get": {
+        "operationId": "listDiscussionReplies",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threadId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionPostPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The replies gathered under a top-level post, oldest first",
         "tags": [
           "learning"
         ]
@@ -13103,7 +13387,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DiscussionThreadDto"
+                  "$ref": "#/components/schemas/DiscussionPostDto"
                 }
               }
             }
@@ -13625,7 +13909,129 @@
             "access-token": []
           }
         ],
-        "summary": "Who a teacher of this institution is and what they teach",
+        "summary": "Who a teacher of this institution is and where they work",
+        "tags": [
+          "teachers"
+        ]
+      }
+    },
+    "/api/v1/institutions/{institutionId}/teachers/{userId}/offerings": {
+      "get": {
+        "operationId": "listTeacherOfferings",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Narrows to courses whose title or code contains this",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherOfferingPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The courses a teacher teaches, newest term first, a page at a time",
         "tags": [
           "teachers"
         ]
@@ -21888,16 +22294,21 @@
           "canModerate": {
             "type": "boolean"
           },
-          "threads": {
+          "items": {
+            "description": "Most recently active first.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DiscussionThreadSummaryDto"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CursorPageMetaDto"
           }
         },
         "required": [
           "canModerate",
-          "threads"
+          "items",
+          "meta"
         ]
       },
       "DiscussionAttachmentClaimDto": {
@@ -21945,6 +22356,49 @@
         "required": [
           "title",
           "body"
+        ]
+      },
+      "DiscussionThreadDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DiscussionAuthorDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "Hidden by a moderator."
+          },
+          "canModerate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "author",
+          "createdAt",
+          "lastActivityAt",
+          "postCount",
+          "hidden",
+          "canModerate"
         ]
       },
       "DiscussionPostAuthorDto": {
@@ -22003,6 +22457,37 @@
           "scanStatus"
         ]
       },
+      "DiscussionQuoteDto": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DiscussionAuthorDto"
+          },
+          "excerpt": {
+            "type": "string",
+            "nullable": true,
+            "description": "The start of the quoted text; null when it is deleted or withheld."
+          },
+          "state": {
+            "enum": [
+              "visible",
+              "hidden",
+              "deleted"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "postId",
+          "author",
+          "excerpt",
+          "state"
+        ]
+      },
       "DiscussionPostDto": {
         "type": "object",
         "properties": {
@@ -22045,6 +22530,26 @@
             "items": {
               "$ref": "#/components/schemas/DiscussionAttachmentDto"
             }
+          },
+          "parentPostId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The top-level post this reply is gathered under; null for a top-level post."
+          },
+          "replyCount": {
+            "type": "number",
+            "description": "Replies gathered under a top-level post; 0 for a reply."
+          },
+          "quote": {
+            "nullable": true,
+            "description": "The reply this one answers, inside the same group.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DiscussionQuoteDto"
+              }
+            ]
           }
         },
         "required": [
@@ -22055,57 +22560,29 @@
           "mine",
           "createdAt",
           "editedAt",
-          "attachments"
+          "attachments",
+          "parentPostId",
+          "replyCount",
+          "quote"
         ]
       },
-      "DiscussionThreadDto": {
+      "DiscussionPostPageDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string"
-          },
-          "author": {
-            "$ref": "#/components/schemas/DiscussionAuthorDto"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "lastActivityAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "postCount": {
-            "type": "number"
-          },
-          "hidden": {
-            "type": "boolean",
-            "description": "Hidden by a moderator."
-          },
-          "canModerate": {
-            "type": "boolean"
-          },
-          "posts": {
+          "items": {
+            "description": "Oldest first.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DiscussionPostDto"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CursorPageMetaDto"
           }
         },
         "required": [
-          "id",
-          "title",
-          "author",
-          "createdAt",
-          "lastActivityAt",
-          "postCount",
-          "hidden",
-          "canModerate",
-          "posts"
+          "items",
+          "meta"
         ]
       },
       "CreateDiscussionPostDto": {
@@ -22122,6 +22599,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 10000
+          },
+          "replyToPostId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Answer this post. A top-level post gathers the reply under it; a reply keeps the new one in the same group and quotes it."
           }
         },
         "required": [
@@ -22275,6 +22757,33 @@
           "name"
         ]
       },
+      "TeacherProfileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "departments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherDepartmentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "departments"
+        ]
+      },
       "TeacherOfferingDto": {
         "type": "object",
         "properties": {
@@ -22304,39 +22813,23 @@
           "viewerCanOpen"
         ]
       },
-      "TeacherProfileResponseDto": {
+      "TeacherOfferingPageDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "departments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TeacherDepartmentDto"
-            }
-          },
-          "offerings": {
+          "items": {
             "description": "Newest term first.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TeacherOfferingDto"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CursorPageMetaDto"
           }
         },
         "required": [
-          "id",
-          "displayName",
-          "email",
-          "departments",
-          "offerings"
+          "items",
+          "meta"
         ]
       },
       "CaptchaStateDto": {

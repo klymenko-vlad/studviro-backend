@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, ne, sql, type SQL } from 'drizzle-orm';
 
+import { decodeCursor } from '../../database/repository/cursor';
+import { escapeLike } from '../../database/repository/escape-like';
 import {
   discussionPosts,
   discussionThreads,
@@ -17,9 +19,10 @@ export interface ThreadSummaryRow {
   readonly postCount: number;
 }
 
-export interface PostRow {
-  readonly post: DiscussionPost;
-  readonly authorName: string;
+export interface ThreadPageQuery {
+  readonly limit: number;
+  readonly cursor?: string | undefined;
+  readonly q?: string | undefined;
 }
 
 @Injectable()
@@ -30,7 +33,8 @@ export class DiscussionsRepository {
     institutionId: string,
     offeringId: string,
     includeHidden: boolean,
-  ): Promise<ThreadSummaryRow[]> {
+    query: ThreadPageQuery,
+  ): Promise<{ rows: ThreadSummaryRow[]; hasNextPage: boolean }> {
     const postCount = this.reader
       .select({ threadId: discussionPosts.threadId, total: count().as('total') })
       .from(discussionPosts)
@@ -53,11 +57,15 @@ export class DiscussionsRepository {
           eq(discussionThreads.courseOfferingId, offeringId),
           isNull(discussionThreads.deletedAt),
           includeHidden ? undefined : isNull(discussionThreads.hiddenAt),
+          ...threadFilters(query),
         ),
       )
-      .orderBy(desc(discussionThreads.lastActivityAt), desc(discussionThreads.id));
+      .orderBy(desc(discussionThreads.lastActivityAt), desc(discussionThreads.id))
+      .limit(query.limit + 1);
 
-    return rows;
+    const hasNextPage = rows.length > query.limit;
+
+    return { rows: hasNextPage ? rows.slice(0, query.limit) : rows, hasNextPage };
   }
 
   async findThread(
@@ -82,13 +90,13 @@ export class DiscussionsRepository {
     return row;
   }
 
-  postsOf(threadId: string): Promise<PostRow[]> {
-    return this.client
-      .select({ post: discussionPosts, authorName: users.displayName })
+  async countPosts(threadId: string): Promise<number> {
+    const [row] = await this.reader
+      .select({ total: count() })
       .from(discussionPosts)
-      .innerJoin(users, eq(users.id, discussionPosts.authorId))
-      .where(eq(discussionPosts.threadId, threadId))
-      .orderBy(asc(discussionPosts.createdAt), asc(discussionPosts.id));
+      .where(and(eq(discussionPosts.threadId, threadId), isNull(discussionPosts.deletedAt)));
+
+    return row?.total ?? 0;
   }
 
   async findPost(threadId: string, postId: string): Promise<DiscussionPost | undefined> {
@@ -141,6 +149,8 @@ export class DiscussionsRepository {
     threadId: string;
     authorId: string;
     body: string;
+    parentPostId: string | null;
+    quotedPostId: string | null;
     now: Date;
   }): Promise<DiscussionPost> {
     const [post] = await this.client
@@ -150,6 +160,8 @@ export class DiscussionsRepository {
         threadId: values.threadId,
         authorId: values.authorId,
         body: values.body,
+        parentPostId: values.parentPostId,
+        quotedPostId: values.quotedPostId,
         createdAt: values.now,
       })
       .returning();
@@ -234,4 +246,21 @@ export class DiscussionsRepository {
   private get client() {
     return this.txHost.client();
   }
+}
+
+function threadFilters(query: ThreadPageQuery): SQL[] {
+  const filters: SQL[] = [];
+
+  const q = query.q?.trim();
+  if (q) filters.push(ilike(discussionThreads.title, `%${escapeLike(q)}%`));
+
+  if (query.cursor) {
+    const { value, id } = decodeCursor(query.cursor);
+    const lastActivityAt = value instanceof Date ? value.toISOString() : value;
+    filters.push(
+      sql`(${discussionThreads.lastActivityAt}, ${discussionThreads.id}) < (${lastActivityAt}::timestamptz, ${id}::uuid)`,
+    );
+  }
+
+  return filters;
 }

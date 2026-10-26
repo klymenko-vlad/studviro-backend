@@ -5,6 +5,7 @@ import {
   EntityNotFoundError,
   PermissionDeniedError,
 } from '../../common/errors/domain.error';
+import { encodeCursor } from '../../database/repository/cursor';
 import type { DiscussionThread } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { DiscussionNotificationsService } from '../notifications/discussion-notifications.service';
@@ -14,10 +15,10 @@ import { DiscussionAccessService, type DiscussionCaller } from './discussion-acc
 import {
   DiscussionAttachmentsService,
   type AttachmentClaim,
-  type AttachmentView,
 } from './discussion-attachments.service';
-import { visiblePost, type VisiblePost } from './discussion-visibility';
-import { DiscussionsRepository } from './discussions.repository';
+import { DiscussionPostsService, type PostView } from './discussion-posts.service';
+import { visiblePost, type DiscussionViewer } from './discussion-visibility';
+import { DiscussionsRepository, type ThreadPageQuery } from './discussions.repository';
 
 export interface ThreadSummary {
   readonly id: string;
@@ -31,23 +32,15 @@ export interface ThreadSummary {
 
 export interface ThreadList {
   readonly canModerate: boolean;
-  readonly threads: ThreadSummary[];
-}
-
-export interface PostView extends VisiblePost {
-  readonly id: string;
-  readonly author: { id: string; displayName: string; isTeacher: boolean };
-  readonly createdAt: Date;
-  readonly editedAt: Date | null;
-  readonly attachments: AttachmentView[];
+  readonly items: ThreadSummary[];
+  readonly hasNextPage: boolean;
+  readonly nextCursor: string | null;
 }
 
 export interface ThreadDetail extends ThreadSummary {
   readonly canModerate: boolean;
-  readonly posts: PostView[];
 }
 
-/** A course's own conversation: threads, replies, and an author deleting their own words. */
 @Injectable()
 export class DiscussionsService {
   constructor(
@@ -56,54 +49,35 @@ export class DiscussionsService {
     private readonly repository: DiscussionsRepository,
     private readonly notifications: DiscussionNotificationsService,
     private readonly attachments: DiscussionAttachmentsService,
+    private readonly posts: DiscussionPostsService,
   ) {}
 
-  async listThreads(caller: DiscussionCaller): Promise<ThreadList> {
+  async listThreads(caller: DiscussionCaller, query: ThreadPageQuery): Promise<ThreadList> {
     const viewer = await this.access.viewer(caller);
-    const rows = await this.repository.listThreads(
+    const { rows, hasNextPage } = await this.repository.listThreads(
       caller.institutionId,
       caller.offeringId,
       viewer.moderates,
+      query,
     );
+    const last = rows.at(-1)?.thread;
 
     return {
       canModerate: viewer.moderates,
-      threads: rows.map((row) => summaryOf(row.thread, row.authorName, row.postCount)),
+      items: rows.map((row) => summaryOf(row.thread, row.authorName, row.postCount)),
+      hasNextPage,
+      nextCursor:
+        hasNextPage && last ? encodeCursor({ value: last.lastActivityAt, id: last.id }) : null,
     };
   }
 
   async thread(caller: DiscussionCaller, threadId: string): Promise<ThreadDetail> {
     const viewer = await this.access.viewer(caller);
     const { thread, authorName } = await this.access.thread(caller, threadId, viewer);
-    const [posts, teachers] = await Promise.all([
-      this.repository.postsOf(thread.id),
-      this.repository.teachersOf(caller.offeringId),
-    ]);
-    const files = await this.attachments.byPost(posts.map((row) => row.post.id));
 
     return {
-      ...summaryOf(
-        thread,
-        authorName,
-        posts.filter((row) => row.post.deletedAt === null).length,
-      ),
+      ...summaryOf(thread, authorName, await this.repository.countPosts(thread.id)),
       canModerate: viewer.moderates,
-      posts: posts.map(({ post, authorName: name }) => {
-        const visible = visiblePost(post, viewer);
-
-        return {
-          id: post.id,
-          author: {
-            id: post.authorId,
-            displayName: name,
-            isTeacher: teachers.includes(post.authorId),
-          },
-          createdAt: post.createdAt,
-          editedAt: post.deletedAt === null ? post.editedAt : null,
-          attachments: visible.body === null ? [] : (files.get(post.id) ?? []),
-          ...visible,
-        };
-      }),
     };
   }
 
@@ -142,46 +116,64 @@ export class DiscussionsService {
   async reply(
     caller: DiscussionCaller,
     threadId: string,
-    input: { body: string; attachments?: readonly AttachmentClaim[] },
+    input: { body: string; replyToPostId?: string; attachments?: readonly AttachmentClaim[] },
     now = new Date(),
-  ): Promise<ThreadDetail> {
+  ): Promise<PostView> {
     const viewer = await this.access.viewer(caller);
     const { thread } = await this.access.thread(caller, threadId, viewer);
     if (thread.hiddenAt !== null) {
       throw new ConflictError('DISCUSSION_THREAD_HIDDEN', 'This thread has been hidden');
     }
+    const place = await this.placeOf(thread.id, input.replyToPostId, viewer);
     const files = await this.attachments.confirm(caller.institutionId, input.attachments ?? []);
 
-    await this.txHost.run(async () => {
-      const post = await this.repository.createPost({
+    const post = await this.txHost.run(async () => {
+      const created = await this.repository.createPost({
         institutionId: caller.institutionId,
         threadId: thread.id,
         authorId: caller.userId,
         body: input.body.trim(),
+        ...place,
         now,
       });
-      await this.attachments.record(caller.institutionId, post.id, files);
+      await this.attachments.record(caller.institutionId, created.id, files);
       await this.notifications.replied(
         thread,
         await this.repository.participantsOf(thread.id, caller.userId),
         now,
       );
+
+      return created;
     });
 
-    return this.thread(caller, thread.id);
+    return this.posts.one(caller.offeringId, viewer, post.id);
   }
 
-  /**
-   * The author corrects their own words. Not while a teacher has the post or
-   * its thread hidden: what was taken down is restored first, then changed.
-   */
+  private async placeOf(
+    threadId: string,
+    replyToPostId: string | undefined,
+    viewer: DiscussionViewer,
+  ): Promise<{ parentPostId: string | null; quotedPostId: string | null }> {
+    if (replyToPostId === undefined) return { parentPostId: null, quotedPostId: null };
+
+    const target = await this.repository.findPost(threadId, replyToPostId);
+    if (target === undefined || visiblePost(target, viewer).state === 'deleted') {
+      throw new EntityNotFoundError('discussion post', replyToPostId);
+    }
+    assertNotHidden(target.hiddenAt);
+
+    return target.parentPostId === null
+      ? { parentPostId: target.id, quotedPostId: null }
+      : { parentPostId: target.parentPostId, quotedPostId: target.id };
+  }
+
   async editPost(
     caller: DiscussionCaller,
     threadId: string,
     postId: string,
     body: string,
     now = new Date(),
-  ): Promise<ThreadDetail> {
+  ): Promise<PostView> {
     const viewer = await this.access.viewer(caller);
     const { thread } = await this.access.thread(caller, threadId, viewer);
     const post = await this.repository.findPost(thread.id, postId);
@@ -198,7 +190,7 @@ export class DiscussionsService {
 
     await this.repository.editPost(post.id, body.trim(), now);
 
-    return this.thread(caller, thread.id);
+    return this.posts.one(caller.offeringId, viewer, post.id);
   }
 
   async renameThread(

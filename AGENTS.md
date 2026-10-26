@@ -27,6 +27,15 @@ behavior, not implementation. Reproduce every bug with a regression test before 
 - Long files that only aggregate (schema barrels, route tables) are fine. Long files that
   reason are not.
 
+## Lists
+
+Every endpoint that returns a collection that grows with data is paginated and filterable:
+`CursorPaginationQueryDto` (keyset, `limit` ≤ 100, opaque `cursor` from
+`database/repository/cursor.ts`), a `q` text filter applied in SQL, and a
+`CursorPageDto`-shaped response. Order by a total order with an id tiebreaker. Do not
+return a whole collection, and do not cap one with a bare `LIMIT` the caller cannot page
+past. The people directory (`people.repository.ts`) is the reference.
+
 ## Comments
 
 Write none. Fix the code instead — rename, extract, tighten the type. No restatements, no

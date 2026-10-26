@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 
+import { escapeLike } from '../../database/repository/escape-like';
 import {
   academicTerms,
   courseOfferings,
@@ -365,12 +366,4 @@ export class SearchService {
   private get reader() {
     return this.txHost.reader();
   }
-}
-
-/**
- * `%`, `_` and `\` are wildcards to LIKE. A student searching for `100_2`
- * should not match `100X2`, and a query of `%` should not return everything.
- */
-function escapeLike(value: string): string {
-  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
 }

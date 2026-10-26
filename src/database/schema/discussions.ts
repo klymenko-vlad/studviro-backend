@@ -1,5 +1,13 @@
 import { isNull, sql } from 'drizzle-orm';
-import { index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  index,
+  integer,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 
 import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
@@ -49,6 +57,12 @@ export const discussionPosts = pgTable(
       .notNull()
       .references(() => users.id),
     body: text('body').notNull(),
+    parentPostId: uuid('parent_post_id').references((): AnyPgColumn => discussionPosts.id, {
+      onDelete: 'cascade',
+    }),
+    quotedPostId: uuid('quoted_post_id').references((): AnyPgColumn => discussionPosts.id, {
+      onDelete: 'set null',
+    }),
     /** Set when the author last changed the text; readers see it was edited. */
     editedAt: timestampColumn('edited_at'),
     hiddenAt: timestampColumn('hidden_at'),
@@ -58,6 +72,7 @@ export const discussionPosts = pgTable(
   },
   (table) => [
     index('discussion_posts_thread_idx').on(table.threadId, table.createdAt),
+    index('discussion_posts_parent_idx').on(table.parentPostId, table.createdAt),
     index('discussion_posts_author_idx').on(table.authorId),
   ],
 );
