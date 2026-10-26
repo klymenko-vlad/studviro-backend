@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { InstitutionsModule } from '../institutions/institutions.module';
 import { LearningModule } from '../learning/learning.module';
+import { PlannerModule } from '../planner/planner.module';
 import { SchedulingModule } from '../scheduling/scheduling.module';
 import { UsersModule } from '../users/users.module';
 
@@ -17,6 +18,7 @@ import { MyCalendarFeedController } from './my-calendar-feed.controller';
     AuthorizationModule,
     InstitutionsModule,
     LearningModule,
+    PlannerModule,
     SchedulingModule,
     UsersModule,
   ],

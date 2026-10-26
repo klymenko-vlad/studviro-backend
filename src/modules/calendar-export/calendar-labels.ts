@@ -6,6 +6,7 @@ export interface CalendarLabels {
   examKind: Record<ExamTermKind, string>;
   exam: string;
   due: string;
+  task: string;
   room: string;
 }
 
@@ -27,6 +28,7 @@ const EN: CalendarLabels = {
   },
   exam: 'Exam',
   due: 'Due',
+  task: 'Task',
   room: 'Room',
 };
 
@@ -48,6 +50,7 @@ const SK: CalendarLabels = {
   },
   exam: 'Skúška',
   due: 'Termín odovzdania',
+  task: 'Úloha',
   room: 'Miestnosť',
 };
 

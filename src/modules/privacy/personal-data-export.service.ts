@@ -7,6 +7,7 @@ import { AccountDataRepository } from './account-data.repository';
 import { DiscussionDataRepository } from './discussion-data.repository';
 import { LearningDataRepository } from './learning-data.repository';
 import type { PersonalDataExport } from './personal-data.types';
+import { PlannerDataRepository } from './planner-data.repository';
 
 /**
  * Article 15 in one document. Scoped to one institution, because that is the
@@ -21,6 +22,7 @@ export class PersonalDataExportService {
     private readonly academic: AcademicDataRepository,
     private readonly learning: LearningDataRepository,
     private readonly discussions: DiscussionDataRepository,
+    private readonly planner: PlannerDataRepository,
   ) {}
 
   async exportFor(institutionId: string, userId: string): Promise<PersonalDataExport> {
@@ -45,6 +47,8 @@ export class PersonalDataExportService {
       notifications,
       files,
       discussionPosts,
+      personalTasks,
+      personalEvents,
     ] = await Promise.all([
       this.account.emails(institutionId, userId),
       this.account.externalIdentities(institutionId, userId),
@@ -67,6 +71,8 @@ export class PersonalDataExportService {
         this.discussions.files(institutionId, userId),
       ]).then(([submitted, attached]) => [...submitted, ...attached]),
       this.discussions.posts(institutionId, userId),
+      this.planner.tasks(institutionId, userId),
+      this.planner.events(institutionId, userId),
     ]);
 
     return {
@@ -98,6 +104,8 @@ export class PersonalDataExportService {
       activityCompletions,
       submissions,
       discussionPosts,
+      personalTasks,
+      personalEvents,
       notifications,
       files,
     };

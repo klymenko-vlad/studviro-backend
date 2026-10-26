@@ -24,6 +24,8 @@ import {
   notificationEvents,
   officialCourseResults,
   passwordResetTokens,
+  personalEvents,
+  personalTasks,
   programMemberships,
   programs,
   refreshTokens,
@@ -417,6 +419,34 @@ describe('Personal data export and erasure (e2e)', () => {
       expect(document.files[0].storageKey).toBe(storageKey);
     });
 
+    it('includes the person’s own planner', async () => {
+      await harness.db.insert(personalTasks).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Renew the dorm contract',
+        dueAt: new Date('2026-11-30T10:00:00.000Z'),
+      });
+      await harness.db.insert(personalEvents).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Therapy session',
+        startsAt: new Date('2026-11-03T15:00:00.000Z'),
+        endsAt: new Date('2026-11-03T16:00:00.000Z'),
+      });
+
+      const document = (await exportAs(student)).json();
+      const classmates = (await exportAs(classmate)).json();
+
+      expect(document.personalTasks).toEqual([
+        expect.objectContaining({ title: 'Renew the dorm contract', completedAt: null }),
+      ]);
+      expect(document.personalEvents).toEqual([
+        expect.objectContaining({ title: 'Therapy session', location: null }),
+      ]);
+      expect(classmates.personalTasks).toEqual([]);
+      expect(classmates.personalEvents).toEqual([]);
+    });
+
     it('never answers with anybody else’s data', async () => {
       const response = await exportAs(classmate);
       expect(response.statusCode).toBe(200);
@@ -506,6 +536,42 @@ describe('Personal data export and erasure (e2e)', () => {
           .from(twoFactorRecoveryCodes)
           .where(eq(twoFactorRecoveryCodes.userId, student.user.id)),
       ).toEqual([]);
+    });
+
+    it('destroys the person’s planner', async () => {
+      await harness.db.insert(personalTasks).values([
+        { institutionId, userId: student.user.id, title: 'Private chore' },
+        { institutionId, userId: classmate.user.id, title: 'Someone else’s chore' },
+      ]);
+      await harness.db.insert(personalEvents).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Doctor',
+        startsAt: new Date('2026-11-03T15:00:00.000Z'),
+        endsAt: new Date('2026-11-03T16:00:00.000Z'),
+      });
+
+      const erased = await eraseAs(admin, student.user.id);
+
+      expect(erased.json()).toMatchObject({ tally: { personalTasks: 1, personalEvents: 1 } });
+      expect(
+        await harness.db
+          .select()
+          .from(personalTasks)
+          .where(eq(personalTasks.userId, student.user.id)),
+      ).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(personalEvents)
+          .where(eq(personalEvents.userId, student.user.id)),
+      ).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(personalTasks)
+          .where(eq(personalTasks.userId, classmate.user.id)),
+      ).toHaveLength(1);
     });
 
     it('leaves an erased person unable to sign in', async () => {

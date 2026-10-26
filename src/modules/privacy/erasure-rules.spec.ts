@@ -25,6 +25,8 @@ const tally: ErasureTally = {
   conflictNotes: 1,
   assessmentFeedback: 4,
   discussionPosts: 0,
+  personalTasks: 0,
+  personalEvents: 0,
   submissionNotes: 2,
 };
 

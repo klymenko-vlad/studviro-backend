@@ -5,6 +5,8 @@ import { AuthorizationService } from '../authorization/authorization.service';
 import { InstitutionConfigurationService } from '../institutions/configuration/institution-configuration.service';
 import { InstitutionsRepository } from '../institutions/institutions.repository';
 import { MyDeadlinesService } from '../learning/my-deadlines.service';
+import { PersonalEventsService } from '../planner/personal-events.service';
+import { PersonalTasksService } from '../planner/personal-tasks.service';
 import { MyExamTermsService } from '../scheduling/my-exam-terms.service';
 import { MyTimetableEventsService } from '../scheduling/my-timetable-events.service';
 import { UsersRepository } from '../users/users.repository';
@@ -34,6 +36,8 @@ export class CalendarExportService {
     private readonly institutions: InstitutionsRepository,
     private readonly users: UsersRepository,
     private readonly authorization: AuthorizationService,
+    private readonly personalEvents: PersonalEventsService,
+    private readonly personalTasks: PersonalTasksService,
   ) {}
 
   async render(institutionId: string, userId: string, now = new Date()): Promise<string> {
@@ -48,10 +52,13 @@ export class CalendarExportService {
       this.configuration.isEnabled(institutionId, 'examRegistration'),
     ]);
 
-    const [timetable, exams, deadlines] = await Promise.all([
+    const owner = { institutionId, userId };
+    const [timetable, exams, deadlines, personalEvents, personalTasks] = await Promise.all([
       withTimetable ? this.timetable.listMine(institutionId, userId, range) : [],
       withExams ? this.exams.listMine(institutionId, userId, range, now) : [],
       this.deadlines.listMine(institutionId, userId, range),
+      this.personalEvents.list(owner, range),
+      this.personalTasks.listOpenDue(owner, range),
     ]);
 
     const labels = calendarLabels(user.locale);
@@ -59,7 +66,10 @@ export class CalendarExportService {
     return renderIcal({
       name: labels.calendarName(institution.name),
       stamp: now,
-      events: toCalendarEntries({ timetable, exams, deadlines }, labels),
+      events: toCalendarEntries(
+        { timetable, exams, deadlines, personalEvents, personalTasks },
+        labels,
+      ),
     });
   }
 

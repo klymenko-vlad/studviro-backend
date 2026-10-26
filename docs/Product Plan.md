@@ -159,13 +159,13 @@ measured and documented in `docs/Observability.md`.
 
 ## Phase 5 — What the thesis review found (2026-10-26)
 
-**Open.** The diploma was checked against its zadanie and against what AIS2 does on
-2026-10-26, and the student chose this order. Take W1 first, one step per session, both
+**Open; W1 done (ADR 0054).** The diploma was checked against its zadanie and against what AIS2 does on
+2026-10-26, and the student chose this order. Take the next open step, one step per session, both
 halves of each; the items under _Later_ are recorded so nothing is lost, not scheduled.
 
 | #   | Step                                                                                                                                                                                                                            | Status |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| W1  | Personal planner: a student's own tasks (with a due time) and events, private to them, shown in the calendar, on the dashboard and in the iCalendar feed                                                                        | Open   |
+| W1  | Personal planner: a student's own tasks (with a due time) and events, private to them, shown in the calendar, on the dashboard and in the iCalendar feed                                                                        | Done   |
 | W2  | B43 — a teacher reads another course's learning space through the API                                                                                                                                                           | Open   |
 | W3  | B48 — withdrawing a graded student erases their published grade                                                                                                                                                                 | Open   |
 | W4  | B49 — a sat exam loses its registration and its seat count                                                                                                                                                                      | Open   |

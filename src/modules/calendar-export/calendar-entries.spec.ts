@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PersonalEvent, PersonalTask } from '../../database/schema';
 import type { MyDeadline } from '../learning/my-deadlines.service';
 import type { MyExamTerm } from '../scheduling/my-exam-terms.service';
 import type { MyTimetableEvent } from '../scheduling/my-timetable-events.service';
@@ -55,11 +56,35 @@ const deadline = {
   term,
 } as MyDeadline;
 
+const noPersonal = { personalEvents: [], personalTasks: [] };
+
+const personalEvent = {
+  id: 'personal-event-1',
+  title: 'Choir rehearsal',
+  note: 'Bring the score',
+  location: 'Hall B',
+  startsAt: new Date('2026-10-21T16:00:00.000Z'),
+  endsAt: new Date('2026-10-21T18:00:00.000Z'),
+} as PersonalEvent;
+
+const personalTask = (overrides: Partial<PersonalTask>): PersonalTask =>
+  ({
+    id: 'task-1',
+    title: 'Pay rent',
+    note: null,
+    dueAt: new Date('2026-10-25T10:00:00.000Z'),
+    completedAt: null,
+    ...overrides,
+  }) as PersonalTask;
+
 const en = calendarLabels('en');
 
 describe('toCalendarEntries', () => {
   it('turns a class into a timed event named after its course and type', () => {
-    const [entry] = toCalendarEntries({ timetable: [lecture], exams: [], deadlines: [] }, en);
+    const [entry] = toCalendarEntries(
+      { timetable: [lecture], exams: [], deadlines: [], ...noPersonal },
+      en,
+    );
 
     expect(entry).toMatchObject({
       uid: 'timetable-event-1@studviro',
@@ -73,7 +98,12 @@ describe('toCalendarEntries', () => {
 
   it('prefers the title the timetable gave a class', () => {
     const [entry] = toCalendarEntries(
-      { timetable: [{ ...lecture, title: 'Algorithms seminar' }], exams: [], deadlines: [] },
+      {
+        timetable: [{ ...lecture, title: 'Algorithms seminar' }],
+        exams: [],
+        deadlines: [],
+        ...noPersonal,
+      },
       en,
     );
 
@@ -82,7 +112,12 @@ describe('toCalendarEntries', () => {
 
   it('keeps a cancelled class, marked cancelled, so a subscribed calendar drops it', () => {
     const [entry] = toCalendarEntries(
-      { timetable: [{ ...lecture, isCancelled: true }], exams: [], deadlines: [] },
+      {
+        timetable: [{ ...lecture, isCancelled: true }],
+        exams: [],
+        deadlines: [],
+        ...noPersonal,
+      },
       en,
     );
 
@@ -107,6 +142,7 @@ describe('toCalendarEntries', () => {
           }),
         ],
         deadlines: [],
+        ...noPersonal,
       },
       en,
     );
@@ -121,6 +157,7 @@ describe('toCalendarEntries', () => {
         timetable: [],
         exams: [exam({ attendance: 'teaching', myRegistration: null })],
         deadlines: [],
+        ...noPersonal,
       },
       en,
     );
@@ -134,17 +171,24 @@ describe('toCalendarEntries', () => {
         timetable: [],
         exams: [exam({ endsAt: new Date('2026-12-28T11:00:00.000Z') })],
         deadlines: [],
+        ...noPersonal,
       },
       en,
     );
-    const [open] = toCalendarEntries({ timetable: [], exams: [exam({})], deadlines: [] }, en);
+    const [open] = toCalendarEntries(
+      { timetable: [], exams: [exam({})], deadlines: [], ...noPersonal },
+      en,
+    );
 
     expect(ends?.endsAt).toEqual(new Date('2026-12-28T11:00:00.000Z'));
     expect(open?.endsAt).toBeNull();
   });
 
   it('writes a deadline as a moment at the due time', () => {
-    const [entry] = toCalendarEntries({ timetable: [], exams: [], deadlines: [deadline] }, en);
+    const [entry] = toCalendarEntries(
+      { timetable: [], exams: [], deadlines: [deadline], ...noPersonal },
+      en,
+    );
 
     expect(entry).toMatchObject({
       uid: 'deadline-activity-1@studviro',
@@ -156,7 +200,7 @@ describe('toCalendarEntries', () => {
 
   it('speaks Slovak to a Slovak reader', () => {
     const entries = toCalendarEntries(
-      { timetable: [lecture], exams: [exam({})], deadlines: [deadline] },
+      { timetable: [lecture], exams: [exam({})], deadlines: [deadline], ...noPersonal },
       calendarLabels('sk'),
     );
 
@@ -164,6 +208,53 @@ describe('toCalendarEntries', () => {
       'Algorithms – Prednáška',
       'Skúška: Algorithms (riadny termín)',
       'Termín odovzdania: Assignment 2 (Algorithms)',
+    ]);
+  });
+
+  it('writes a personal event with its place and note, as the person wrote it', () => {
+    const [entry] = toCalendarEntries(
+      {
+        timetable: [],
+        exams: [],
+        deadlines: [],
+        personalEvents: [personalEvent],
+        personalTasks: [],
+      },
+      en,
+    );
+
+    expect(entry).toEqual({
+      uid: 'personal-event-personal-event-1@studviro',
+      startsAt: personalEvent.startsAt,
+      endsAt: personalEvent.endsAt,
+      summary: 'Choir rehearsal',
+      location: 'Hall B',
+      description: 'Bring the score',
+    });
+  });
+
+  it('writes an open dated task as a moment and leaves out undated and finished ones', () => {
+    const entries = toCalendarEntries(
+      {
+        timetable: [],
+        exams: [],
+        deadlines: [],
+        personalEvents: [],
+        personalTasks: [
+          personalTask({}),
+          personalTask({ id: 'task-2', dueAt: null }),
+          personalTask({ id: 'task-3', completedAt: new Date('2026-10-20T10:00:00.000Z') }),
+        ],
+      },
+      calendarLabels('sk'),
+    );
+
+    expect(entries).toEqual([
+      expect.objectContaining({
+        uid: 'personal-task-task-1@studviro',
+        summary: 'Úloha: Pay rent',
+        endsAt: null,
+      }),
     ]);
   });
 });

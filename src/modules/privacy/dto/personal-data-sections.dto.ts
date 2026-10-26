@@ -211,6 +211,27 @@ export class ExportedDiscussionPostDto {
 }
 
 @Exclude()
+export class ExportedPersonalTaskDto {
+  @Expose() @ApiProperty(uuid) id!: string;
+  @Expose() @ApiProperty() title!: string;
+  @Expose() @ApiProperty(nullableText) note!: string | null;
+  @Expose() @ApiProperty(nullableDateTime) dueAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) completedAt!: Date | null;
+  @Expose() @ApiProperty(dateTime) createdAt!: Date;
+}
+
+@Exclude()
+export class ExportedPersonalEventDto {
+  @Expose() @ApiProperty(uuid) id!: string;
+  @Expose() @ApiProperty() title!: string;
+  @Expose() @ApiProperty(nullableText) note!: string | null;
+  @Expose() @ApiProperty(nullableText) location!: string | null;
+  @Expose() @ApiProperty(dateTime) startsAt!: Date;
+  @Expose() @ApiProperty(dateTime) endsAt!: Date;
+  @Expose() @ApiProperty(dateTime) createdAt!: Date;
+}
+
+@Exclude()
 export class ExportedSubmissionDto {
   @Expose() @ApiProperty(uuid) id!: string;
   @Expose() @ApiProperty(uuid) learningActivityId!: string;

@@ -145,6 +145,21 @@ calendar, marked as cancelled, so you can see that it was meant to happen.
 
 Times are shown in your institution's time zone.
 
+### Your own tasks and events
+
+The calendar is also yours to write in. **_New event_** adds something with a start and an
+end — training, a shift, a doctor's appointment — and **_New task_** adds a to-do, with a
+due time if it has one. They appear on the calendar marked _Personal_, in your calendar
+subscription and in `studviro.ics`, and a task with a due time shows on the dashboard's
+_Deadlines_ tile beside your coursework. A fourth switch, _Show my own events and tasks_,
+hides them.
+
+The **_My tasks_** tab lists your tasks, soonest due first, with a search box and a choice
+of open, done or all. Tick the circle to mark one done; the pencil opens it to edit or
+delete it. Click an event on the calendar to change or delete it.
+
+Nobody else sees any of this — not your teachers and not the institution's administrators.
+
 ## Exams
 
 **_Exams_** lists the exam terms of the courses you attend, upcoming and past. Each one

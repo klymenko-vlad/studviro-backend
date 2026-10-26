@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-26 (course builder merged to dev)
+Last updated: 2026-10-26 (personal planner, W1)
 
 ## What this is
 
@@ -109,9 +109,14 @@ dashboard's at-a-glance strip that had been left uncommitted in `../backend` and
 complete again (741 course-builder strings translated) and the client budget is 728 kB,
 measured 726.95 kB.
 
-**Next task: W1 of `Product Plan.md` Phase 5 — the personal planner.** Phase 5 (2026-10-26)
-is the order the student chose after checking the diploma against its zadanie and AIS2:
-W1–W11, then _Later_. The UI Work Plan (U1 onwards) waits behind it; its B41 is listed there.
+**Personal planner (W1, ADR 0054)** shipped on 2026-10-26: a student's own tasks and
+events, private to them, on a _My tasks_ tab of the calendar, as a fourth calendar layer,
+in the feed and on the dashboard's deadlines tile. 54 new client strings await Slovak.
+
+**Next task: W2 of `Product Plan.md` Phase 5 — B43, a teacher reading another course's
+learning space through the API.** Phase 5 (2026-10-26) is the order the student chose after
+checking the diploma against its zadanie and AIS2: W1–W11, then _Later_. The UI Work Plan
+(U1 onwards) waits behind it; its B41 is listed there.
 
 Phase N (information architecture, N1–N4) shipped on 2026-10-22:
 students have five menu entries, search and notifications live in the header, course tabs

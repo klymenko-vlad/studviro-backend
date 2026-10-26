@@ -14,6 +14,7 @@ import { PersonalDataErasureController } from './personal-data-erasure.controlle
 import { PersonalDataErasureService } from './personal-data-erasure.service';
 import { PersonalDataExportService } from './personal-data-export.service';
 import { PersonalDataController } from './personal-data.controller';
+import { PlannerDataRepository } from './planner-data.repository';
 import { RelatedInstitutionsRepository } from './related-institutions.repository';
 
 @Module({
@@ -23,6 +24,7 @@ import { RelatedInstitutionsRepository } from './related-institutions.repository
     AcademicDataRepository,
     AccountDataRepository,
     DiscussionDataRepository,
+    PlannerDataRepository,
     LearningDataRepository,
     PersonalDataErasureService,
     PersonalDataExportService,

@@ -5,6 +5,8 @@ import type { AuthorizationService } from '../authorization/authorization.servic
 import type { InstitutionConfigurationService } from '../institutions/configuration/institution-configuration.service';
 import type { InstitutionsRepository } from '../institutions/institutions.repository';
 import type { MyDeadlinesService } from '../learning/my-deadlines.service';
+import type { PersonalEventsService } from '../planner/personal-events.service';
+import type { PersonalTasksService } from '../planner/personal-tasks.service';
 import type { MyExamTermsService } from '../scheduling/my-exam-terms.service';
 import type { MyTimetableEventsService } from '../scheduling/my-timetable-events.service';
 import type { UsersRepository } from '../users/users.repository';
@@ -24,6 +26,8 @@ describe('CalendarExportService', () => {
   const institutions = { findByIdOrFail: vi.fn() };
   const users = { findById: vi.fn(), findByIdOrFail: vi.fn() };
   const authorization = { can: vi.fn() };
+  const personalEvents = { list: vi.fn() };
+  const personalTasks = { listOpenDue: vi.fn() };
   let service: CalendarExportService;
 
   beforeEach(() => {
@@ -37,6 +41,8 @@ describe('CalendarExportService', () => {
     users.findById.mockResolvedValue({ status: 'active', locale: 'sk' });
     users.findByIdOrFail.mockResolvedValue({ status: 'active', locale: 'sk' });
     authorization.can.mockResolvedValue(true);
+    personalEvents.list.mockResolvedValue([]);
+    personalTasks.listOpenDue.mockResolvedValue([]);
 
     service = new CalendarExportService(
       feeds as unknown as CalendarFeedService,
@@ -47,6 +53,8 @@ describe('CalendarExportService', () => {
       institutions as unknown as InstitutionsRepository,
       users as unknown as UsersRepository,
       authorization as unknown as AuthorizationService,
+      personalEvents as unknown as PersonalEventsService,
+      personalTasks as unknown as PersonalTasksService,
     );
   });
 
