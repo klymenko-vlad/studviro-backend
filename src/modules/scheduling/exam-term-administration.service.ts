@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import {
   courseOfferings,
-  EXAM_REGISTRATION_HOLDING_STATUSES,
+  EXAM_REGISTRATION_SEATED_STATUSES,
   examRegistrations,
   examTerms,
   rooms,
@@ -77,7 +77,7 @@ export class ExamTermAdministrationService {
     const held = sql<number>`(
       select count(*) from ${examRegistrations}
       where ${examRegistrations.examTermId} = ${examTerms.id}
-        and ${examRegistrations.status} = 'registered'
+        and ${examRegistrations.status} in ${EXAM_REGISTRATION_SEATED_STATUSES}
         and ${examRegistrations.deletedAt} is null
     )`.mapWith(Number);
 
@@ -334,7 +334,7 @@ export class ExamTermAdministrationService {
       .where(
         and(
           eq(examRegistrations.examTermId, examTermId),
-          inArray(examRegistrations.status, [...EXAM_REGISTRATION_HOLDING_STATUSES]),
+          inArray(examRegistrations.status, [...EXAM_REGISTRATION_SEATED_STATUSES]),
           isNull(examRegistrations.deletedAt),
         ),
       );

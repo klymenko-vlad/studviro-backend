@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { EntityNotFoundError } from '../../common/errors/domain.error';
 import {
@@ -8,6 +8,7 @@ import {
   ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   EXAM_REGISTRATION_HOLDING_STATUSES,
+  EXAM_REGISTRATION_SEATED_STATUSES,
   examRegistrations,
   examTerms,
   officialCourseResults,
@@ -15,6 +16,7 @@ import {
   users,
   type CourseGrade,
   type EnrollmentStatus,
+  type ExamSeatedStatus,
   type OfficialCourseResult,
   type OfficialCourseResultStatus,
 } from '../../database/schema';
@@ -43,6 +45,13 @@ export interface OfferingResultRow {
   proposedAt: Date | null;
   officialGrade: CourseGrade | null;
   officialRecordedAt: Date | null;
+}
+
+export interface ExamSittingRow {
+  userId: string;
+  examTermId: string;
+  startsAt: Date;
+  status: ExamSeatedStatus;
 }
 
 @Injectable()
@@ -128,6 +137,28 @@ export class OfferingResultsRepository {
         ),
       )
       .orderBy(users.displayName, officialCourseResults.attempt);
+  }
+
+  findLatestSittings(offeringId: string): Promise<ExamSittingRow[]> {
+    return this.reader
+      .selectDistinctOn([examRegistrations.userId], {
+        userId: examRegistrations.userId,
+        examTermId: examTerms.id,
+        startsAt: examTerms.startsAt,
+        status: sql<ExamSeatedStatus>`${examRegistrations.status}`,
+      })
+      .from(examRegistrations)
+      .innerJoin(examTerms, eq(examTerms.id, examRegistrations.examTermId))
+      .where(
+        and(
+          eq(examTerms.courseOfferingId, offeringId),
+          inArray(examRegistrations.status, [...EXAM_REGISTRATION_SEATED_STATUSES]),
+          isNull(examRegistrations.deletedAt),
+          isNull(examTerms.deletedAt),
+          isNull(examTerms.cancelledAt),
+        ),
+      )
+      .orderBy(examRegistrations.userId, desc(examTerms.startsAt), desc(examRegistrations.id));
   }
 
   async findEnrollment(institutionId: string, enrollmentId: string, offeringId: string) {

@@ -7,6 +7,7 @@ import {
   courses,
   ENROLLMENT_RECORDED_STATUSES,
   enrollments,
+  EXAM_REGISTRATION_SEATED_STATUSES,
   examRegistrations,
   examTerms,
   rooms,
@@ -146,7 +147,7 @@ export class MyExamTermsRepository {
     return sql<number>`(
       select count(*) from ${examRegistrations}
       where ${examRegistrations.examTermId} = ${examTerms.id}
-        and ${examRegistrations.status} = 'registered'
+        and ${examRegistrations.status} in ${EXAM_REGISTRATION_SEATED_STATUSES}
         and ${examRegistrations.deletedAt} is null
     )`.mapWith(Number);
   }
