@@ -22499,6 +22499,33 @@
           "official"
         ]
       },
+      "OfferingExamSittingDto": {
+        "type": "object",
+        "properties": {
+          "examTermId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "enum": [
+              "registered",
+              "attended",
+              "no_show",
+              "excused"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "examTermId",
+          "startsAt",
+          "status"
+        ]
+      },
       "OfferingResultStudentDto": {
         "type": "object",
         "properties": {
@@ -22535,7 +22562,18 @@
             }
           },
           "nextAttempt": {
-            "type": "number"
+            "type": "number",
+            "description": "The attempt a new grade would land on if the caller names none."
+          },
+          "sitting": {
+            "nullable": true,
+            "description": "The latest exam term of this offering the student took a seat on.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OfferingExamSittingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -22545,7 +22583,8 @@
           "email",
           "enrollmentStatus",
           "attempts",
-          "nextAttempt"
+          "nextAttempt",
+          "sitting"
         ]
       },
       "OfferingResultsResponseDto": {

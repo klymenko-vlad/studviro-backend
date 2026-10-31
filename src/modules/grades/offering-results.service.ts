@@ -10,6 +10,7 @@ import {
   isVoidedResult,
   type CourseGrade,
   type EnrollmentStatus,
+  type ExamSeatedStatus,
   type OfficialCourseResult,
   type OfficialCourseResultStatus,
 } from '../../database/schema';
@@ -20,6 +21,7 @@ import { GradeNotificationsService } from '../notifications/grade-notifications.
 
 import {
   OfferingResultsRepository,
+  type ExamSittingRow,
   type OfferingResultRow,
 } from './offering-results.repository';
 
@@ -36,6 +38,12 @@ export interface OfferingResultAttempt {
   official: { grade: CourseGrade | null; recordedAt: Date | null };
 }
 
+export interface OfferingExamSitting {
+  examTermId: string;
+  startsAt: Date;
+  status: ExamSeatedStatus;
+}
+
 export interface OfferingResultStudent {
   enrollmentId: string;
   userId: string;
@@ -43,8 +51,8 @@ export interface OfferingResultStudent {
   email: string;
   enrollmentStatus: EnrollmentStatus;
   attempts: OfferingResultAttempt[];
-  /** The attempt a new grade would land on if the caller names none. */
   nextAttempt: number;
+  sitting: OfferingExamSitting | null;
 }
 
 export interface OfferingResults {
@@ -80,7 +88,10 @@ export class OfferingResultsService {
   ): Promise<OfferingResults> {
     const offering = await this.offeringOrFail(institutionId, offeringId);
     const viewerRole = await this.viewerRole(institutionId, offeringId, userId);
-    const rows = await this.repository.findResults(offeringId);
+    const [rows, sittings] = await Promise.all([
+      this.repository.findResults(offeringId),
+      this.repository.findLatestSittings(offeringId),
+    ]);
 
     return {
       offering: { id: offering.offeringId },
@@ -92,7 +103,7 @@ export class OfferingResultsService {
       },
       viewerRole,
       canPublish: await this.canPublish(institutionId, userId),
-      students: groupByStudent(rows),
+      students: groupByStudent(rows, sittings),
     };
   }
 
@@ -288,8 +299,14 @@ function statusFor({
   return current ?? 'proposed';
 }
 
-function groupByStudent(rows: OfferingResultRow[]): OfferingResultStudent[] {
+function groupByStudent(
+  rows: OfferingResultRow[],
+  sittings: ExamSittingRow[],
+): OfferingResultStudent[] {
   const students = new Map<string, OfferingResultStudent>();
+  const sittingOf = new Map(
+    sittings.map(({ userId, ...sitting }) => [userId, sitting] as const),
+  );
 
   for (const row of rows) {
     const student = students.get(row.enrollmentId) ?? {
@@ -300,6 +317,7 @@ function groupByStudent(rows: OfferingResultRow[]): OfferingResultStudent[] {
       enrollmentStatus: row.enrollmentStatus,
       attempts: [],
       nextAttempt: 1,
+      sitting: sittingOf.get(row.userId) ?? null,
     };
 
     if (row.resultId !== null && row.attempt !== null && row.status !== null) {

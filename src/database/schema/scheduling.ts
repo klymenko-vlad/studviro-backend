@@ -113,8 +113,17 @@ export const EXAM_REGISTRATION_STATUSES = [
 ] as const;
 export type ExamRegistrationStatus = (typeof EXAM_REGISTRATION_STATUSES)[number];
 
-/** Holds a seat: counts against capacity and blocks a second registration. */
+/** A live registration: blocks a second one on the course, released when the term is cancelled. */
 export const EXAM_REGISTRATION_HOLDING_STATUSES = ['registered'] as const;
+
+/** Took a seat: counts against capacity before the exam and after attendance is recorded. */
+export const EXAM_REGISTRATION_SEATED_STATUSES = [
+  'registered',
+  'attended',
+  'no_show',
+  'excused',
+] as const;
+export type ExamSeatedStatus = (typeof EXAM_REGISTRATION_SEATED_STATUSES)[number];
 
 /**
  * Consumed an attempt. Showing up and failing, and not showing up at all, both
