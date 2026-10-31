@@ -160,6 +160,22 @@ delete it. Click an event on the calendar to change or delete it.
 
 Nobody else sees any of this — not your teachers and not the institution's administrators.
 
+### In Google Calendar, Outlook or Apple Calendar
+
+The card at the foot of the calendar page puts your StudViro calendar into the calendar app
+you already use. **_Create subscription link_** makes a private address for it; while the
+address is on screen, the buttons under it subscribe in one click: **_Google Calendar_**,
+**_Outlook.com_**, **_Microsoft 365_**, and **_Apple Calendar_**, which also opens any
+other app that understands `webcal` links. Only the service you click receives the link.
+The address is shown once; to subscribe another app later, replace the link and subscribe
+again — the old one stops working. **_Download .ics_** gives you the whole calendar as a
+file instead.
+
+To take just one thing with you, switch the calendar to **_List_** and press
+**_Add to calendar_** on a class, a deadline, or an exam you are registered for. You get a
+small `.ics` file with that one event; open it and your calendar app adds it. It is a copy:
+if the class moves later, the copy does not, unless you also subscribe.
+
 ## Exams
 
 **_Exams_** lists the exam terms of the courses you attend, upcoming and past. Each one

@@ -159,7 +159,7 @@ measured and documented in `docs/Observability.md`.
 
 ## Phase 5 — What the thesis review found (2026-10-26)
 
-**Open; W1 done (ADR 0054).** The diploma was checked against its zadanie and against what AIS2 does on
+**Open; W1 done (ADR 0054), W9 done (ADR 0056).** The diploma was checked against its zadanie and against what AIS2 does on
 2026-10-26, and the student chose this order. Take the next open step, one step per session, both
 halves of each; the items under _Later_ are recorded so nothing is lost, not scheduled.
 
@@ -173,7 +173,7 @@ halves of each; the items under _Later_ are recorded so nothing is lost, not sch
 | W6  | Zápisný list: the year's enrolled courses and credits as a PDF                                                                                                                                                                  | Open   |
 | W7  | Confirmation of study (potvrdenie o štúdiu) as a PDF with a code anyone can verify on a public page                                                                                                                             | Open   |
 | W8  | Transcript (výpis výsledkov) as a PDF, by term                                                                                                                                                                                  | Open   |
-| W9  | One-click subscribe (Google, Outlook, Apple / `webcal://`) and _Add to calendar_ on a single exam, deadline or class                                                                                                            | Open   |
+| W9  | One-click subscribe (Google, Outlook, Apple / `webcal://`) and _Add to calendar_ on a single exam, deadline or class                                                                                                            | Done   |
 | W10 | A better feed: choose classes / exams / deadlines, reminders (`VALARM`), course codes and links back                                                                                                                            | Open   |
 | W11 | Deadline reminders: a notification and optional e-mail before a deadline or exam, set in account settings                                                                                                                       | Open   |
 
