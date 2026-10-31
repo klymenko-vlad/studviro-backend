@@ -32,7 +32,8 @@ and keep the grade. The user chose the second on 2026-10-31.
   official grade is refused the page as before.
 - **Nothing else reopens.** The course's materials, assignments, discussion, timetable and
   exam terms stay closed to the withdrawn student; those follow participation, and a
-  withdrawn student no longer participates. The roster and the teacher's grade table do
+  withdrawn student no longer participates. The client shows them only the page's
+  _Overview_ and _Grades_ tabs and calls them _Withdrawn_ rather than _Enrolled_. The roster and the teacher's grade table do
   not list them.
 - **The student is told.** A registrar's withdrawal raises a new notification type,
   `enrollment_withdrawn`, in the enrolment group of the e-mail settings. It opens the
