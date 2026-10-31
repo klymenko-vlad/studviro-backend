@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-26 (course pages closed to outsiders, W2)
+Last updated: 2026-10-31 (W3, W4 and W9 shipped in parallel and merged)
 
 ## What this is
 
@@ -117,13 +117,41 @@ in the feed and on the dashboard's deadlines tile. 54 new client strings await S
 course or a student not enrolled is refused a course page through the API, as the client
 already refused them; a registrar still reads it.
 
+**Withdrawal keeps an official grade (W3, B48, ADR 0056)** on 2026-10-31: a registrar's
+withdrawal after an official grade goes through and the grade stays on the record, in
+_My grades_ and on the course page, which a withdrawn student can still open on Overview
+and Grades. The student gets a new `enrollment_withdrawn` notification (migration
+`0045_enrollment_withdrawn_notification`), and the roster has a confirmed _Withdraw_.
+
+**A sat exam keeps its seat (W4, B49)** on 2026-10-31: seat counts and the capacity check
+count `attended`, `no_show` and `excused` as seated; the student's card says how they sat,
+and the teacher's grade table shows each student's latest sitting.
+
 **One-click subscribe and _Add to calendar_ (W9, ADR 0057)** on 2026-10-31: Google,
 Outlook.com, Microsoft 365 and `webcal://` buttons beside a just-issued feed URL, and a
 one-event `.ics` from `me/calendar-entries/{class|exam|deadline}/{id}` on the calendar's
-list cards. Client budget 743 kB, measured 741.1 kB.
+list cards. With W3 and W4 the client budget is 744 kB, measured 742.74 kB.
 
-**Next task: W3 of `Product Plan.md` Phase 5 — B48, withdrawing a graded student erases
-their published grade.** Phase 5 (2026-10-26) is the order the student chose after
+Noticed during W3/W4/W9, not fixed:
+
+- `learning-space-index` ("answers with nothing when the offering has no page yet") and
+  `submissions` ("refuses somebody who is not enrolled", 403 not 409) fail on `dev` since
+  W2. No public MinIO image could be pulled on 2026-10-31, so the storage suites went unrun.
+- The teacher's grade table hides withdrawn students, so a kept grade is corrected only by
+  reversing the withdrawal first. A _completed_ student's Content/Assignments/Schedule tabs
+  read "could not be loaded".
+- A no-show followed by a published grade stays `no_show` (may count twice on the retake
+  ladder); a student who passed one regular term can register for another.
+- The course roster and the offering results endpoint return everyone, unpaged.
+- _Add to calendar_ is only on the calendar's list view — not on the week grid, the exams
+  page or the dashboard deadline tile.
+- `src/database/migrate.ts` and `seed.ts` read only `.env`; `pnpm db:seed` fails if
+  object storage is unreachable.
+- The agents translated their new `sk.json` strings, against `frontend/AGENTS.md`.
+
+**Next task: W5 of `Product Plan.md` Phase 5 — course announcements.** W6–W8 (the PDFs)
+share one renderer: take W6 first, then W7 and W8 can run in parallel. W10 changes the feed
+and the single-entry file together (one builder). Phase 5 (2026-10-26) is the order the student chose after
 checking the diploma against its zadanie and AIS2: W1–W11, then _Later_. The UI Work Plan
 (U1 onwards) waits behind it; its B41 is listed there.
 
