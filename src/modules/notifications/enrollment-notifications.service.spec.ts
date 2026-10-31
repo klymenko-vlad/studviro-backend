@@ -51,6 +51,21 @@ describe('EnrollmentNotificationsService', () => {
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({ type: 'enrollment_rejected' }));
   });
 
+  it('tells the student they were withdrawn from the course', async () => {
+    await apply({
+      previous: enrollment('active'),
+      current: enrollment('withdrawn'),
+    });
+
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'enrollment_withdrawn',
+        courseOfferingId: 'offering-1',
+        recipients: ['student-1'],
+      }),
+    );
+  });
+
   it('says nothing when the outcome has not moved', async () => {
     await apply({
       previous: enrollment('active'),

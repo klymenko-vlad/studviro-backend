@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 
 import {
   academicTerms,
@@ -11,6 +11,7 @@ import {
   programMemberships,
   programs,
   type CourseGrade,
+  type EnrollmentStatus,
   type OfficialCourseResultStatus,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
@@ -26,6 +27,7 @@ export interface MyCourseResultRow {
   officialRecordedAt: Date | null;
   conflictNote: string | null;
   enrollmentId: string;
+  enrollmentStatus: EnrollmentStatus;
   attempt: number;
   offeringId: string;
   courseId: string;
@@ -54,10 +56,16 @@ export class MyCourseResultsRepository {
     userId: string,
     filter: MyCourseResultFilter = {},
   ): Promise<MyCourseResultRow[]> {
-    const conditions: SQL[] = [
+    const conditions: (SQL | undefined)[] = [
       eq(officialCourseResults.institutionId, institutionId),
       eq(enrollments.userId, userId),
-      inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
+      or(
+        inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES),
+        and(
+          eq(enrollments.status, 'withdrawn'),
+          isNotNull(officialCourseResults.officialGrade),
+        ),
+      ),
       isNull(officialCourseResults.deletedAt),
       isNull(enrollments.deletedAt),
       isNull(courseOfferings.deletedAt),
@@ -81,6 +89,7 @@ export class MyCourseResultsRepository {
         officialRecordedAt: officialCourseResults.officialRecordedAt,
         conflictNote: officialCourseResults.conflictNote,
         enrollmentId: enrollments.id,
+        enrollmentStatus: enrollments.status,
         attempt: enrollments.attempt,
         offeringId: courseOfferings.id,
         courseId: courses.id,

@@ -22194,6 +22194,19 @@
             "type": "string",
             "format": "uuid"
           },
+          "enrollmentStatus": {
+            "enum": [
+              "requested",
+              "provisioning",
+              "active",
+              "completed",
+              "withdrawn",
+              "rejected",
+              "waitlisted"
+            ],
+            "type": "string",
+            "description": "A withdrawn enrolment keeps the results that were officially recorded."
+          },
           "offering": {
             "$ref": "#/components/schemas/MyCourseResultOfferingDto"
           },
@@ -22215,6 +22228,7 @@
           "proposed",
           "official",
           "enrollmentId",
+          "enrollmentStatus",
           "offering",
           "course",
           "term"
@@ -22707,7 +22721,8 @@
               "submission_marked",
               "waitlist_place_free",
               "discussion_thread_started",
-              "discussion_reply"
+              "discussion_reply",
+              "enrollment_withdrawn"
             ],
             "type": "string"
           },
@@ -22862,7 +22877,8 @@
                 "submission_marked",
                 "waitlist_place_free",
                 "discussion_thread_started",
-                "discussion_reply"
+                "discussion_reply",
+                "enrollment_withdrawn"
               ]
             }
           }
@@ -22896,7 +22912,8 @@
                 "submission_marked",
                 "waitlist_place_free",
                 "discussion_thread_started",
-                "discussion_reply"
+                "discussion_reply",
+                "enrollment_withdrawn"
               ]
             },
             "description": "Every notification type that should also arrive by e-mail. Types left out stay in the application only."
@@ -30497,7 +30514,8 @@
               "submission_marked",
               "waitlist_place_free",
               "discussion_thread_started",
-              "discussion_reply"
+              "discussion_reply",
+              "enrollment_withdrawn"
             ]
           },
           "occurredAt": {

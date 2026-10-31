@@ -37,6 +37,7 @@ export const NOTIFICATION_TYPES = [
   'waitlist_place_free',
   'discussion_thread_started',
   'discussion_reply',
+  'enrollment_withdrawn',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationType = pgEnum('notification_type', NOTIFICATION_TYPES);

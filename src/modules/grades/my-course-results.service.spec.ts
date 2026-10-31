@@ -17,6 +17,7 @@ const row = (overrides: Partial<MyCourseResultRow> = {}): MyCourseResultRow => (
   officialRecordedAt: new Date('2026-06-10T00:00:00.000Z'),
   conflictNote: null,
   enrollmentId: 'enrollment-1',
+  enrollmentStatus: 'active',
   attempt: 1,
   offeringId: 'offering-1',
   courseId: 'course-1',

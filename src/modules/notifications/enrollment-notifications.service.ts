@@ -8,6 +8,7 @@ import type { NotificationChange } from './notification-emitter.types';
 const OUTCOMES: Partial<Record<Enrollment['status'], NotificationType>> = {
   active: 'enrollment_confirmed',
   rejected: 'enrollment_rejected',
+  withdrawn: 'enrollment_withdrawn',
 };
 
 @Injectable()

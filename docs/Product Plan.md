@@ -159,7 +159,7 @@ measured and documented in `docs/Observability.md`.
 
 ## Phase 5 — What the thesis review found (2026-10-26)
 
-**Open; W1 done (ADR 0054).** The diploma was checked against its zadanie and against what AIS2 does on
+**Open; W1–W3 done (ADRs 0054–0056).** The diploma was checked against its zadanie and against what AIS2 does on
 2026-10-26, and the student chose this order. Take the next open step, one step per session, both
 halves of each; the items under _Later_ are recorded so nothing is lost, not scheduled.
 
@@ -167,7 +167,7 @@ halves of each; the items under _Later_ are recorded so nothing is lost, not sch
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | W1  | Personal planner: a student's own tasks (with a due time) and events, private to them, shown in the calendar, on the dashboard and in the iCalendar feed                                                                        | Done   |
 | W2  | B43 — a teacher reads another course's learning space through the API                                                                                                                                                           | Done   |
-| W3  | B48 — withdrawing a graded student erases their published grade                                                                                                                                                                 | Open   |
+| W3  | B48 — withdrawing a graded student erases their published grade                                                                                                                                                                 | Done   |
 | W4  | B49 — a sat exam loses its registration and its seat count                                                                                                                                                                      | Open   |
 | W5  | Course announcements: a teacher writes to all students of an offering, a group or selected students; in-app plus e-mail (important ones always mailed, Reply-To the teacher), kept on the course page, rate-limited and audited | Open   |
 | W6  | Zápisný list: the year's enrolled courses and credits as a PDF                                                                                                                                                                  | Open   |

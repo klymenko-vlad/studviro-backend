@@ -5,6 +5,7 @@ import {
   isPassingGrade,
   isVoidedResult,
   type CourseGrade,
+  type EnrollmentStatus,
   type OfficialCourseResultStatus,
 } from '../../database/schema';
 
@@ -37,6 +38,7 @@ export interface MyCourseResult {
   proposed: { grade: CourseGrade | null; at: Date | null };
   official: { grade: CourseGrade | null; recordedAt: Date | null };
   enrollmentId: string;
+  enrollmentStatus: EnrollmentStatus;
   offering: { id: string };
   course: { id: string; code: string; title: string; credits: number | null };
   term: { id: string; code: string; name: string; academicYear: string; startsAt: Date };
@@ -90,6 +92,7 @@ export class MyCourseResultsService {
       proposed: { grade: row.proposedGrade, at: row.proposedAt },
       official: { grade: row.officialGrade, recordedAt: row.officialRecordedAt },
       enrollmentId: row.enrollmentId,
+      enrollmentStatus: row.enrollmentStatus,
       offering: { id: row.offeringId },
       course: {
         id: row.courseId,
