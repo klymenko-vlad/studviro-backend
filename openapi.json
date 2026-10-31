@@ -18063,6 +18063,103 @@
         ]
       }
     },
+    "/api/v1/institutions/{institutionId}/me/calendar-entries/{kind}/{entryId}": {
+      "get": {
+        "operationId": "downloadMyCalendarEntry",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "class",
+                "exam",
+                "deadline"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "entryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed or the payload was malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Download one class, exam or deadline of the current user as an iCalendar file",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
     "/api/v1/calendar-feeds/{token}": {
       "get": {
         "operationId": "getCalendarFeed",

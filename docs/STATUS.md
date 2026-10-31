@@ -117,6 +117,11 @@ in the feed and on the dashboard's deadlines tile. 54 new client strings await S
 course or a student not enrolled is refused a course page through the API, as the client
 already refused them; a registrar still reads it.
 
+**One-click subscribe and _Add to calendar_ (W9, ADR 0057)** on 2026-10-31: Google,
+Outlook.com, Microsoft 365 and `webcal://` buttons beside a just-issued feed URL, and a
+one-event `.ics` from `me/calendar-entries/{class|exam|deadline}/{id}` on the calendar's
+list cards. Client budget 743 kB, measured 741.1 kB.
+
 **Next task: W3 of `Product Plan.md` Phase 5 — B48, withdrawing a graded student erases
 their published grade.** Phase 5 (2026-10-26) is the order the student chose after
 checking the diploma against its zadanie and AIS2: W1–W11, then _Later_. The UI Work Plan
