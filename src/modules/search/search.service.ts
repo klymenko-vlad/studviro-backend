@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import { escapeLike } from '../../database/repository/escape-like';
 import {
   academicTerms,
   courseOfferings,
   courses,
-  ENROLLMENT_RECORDED_STATUSES,
   enrollments,
   orgUnits,
   programMemberships,
@@ -20,6 +19,7 @@ import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import type { Permission } from '../authorization/permissions';
 import { administersOfferings } from '../courses/administers-offering';
+import { holdsCourseRecord } from '../courses/holds-course-record';
 
 export const SEARCH_KINDS = [
   'course',
@@ -191,7 +191,7 @@ export class SearchService {
       ? undefined
       : or(
           sql`exists (select 1 from ${teachingAssignments} where ${teachingAssignments.courseOfferingId} = ${courseOfferings.id} and ${teachingAssignments.userId} = ${userId} and ${teachingAssignments.deletedAt} is null)`,
-          sql`exists (select 1 from ${enrollments} where ${enrollments.courseOfferingId} = ${courseOfferings.id} and ${enrollments.userId} = ${userId} and ${enrollments.deletedAt} is null and ${inArray(enrollments.status, ENROLLMENT_RECORDED_STATUSES)})`,
+          sql`exists (select 1 from ${enrollments} where ${enrollments.courseOfferingId} = ${courseOfferings.id} and ${enrollments.userId} = ${userId} and ${enrollments.deletedAt} is null and ${holdsCourseRecord()})`,
         );
 
     const rows = await this.reader

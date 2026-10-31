@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
-import {
-  ENROLLMENT_RECORDED_STATUSES,
-  enrollments,
-  teachingAssignments,
-} from '../../database/schema';
+import { enrollments, teachingAssignments } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { administersOfferings } from '../courses/administers-offering';
+import { holdsCourseRecord } from '../courses/holds-course-record';
 
 @Injectable()
 export class ViewerOfferingAccessService {
@@ -45,7 +42,7 @@ export class ViewerOfferingAccessService {
           and(
             eq(enrollments.userId, viewerId),
             inArray(enrollments.courseOfferingId, [...offeringIds]),
-            inArray(enrollments.status, [...ENROLLMENT_RECORDED_STATUSES]),
+            holdsCourseRecord(),
             isNull(enrollments.deletedAt),
           ),
         ),
