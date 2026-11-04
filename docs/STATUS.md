@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-18
+Last updated: 2026-10-31 (W3, W4 and W9 shipped in parallel and merged)
 
 ## What this is
 
@@ -24,7 +24,7 @@ Design and acts as the BFF. Decisions live in `docs/adr/`.
 
 ```
 cd backend  && pnpm docker:up && pnpm db:migrate && pnpm db:seed && pnpm build && node dist/main.js
-cd frontend && pnpm dev            # port 3001; the API is on 3010
+cd frontend && pnpm dev            # port 3001; the API is on 3000 here (frontend/.env.local)
 ```
 
 `pnpm db:seed` writes a whole demo university — ~7,000 rows across twenty tables, including
@@ -37,8 +37,8 @@ the learning half, with one assignment already marked and one still open. Sign i
 | Teacher       | `teacher@studviro.local`   |
 | Student       | `ada@studviro.local`       |
 
-Password `correct horse battery staple` — **except** any account that already existed on this
-machine, which keeps the password it had. `admin@studviro.local` here is `newpassword123`.
+Password `correct horse battery staple` for all four — checked on 2026-10-22; an account that
+already existed on a machine keeps the password it had there.
 
 ## Where the backlog stands
 
@@ -68,7 +68,8 @@ security mail, and deleting your own account.
 
 **Course discussion (B58, ADR 0040)** shipped on 2026-10-18: a _Discussion_ tab on each
 course page, moderated by its teachers. Since 2026-10-19 an author edits their own posts
-(B60) and a post carries up to three files (B61).
+(B60) and a post carries up to three files (B61). Since 2026-10-23 a post can be answered
+in a group under it, quoting the reply it answers, and everything pages (B65).
 
 **Mail (B37, ADR 0039)** shipped on 2026-10-18: reset, invitation and welcome mail over
 SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
@@ -76,6 +77,10 @@ SMTP. Development catches it in Mailpit (`pnpm docker:up`, inbox on :8025).
 **Notification mail (B59, ADR 0041)** shipped on 2026-10-19: e-mail copies of the
 notification types a person turns on in `/account/settings`, sent only for what is still
 unread after five minutes.
+
+**Teacher directory (B63, ADR 0044)** shipped on 2026-10-23 at the user's request: a
+student's search finds any teacher of the institution, and the hit opens a teacher profile
+with an e-mail link and the courses they teach.
 
 **Calendar subscriptions (B56, ADR 0038)** shipped on 2026-10-18: a secret iCalendar URL
 and a `studviro.ics` download on the calendar page.
@@ -88,15 +93,93 @@ client now needs `STORAGE_PUBLIC_URL` set to the store's origin (`docs/Deploymen
 
 ## What to do next
 
-**Next task: B33 — links land on the offering's Overview, never on the thing.** B31 (time
-zones) shipped on 2026-10-18, and B32's missing course name with it; B33 is what is left of
-"notifications that land nowhere useful".
+**`Course Builder Plan.md` is complete (2026-10-24), CB1–CB11, both halves.** The user
+asked on 2026-10-22 for Moodle-style courses; a course page is now an outline of sections
+(ADR 0043) with availability windows (0044), completion and progress (0045), restrictions
+(0046), content for some groups (0047), a student view (0048), pages, labels, videos and
+folders (0049), quizzes with a versioned bank (0050), attempts (0051), review and marking
+(0052), and **import from another course page (CB10, ADR 0053)**: an author copies a page
+they also teach — sections, materials and their files copied in the store, assignments with
+new gradebook columns, quizzes and the bank — appended after what is there, hidden by
+default, every date moved by the gap between the two terms' starts, groups matched by code
+or name, nothing a student did copied; a preview gives the same report first. Both halves
+were merged to `dev` on 2026-10-26, together with the discussion-replies work (B65) and the
+dashboard's at-a-glance strip that had been left uncommitted in `../backend` and
+`../frontend`; its migration is now `0043_discussion_replies`. The Slovak catalogue is
+complete again (741 course-builder strings translated) and the client budget is 728 kB,
+measured 726.95 kB.
 
-After that, take the **open table in `Task Tracker.md`** ("Found walking the app,
-2026-09-25") top down. It is ranked, and it is the output of an eight-agent walk of the app;
-B33 (notifications that land nowhere useful) and B34 (no person page) are what makes
-the product feel like separate screens rather than one tool. **B35 needs a product answer
-first** — ask what a registrar should be able to do before building it.
+**Personal planner (W1, ADR 0054)** shipped on 2026-10-26: a student's own tasks and
+events, private to them, on a _My tasks_ tab of the calendar, as a fourth calendar layer,
+in the feed and on the dashboard's deadlines tile. 54 new client strings await Slovak.
+
+**Course pages closed to outsiders (W2, B43, ADR 0055)** on 2026-10-26: a teacher of another
+course or a student not enrolled is refused a course page through the API, as the client
+already refused them; a registrar still reads it.
+
+**Withdrawal keeps an official grade (W3, B48, ADR 0056)** on 2026-10-31: a registrar's
+withdrawal after an official grade goes through and the grade stays on the record, in
+_My grades_ and on the course page, which a withdrawn student can still open on Overview
+and Grades. The student gets a new `enrollment_withdrawn` notification (migration
+`0045_enrollment_withdrawn_notification`), and the roster has a confirmed _Withdraw_.
+
+**A sat exam keeps its seat (W4, B49)** on 2026-10-31: seat counts and the capacity check
+count `attended`, `no_show` and `excused` as seated; the student's card says how they sat,
+and the teacher's grade table shows each student's latest sitting.
+
+**One-click subscribe and _Add to calendar_ (W9, ADR 0057)** on 2026-10-31: Google,
+Outlook.com, Microsoft 365 and `webcal://` buttons beside a just-issued feed URL, and a
+one-event `.ics` from `me/calendar-entries/{class|exam|deadline}/{id}` on the calendar's
+list cards. With W3 and W4 the client budget is 744 kB, measured 742.74 kB.
+
+Noticed during W3/W4/W9, not fixed:
+
+- `learning-space-index` ("answers with nothing when the offering has no page yet") and
+  `submissions` ("refuses somebody who is not enrolled", 403 not 409) fail on `dev` since
+  W2. No public MinIO image could be pulled on 2026-10-31, so the storage suites went unrun.
+- The teacher's grade table hides withdrawn students, so a kept grade is corrected only by
+  reversing the withdrawal first. A _completed_ student's Content/Assignments/Schedule tabs
+  read "could not be loaded".
+- A no-show followed by a published grade stays `no_show` (may count twice on the retake
+  ladder); a student who passed one regular term can register for another.
+- The course roster and the offering results endpoint return everyone, unpaged.
+- _Add to calendar_ is only on the calendar's list view — not on the week grid, the exams
+  page or the dashboard deadline tile.
+- `src/database/migrate.ts` and `seed.ts` read only `.env`; `pnpm db:seed` fails if
+  object storage is unreachable.
+- The agents translated their new `sk.json` strings, against `frontend/AGENTS.md`.
+
+**Next task: W5 of `Product Plan.md` Phase 5 — course announcements.** W6–W8 (the PDFs)
+share one renderer: take W6 first, then W7 and W8 can run in parallel. W10 changes the feed
+and the single-entry file together (one builder). Phase 5 (2026-10-26) is the order the student chose after
+checking the diploma against its zadanie and AIS2: W1–W11, then _Later_. The UI Work Plan
+(U1 onwards) waits behind it; its B41 is listed there.
+
+Phase N (information architecture, N1–N4) shipped on 2026-10-22:
+students have five menu entries, search and notifications live in the header, course tabs
+are Overview · Content · Assignments · Schedule · Grades · Discussion · People, and
+administration is four hubs (Structure, Teaching offer, People, Institution) whose tabs
+live in `?tab=`; old addresses redirect.
+
+B33 shipped on 2026-10-22 as the plan's U0: notifications and
+calendar, exam and result cards now open the course on the right tab, at the item.
+
+Then take the plan's steps in order. It turns the 2026-10-22 audit pass (`UI Design
+Audit.md`, C1–C11) into 25 one-session steps and absorbs the tracker's UX rows B34, B38,
+B40, B41 and B45. The tracker rows it does not absorb — correctness and access defects such
+as B43, B48 and B49 — stay in the **open table in `Task Tracker.md`** ("Found walking the
+app, 2026-09-25"); take B43 (a teacher reading another course through the API) before Phase
+2 of the plan. **B35 needs a product answer first** — ask what a registrar should be able
+to do before building it.
+
+**Off-plan interface pass, 2026-10-22, at the user's request:** whole-card links, a calmer
+motion layer (CSS scroll-driven reveals, premium easing — the user rejected a colourful
+version as not premium), a phone bottom tab bar, and search that offers only course pages
+the caller can open, starting from their own courses and history. **The client JS budget
+is 718 kB and measures 717.36 kB with `dev` merged into the course builder branch**
+(`.size-limit.mjs`; CB10 cost 3.76 kB, and the five frontend `dev` commits since `5dfccf9`
+another 10.8 kB that `dev` never recorded against its 605 kB entry). Keep features that a route does
+not render out of its barrel imports, and prefer an existing route to a new one.
 
 Noticed while walking, not fixed:
 
@@ -104,6 +187,9 @@ Noticed while walking, not fixed:
   session records the BFF's IP and the credential throttle counts all sign-ins through one
   BFF instance together. Forwarding `X-Forwarded-For` as-is would let a caller pick their
   throttle key; it needs the API to trust the BFF as a proxy hop (ADR 0037).
+- **The backend e2e suite deletes the demo seed's stored files.** It shares the dev bucket,
+  and its orphan-sweep tests remove every object the test database does not name. Run
+  `pnpm db:seed` after `pnpm test:cov` before walking anything with files.
 - **This machine's disk is full** (5.8 GB free of 687 GB). MinIO answers every upload
   `507`, so the storage, submissions, materials and personal-data e2e suites fail locally.
   They pass against a MinIO with room (`STORAGE_ENDPOINT=…`).
@@ -120,8 +206,9 @@ Noticed while walking, not fixed:
   few marks on Algorithms; `pnpm db:seed` puts it back.
 - `backend/.env` here had no `STORAGE_*` block, so every upload was signed for AWS and
   failed. The MinIO defaults from `.env.example` were added on 2026-09-25.
-- The global `agent-browser` link points into a deleted worktree. Call
-  `~/.nvm/versions/node/v22.22.2/lib/node_modules/agent-browser/bin/agent-browser-linux-x64`.
+- `ada@studviro.local` has two-step verification on, on this machine, so she cannot be
+  walked. The CB1 walk used `marek.novak0017@mocku.example` (enrolled on Algorithms), given
+  the demo password by hand; the seed keeps it.
 - `agent-browser click` by ref can land under the sticky header once a button is
   scrolled to the top. Focus the button and press Enter instead. This is a tool quirk,
   not an app bug.
@@ -135,7 +222,8 @@ Noticed while walking, not fixed:
   what a release needs in `docs/Deployment.md` instead.
 - **Institutional unknowns** (controller, DPO, retention, lawful basis) are `TODO(institution)`
   in a table at the top of each document. Do not invent them.
-- **No quizzes** (ADR 0028).
+- **Quizzes are in scope again** (user, 2026-10-22): `Course Builder Plan.md` CB6–CB8. ADR
+  0050 supersedes ADR 0028's L7; the bank is per course page and CB10 copies it.
 - **Joining is by invitation only** (ADR 0035). No request-to-join, no domain self-join.
 
 ## Traps that have cost time here

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PermissionDeniedError } from '../../common/errors/domain.error';
 import { AuthorizationService } from '../authorization/authorization.service';
 
+import { LearningAccessService } from './learning-access.service';
 import { LearningSpacesRepository, type LearningSpaceRow } from './learning-spaces.repository';
 
 export const LEARNING_SPACE_PAGE_SIZE = 100;
@@ -14,23 +15,12 @@ export interface LearningSpaceSummary {
   readonly spaces: readonly LearningSpaceRow[];
 }
 
-/**
- * Two questions behind one route, and they are not the same question.
- *
- * _Which page is on this offering?_ is asked by the course page itself, so
- * every reader of the offering may ask it — that is what `offering:read` on
- * the route means.
- *
- * _Which offerings have a page at all?_ is an administrator's index of the
- * whole institution: the names, codes and workload of courses the caller has
- * nothing to do with. `offering:read` is held by every student, so gating it
- * there offered every student a tab listing every course in the university.
- */
 @Injectable()
 export class LearningSpacesService {
   constructor(
     private readonly spaces: LearningSpacesRepository,
     private readonly authorization: AuthorizationService,
+    private readonly access: LearningAccessService,
   ) {}
 
   async listForInstitution(
@@ -40,6 +30,8 @@ export class LearningSpacesService {
   ): Promise<LearningSpaceSummary> {
     if (offeringId === undefined) {
       await this.assertMayIndex(institutionId, userId);
+    } else {
+      await this.access.assertReaderOfOffering(institutionId, offeringId, userId);
     }
 
     const [spaces, counts] = await Promise.all([

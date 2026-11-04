@@ -4,9 +4,11 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   COURSE_GRADES,
   ENROLLMENT_STATUSES,
+  EXAM_REGISTRATION_SEATED_STATUSES,
   OFFICIAL_COURSE_RESULT_STATUSES,
   type CourseGrade,
   type EnrollmentStatus,
+  type ExamSeatedStatus,
   type OfficialCourseResultStatus,
 } from '../../../database/schema';
 import {
@@ -69,6 +71,16 @@ export class OfferingResultAttemptDto {
 }
 
 @Exclude()
+export class OfferingExamSittingDto {
+  @Expose() @ApiProperty({ format: 'uuid' }) examTermId!: string;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) startsAt!: Date;
+
+  @Expose()
+  @ApiProperty({ enum: EXAM_REGISTRATION_SEATED_STATUSES })
+  status!: ExamSeatedStatus;
+}
+
+@Exclude()
 export class OfferingResultStudentDto {
   @Expose() @ApiProperty({ format: 'uuid' }) enrollmentId!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) userId!: string;
@@ -84,7 +96,20 @@ export class OfferingResultStudentDto {
   @ApiProperty({ type: OfferingResultAttemptDto, isArray: true })
   attempts!: OfferingResultAttemptDto[];
 
-  @Expose() @ApiProperty() nextAttempt!: number;
+  @Expose()
+  @ApiProperty({
+    description: 'The attempt a new grade would land on if the caller names none.',
+  })
+  nextAttempt!: number;
+
+  @Expose()
+  @Type(() => OfferingExamSittingDto)
+  @ApiProperty({
+    type: OfferingExamSittingDto,
+    nullable: true,
+    description: 'The latest exam term of this offering the student took a seat on.',
+  })
+  sitting!: OfferingExamSittingDto | null;
 }
 
 @Exclude()

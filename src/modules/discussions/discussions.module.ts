@@ -7,6 +7,8 @@ import { DiscussionAccessService } from './discussion-access.service';
 import { DiscussionAttachmentsRepository } from './discussion-attachments.repository';
 import { DiscussionAttachmentsService } from './discussion-attachments.service';
 import { DiscussionModerationService } from './discussion-moderation.service';
+import { DiscussionPostsRepository } from './discussion-posts.repository';
+import { DiscussionPostsService } from './discussion-posts.service';
 import { DiscussionsController } from './discussions.controller';
 import { DiscussionsRepository } from './discussions.repository';
 import { DiscussionsService } from './discussions.service';
@@ -20,6 +22,8 @@ import { DiscussionsService } from './discussions.service';
     DiscussionAttachmentsRepository,
     DiscussionAttachmentsService,
     DiscussionModerationService,
+    DiscussionPostsRepository,
+    DiscussionPostsService,
     DiscussionsRepository,
   ],
 })

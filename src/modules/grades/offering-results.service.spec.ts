@@ -30,6 +30,7 @@ describe('OfferingResultsService', () => {
   const findOffering = vi.fn();
   const teaches = vi.fn();
   const findResults = vi.fn();
+  const findLatestSittings = vi.fn();
   const findEnrollment = vi.fn();
   const findResult = vi.fn();
   const highestAttempt = vi.fn();
@@ -43,6 +44,7 @@ describe('OfferingResultsService', () => {
     findOffering,
     teaches,
     findResults,
+    findLatestSittings,
     findEnrollment,
     findResult,
     highestAttempt,
@@ -70,6 +72,7 @@ describe('OfferingResultsService', () => {
     });
     teaches.mockResolvedValue(true);
     findResults.mockResolvedValue([]);
+    findLatestSittings.mockResolvedValue([]);
     findEnrollment.mockResolvedValue({ id: 'enrollment-1', userId: 'student-1' });
     findResult.mockResolvedValue(undefined);
     highestAttempt.mockResolvedValue(0);
@@ -249,6 +252,23 @@ describe('OfferingResultsService', () => {
 
       expect(results.students[0]?.attempts).toEqual([]);
       expect(results.students[0]?.nextAttempt).toBe(1);
+      expect(results.students[0]?.sitting).toBeNull();
+    });
+
+    it('carries the exam the student last took a seat on', async () => {
+      const startsAt = new Date('2026-09-01T09:00:00.000Z');
+      findResults.mockResolvedValue([attemptRow({ resultId: null, attempt: null })]);
+      findLatestSittings.mockResolvedValue([
+        { userId: attemptRow().userId, examTermId: 'term-1', startsAt, status: 'attended' },
+      ]);
+
+      const results = await service.findForViewer('institution-1', 'offering-1', 'teacher-1');
+
+      expect(results.students[0]?.sitting).toEqual({
+        examTermId: 'term-1',
+        startsAt,
+        status: 'attended',
+      });
     });
 
     it('says whether the reader may publish, not only propose', async () => {

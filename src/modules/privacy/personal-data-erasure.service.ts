@@ -41,6 +41,7 @@ import {
   type ErasureTally,
 } from './erasure-rules';
 import { LearningDataRepository } from './learning-data.repository';
+import { PlannerDataRepository } from './planner-data.repository';
 import { RelatedInstitutionsRepository } from './related-institutions.repository';
 
 /**
@@ -68,6 +69,7 @@ export class PersonalDataErasureService {
     private readonly invitationsRepository: InvitationsRepository,
     private readonly learningData: LearningDataRepository,
     private readonly discussionData: DiscussionDataRepository,
+    private readonly plannerData: PlannerDataRepository,
     private readonly storage: StorageService,
     private readonly audit: AuditService,
   ) {}
@@ -97,6 +99,7 @@ export class PersonalDataErasureService {
         submissionFiles: await this.dropSubmissionFiles(institutionId, userId),
         storedObjects: files.length,
         discussionPosts: await this.discussionData.erase(institutionId, userId, new Date()),
+        ...(await this.plannerData.erase(institutionId, userId)),
       };
 
       // Nothing to report, but nothing should be mailed to an anonymised row.

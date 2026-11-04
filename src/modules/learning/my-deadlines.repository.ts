@@ -8,13 +8,17 @@ import {
   ENROLLMENT_PARTICIPATING_STATUSES,
   enrollments,
   learningActivities,
+  learningSections,
   learningSpaces,
   submissions,
   teachingAssignments,
   type LearningActivityType,
+  type Restriction,
   type SubmissionState,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
+
+import { joinedSectionOpenAt, openAt } from './learning-availability.sql';
 
 export interface MyDeadlineRow {
   activityId: string;
@@ -36,6 +40,13 @@ export interface MyDeadlineRow {
   termId: string;
   termCode: string;
   termName: string;
+  sectionId: string | null;
+  visible: boolean;
+  availableFrom: Date | null;
+  availableUntil: Date | null;
+  hiddenUntilAvailable: boolean;
+  restriction: Restriction | null;
+  sectionRestriction: Restriction | null;
 }
 
 export interface MyDeadlineFilter {
@@ -52,6 +63,7 @@ export class MyDeadlinesRepository {
     institutionId: string,
     userId: string,
     filter: MyDeadlineFilter,
+    now: Date,
   ): Promise<MyDeadlineRow[]> {
     const teaches = this.teaches(userId);
     const submission = this.latestSubmission(userId);
@@ -64,9 +76,13 @@ export class MyDeadlinesRepository {
       isNull(academicTerms.deletedAt),
       eq(learningActivities.visible, true),
       eq(learningSpaces.visible, true),
+      or(isNull(learningSections.id), eq(learningSections.visible, true)),
       gte(learningActivities.dueAt, filter.from),
       lt(learningActivities.dueAt, filter.to),
-      or(this.attends(userId), teaches),
+      or(
+        and(this.attends(userId), openAt(learningActivities, now), joinedSectionOpenAt(now)),
+        teaches,
+      ),
     ];
 
     if (filter.offeringId) conditions.push(eq(courseOfferings.id, filter.offeringId));
@@ -94,6 +110,13 @@ export class MyDeadlinesRepository {
         termId: academicTerms.id,
         termCode: academicTerms.code,
         termName: academicTerms.name,
+        sectionId: learningActivities.sectionId,
+        visible: learningActivities.visible,
+        availableFrom: learningActivities.availableFrom,
+        availableUntil: learningActivities.availableUntil,
+        hiddenUntilAvailable: learningActivities.hiddenUntilAvailable,
+        restriction: learningActivities.restriction,
+        sectionRestriction: learningSections.restriction,
       })
       .from(learningActivities)
       .leftJoin(
@@ -106,6 +129,13 @@ export class MyDeadlinesRepository {
         ),
       )
       .innerJoin(learningSpaces, eq(learningSpaces.id, learningActivities.learningSpaceId))
+      .leftJoin(
+        learningSections,
+        and(
+          eq(learningSections.id, learningActivities.sectionId),
+          isNull(learningSections.deletedAt),
+        ),
+      )
       .innerJoin(courseOfferings, eq(courseOfferings.id, learningSpaces.courseOfferingId))
       .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .innerJoin(academicTerms, eq(academicTerms.id, courseOfferings.academicTermId))

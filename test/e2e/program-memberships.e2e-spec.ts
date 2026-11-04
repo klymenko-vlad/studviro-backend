@@ -181,6 +181,12 @@ describe('Programme memberships (e2e)', () => {
     expect(denied.statusCode).toBe(403);
   });
 
+  it('keeps the roll from a student, who would read classmates’ addresses off it', async () => {
+    const student = await actingAs('student', 'curious@example.com');
+
+    expect((await request(student, 'GET')).statusCode).toBe(403);
+  });
+
   it('404s on a programme that is not this institution’s', async () => {
     const admin = await actingAs('institution_admin');
     const [other] = await harness.db

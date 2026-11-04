@@ -23,38 +23,29 @@ export class LearningActivityNotificationsService {
     private readonly audience: LearningActivityAudienceRepository,
   ) {}
 
-  async applied(
+  async published(
+    institutionId: string,
+    activity: LearningActivity,
+    occurredAt: Date,
+    recipients?: readonly string[],
+  ): Promise<void> {
+    await this.emitDeadline(institutionId, 'assignment_due_published', activity, occurredAt, {
+      recipients,
+    });
+  }
+
+  async rescheduled(
     institutionId: string,
     change: NotificationChange<LearningActivity>,
     occurredAt: Date,
   ): Promise<void> {
-    const activity = change.current;
-    const type = this.typeOf(change);
-    if (!activity?.dueAt || !type) return;
+    const { previous, current } = change;
+    if (change.removed || !previous?.announcedAt || !current?.visible) return;
+    if (!previous.dueAt || !current.dueAt) return;
+    if (previous.dueAt.getTime() === current.dueAt.getTime()) return;
 
-    const courseOfferingId = await this.audience.findOfferingOfSpace(
-      institutionId,
-      activity.learningSpaceId,
-    );
-    if (!courseOfferingId) return;
-
-    await this.emitter.emit({
-      institutionId,
-      type,
-      subjectId: activity.id,
-      courseOfferingId,
-      examTermId: null,
-      learningActivityId: activity.id,
-      payload: {
-        activityName: activity.name,
-        activityType: activity.type,
-        dueAt: activity.dueAt.toISOString(),
-        previousDueAt:
-          type === 'assignment_due_rescheduled'
-            ? change.previous?.dueAt?.toISOString()
-            : undefined,
-      },
-      occurredAt,
+    await this.emitDeadline(institutionId, 'assignment_due_rescheduled', current, occurredAt, {
+      previousDueAt: previous.dueAt,
     });
   }
 
@@ -87,21 +78,40 @@ export class LearningActivityNotificationsService {
     });
   }
 
-  private typeOf(change: NotificationChange<LearningActivity>): NotificationType | null {
-    const { current } = change;
-    if (!current?.visible || !current.dueAt) return null;
-    if (change.removed) return null;
-    if (!change.previous) return 'assignment_due_published';
+  private async emitDeadline(
+    institutionId: string,
+    type: NotificationType,
+    activity: LearningActivity,
+    occurredAt: Date,
+    {
+      previousDueAt,
+      recipients,
+    }: { previousDueAt?: Date; recipients?: readonly string[] } = {},
+  ): Promise<void> {
+    if (!activity.dueAt) return;
 
-    // An assignment drafted hidden and then published is news the first time
-    // the students can see it, not when it was written.
-    if (!change.previous.visible) return 'assignment_due_published';
+    const courseOfferingId = await this.audience.findOfferingOfSpace(
+      institutionId,
+      activity.learningSpaceId,
+    );
+    if (!courseOfferingId) return;
 
-    const previousDueAt = change.previous.dueAt;
-    if (previousDueAt === null) return 'assignment_due_published';
-    if (previousDueAt.getTime() === current.dueAt.getTime()) return null;
-
-    return 'assignment_due_rescheduled';
+    await this.emitter.emit({
+      institutionId,
+      type,
+      subjectId: activity.id,
+      courseOfferingId,
+      examTermId: null,
+      learningActivityId: activity.id,
+      ...(recipients === undefined ? {} : { recipients }),
+      payload: {
+        activityName: activity.name,
+        activityType: activity.type,
+        dueAt: activity.dueAt.toISOString(),
+        previousDueAt: previousDueAt?.toISOString(),
+      },
+      occurredAt,
+    });
   }
 }
 

@@ -3,7 +3,6 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import {
-  assessmentResults,
   assessments,
   submissions,
   type AssessmentResult,
@@ -12,6 +11,8 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
+import { AssessmentResultsRepository } from './assessment-results.repository';
+import { CompletionService } from './completion.service';
 import { LearningAccessService } from './learning-access.service';
 import { SubmissionsService } from './submissions.service';
 
@@ -37,6 +38,8 @@ export class SubmissionMarkingService {
     private readonly access: LearningAccessService,
     private readonly submissionsService: SubmissionsService,
     private readonly notifications: LearningActivityNotificationsService,
+    private readonly completion: CompletionService,
+    private readonly results: AssessmentResultsRepository,
   ) {}
 
   async mark(
@@ -76,7 +79,7 @@ export class SubmissionMarkingService {
     }
 
     return this.txHost.run(async () => {
-      const result = await this.upsertResult(
+      const result = await this.results.record(
         { institutionId, assessmentId: assessment.id, userId: submission.userId },
         { points, maxPoints, feedback: input.feedback ?? null, markerId, now },
       );
@@ -88,6 +91,10 @@ export class SubmissionMarkingService {
         .returning();
 
       if (!marked) throw new EntityNotFoundError('submission', submissionId);
+
+      await this.completion.recompute({ kind: 'assignment', id: assignmentId }, [
+        submission.userId,
+      ]);
 
       await this.notifications.marked(
         institutionId,
@@ -107,52 +114,6 @@ export class SubmissionMarkingService {
     });
   }
 
-  private async upsertResult(
-    key: { institutionId: string; assessmentId: string; userId: string },
-    mark: {
-      points: number | null;
-      maxPoints: number | null;
-      feedback: string | null;
-      markerId: string;
-      now: Date;
-    },
-  ): Promise<AssessmentResult> {
-    const values = {
-      points: mark.points === null ? null : mark.points.toFixed(4),
-      normalizedScore: normalize(mark.points, mark.maxPoints),
-      feedback: mark.feedback,
-      gradedAt: mark.now,
-      gradedById: mark.markerId,
-    };
-
-    const [existing] = await this.client
-      .select({ id: assessmentResults.id })
-      .from(assessmentResults)
-      .where(
-        and(
-          eq(assessmentResults.assessmentId, key.assessmentId),
-          eq(assessmentResults.userId, key.userId),
-          isNull(assessmentResults.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    const [written] = existing
-      ? await this.client
-          .update(assessmentResults)
-          .set(values)
-          .where(eq(assessmentResults.id, existing.id))
-          .returning()
-      : await this.client
-          .insert(assessmentResults)
-          .values({ ...key, ...values })
-          .returning();
-
-    if (!written) throw new ConflictError('MARK_NOT_RECORDED', 'The mark was not recorded');
-
-    return written;
-  }
-
   private async assessmentOrFail(assignmentId: string) {
     const [row] = await this.client
       .select()
@@ -170,10 +131,4 @@ export class SubmissionMarkingService {
   private get client() {
     return this.txHost.client();
   }
-}
-
-function normalize(points: number | null, maxPoints: number | null): string | null {
-  if (points === null || maxPoints === null || maxPoints === 0) return null;
-
-  return (points / maxPoints).toFixed(4);
 }

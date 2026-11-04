@@ -3,10 +3,12 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -14,14 +16,23 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+import { COMPLETION_RULES, type CompletionRule } from '../../../database/schema';
 import { MAX_ATTEMPT_LIMIT } from '../assignment-policy';
 import type { AssignmentEntry } from '../assignments.service';
+import { ASSIGNMENT_COMPLETION_RULES } from '../completion-rule';
+import type { Gated } from '../learning-availability.service';
+
+import {
+  AvailabilityDto,
+  AvailabilityResponseDto,
+  availabilityFields,
+} from './availability.dto';
 
 const MAX_NAME = 200;
 const MAX_BRIEF = 20_000;
 const MAX_POINTS = 100_000;
 
-export class CreateAssignmentDto {
+export class CreateAssignmentDto extends AvailabilityDto {
   @ApiProperty({ maxLength: MAX_NAME, example: 'Assignment 1 — sorting' })
   @IsString()
   @MinLength(1)
@@ -92,6 +103,40 @@ export class CreateAssignmentDto {
   @IsOptional()
   @IsBoolean()
   visible?: boolean;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'The section it sits in; null for the general area at the top.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  sectionId?: string | null;
+
+  @ApiPropertyOptional({
+    enum: ASSIGNMENT_COMPLETION_RULES,
+    description:
+      'When a student has completed it: never tracked, when they tick it, when they hand work in, when it is marked, or when the mark reaches the pass mark.',
+  })
+  @IsOptional()
+  @IsIn(ASSIGNMENT_COMPLETION_RULES)
+  completionRule?: (typeof ASSIGNMENT_COMPLETION_RULES)[number];
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: MAX_POINTS,
+    description: 'Points a student needs to pass. Required when the rule is passed.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber()
+  @Min(0)
+  @Max(MAX_POINTS)
+  completionPassPoints?: number | null;
 }
 
 export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {
@@ -103,7 +148,7 @@ export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {
 }
 
 @Exclude()
-export class AssignmentResponseDto {
+export class AssignmentResponseDto extends AvailabilityResponseDto {
   @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) learningSpaceId!: string;
   @Expose() @ApiProperty({ format: 'uuid' }) assessmentId!: string;
@@ -129,7 +174,17 @@ export class AssignmentResponseDto {
   @Expose() @ApiProperty({ type: Number, nullable: true }) position!: number | null;
   @Expose() @ApiProperty() visible!: boolean;
 
-  static from(entry: AssignmentEntry): AssignmentResponseDto {
+  @Expose()
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  sectionId!: string | null;
+
+  @Expose() @ApiProperty({ enum: COMPLETION_RULES }) completionRule!: CompletionRule;
+
+  @Expose()
+  @ApiProperty({ type: Number, nullable: true })
+  completionPassPoints!: number | null;
+
+  static from(entry: Gated<AssignmentEntry>, now = new Date()): AssignmentResponseDto {
     const { activity, assessment } = entry;
 
     return Object.assign(new AssignmentResponseDto(), {
@@ -147,6 +202,11 @@ export class AssignmentResponseDto {
       countsTowardFinalGrade: assessment.countsTowardFinalGrade,
       position: activity.position,
       visible: activity.visible,
+      sectionId: activity.sectionId,
+      completionRule: activity.completionRule,
+      completionPassPoints:
+        activity.completionPassPoints === null ? null : Number(activity.completionPassPoints),
+      ...availabilityFields(activity, entry.gate, now),
     });
   }
 }

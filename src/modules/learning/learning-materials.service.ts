@@ -1,74 +1,97 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
 
-import {
-  EntityNotFoundError,
-  InvalidInputError,
-  ConflictError,
-} from '../../common/errors/domain.error';
-import {
-  learningMaterials,
-  type LearningMaterial,
-  type LearningMaterialKind,
+import type {
+  CompletionRule,
+  LearningMaterial,
+  LearningMaterialKind,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
-import { assertNotInfected } from '../storage/assert-not-infected';
 import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
-import { LearningAccessService } from './learning-access.service';
+import { assertCompletionRule } from './completion-rule';
+import { CompletionService } from './completion.service';
+import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
+import {
+  assertAvailabilityWindow,
+  availabilityChanges,
+  teaserOf,
+} from './learning-availability';
+import { AvailabilityService, type Gated } from './learning-availability.service';
 import { assertPayloadMatchesKind } from './learning-material-payload';
+import { LearningMaterialsRepository } from './learning-materials.repository';
+import { LearningOutlineService } from './learning-outline.service';
+import { contentColumns } from './material-content';
+import type { RestrictionInput } from './restriction';
+import type { AudienceInput } from './restriction-audience';
+import { RestrictionRulesService } from './restriction-rules.service';
 
 export const MATERIAL_PURPOSE = 'materials';
 
+const MATERIAL_CONTENT = [
+  'description',
+  'body',
+  'url',
+  'storageKey',
+  'filename',
+  'contentType',
+  'sizeBytes',
+] as const;
+
 export interface NewLearningMaterial {
   readonly kind: LearningMaterialKind;
-  readonly title: string;
+  readonly title?: string;
   readonly description?: string | null;
   readonly body?: string | null;
   readonly url?: string | null;
   readonly storageKey?: string | null;
   readonly filename?: string | null;
   readonly visible?: boolean;
+  readonly sectionId?: string | null;
+  readonly availableFrom?: Date | null;
+  readonly availableUntil?: Date | null;
+  readonly hiddenUntilAvailable?: boolean;
+  readonly completionRule?: CompletionRule;
+  readonly restriction?: RestrictionInput | null;
+  readonly audience?: AudienceInput | null;
 }
 
 export type LearningMaterialChanges = Partial<Omit<NewLearningMaterial, 'kind'>> & {
   readonly position?: number;
 };
 
-/**
- * Files, links and paragraphs pinned to a course page. A file is not streamed
- * through here: the client takes an upload ticket, PUTs to the store and comes
- * back with the key, and this asks the store what it actually received before
- * the row exists (ADR 0027).
- */
 @Injectable()
 export class LearningMaterialsService {
   constructor(
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
+    private readonly materials: LearningMaterialsRepository,
     private readonly storage: StorageService,
+    private readonly outline: LearningOutlineService,
+    private readonly completion: CompletionService,
+    private readonly availability: AvailabilityService,
+    private readonly restrictions: RestrictionRulesService,
   ) {}
 
   async list(
     institutionId: string,
     spaceId: string,
     userId: string,
-  ): Promise<LearningMaterial[]> {
+  ): Promise<Gated<LearningMaterial>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
-    const rows = await this.reader
-      .select()
-      .from(learningMaterials)
-      .where(
-        and(
-          eq(learningMaterials.learningSpaceId, spaceId),
-          isNull(learningMaterials.deletedAt),
-        ),
-      )
-      .orderBy(asc(learningMaterials.position), asc(learningMaterials.createdAt));
+    return this.listFor(context);
+  }
 
-    return context.stance === 'author' ? rows : rows.filter((row) => row.visible);
+  async listFor(context: LearningSpaceContext): Promise<Gated<LearningMaterial>[]> {
+    const rows = await this.materials.listLive(context.space.id);
+
+    const sifted = await this.availability.sift(context, rows, {
+      itemOf: (row) => row,
+      teaser: (row) => teaserOf(row, MATERIAL_CONTENT),
+    });
+
+    return sifted.map((row) => (row.kind === 'page' ? { ...row, body: null } : row));
   }
 
   async createUploadTicket(
@@ -93,43 +116,51 @@ export class LearningMaterialsService {
     spaceId: string,
     userId: string,
     input: NewLearningMaterial,
-  ): Promise<LearningMaterial> {
+  ): Promise<Gated<LearningMaterial>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
     assertPayloadMatchesKind(input);
+    assertAvailabilityWindow(input);
+    assertCompletionRule({ kind: 'material', rule: input.completionRule ?? 'none' });
+    await this.outline.assertSectionOf(spaceId, input.sectionId);
+    const sectionId = input.sectionId ?? null;
+    const { restriction = null } = await this.restrictions.settle(
+      { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
+      { input: input.restriction, audience: input.audience },
+    );
     const stored =
       input.kind === 'file' && input.storageKey
         ? await this.storage.confirm(input.storageKey, institutionId)
         : undefined;
 
     return this.txHost.run(async () => {
-      const [created] = await this.client
-        .insert(learningMaterials)
-        .values({
-          institutionId,
-          learningSpaceId: spaceId,
-          kind: input.kind,
-          title: input.title,
-          description: input.description ?? null,
-          body: input.kind === 'text' ? (input.body ?? null) : null,
-          url: input.kind === 'link' ? (input.url ?? null) : null,
-          storageKey: stored?.key ?? null,
-          filename: stored === undefined ? null : (input.filename ?? null),
-          contentType: stored?.contentType ?? null,
-          sizeBytes: stored?.sizeBytes ?? null,
-          scanStatus: stored?.scanStatus ?? 'unscanned',
-          position: await this.nextPosition(spaceId),
-          visible: input.visible ?? true,
-          createdById: userId,
-        })
-        .returning();
+      const created = await this.materials.insert({
+        institutionId,
+        learningSpaceId: spaceId,
+        kind: input.kind,
+        title: '',
+        description: input.description ?? null,
+        body: null,
+        url: null,
+        ...contentColumns(input.kind, input),
+        storageKey: stored?.key ?? null,
+        filename: stored === undefined ? null : (input.filename ?? null),
+        contentType: stored?.contentType ?? null,
+        sizeBytes: stored?.sizeBytes ?? null,
+        scanStatus: stored?.scanStatus ?? 'unscanned',
+        sectionId,
+        position: await this.outline.nextPosition(spaceId, sectionId),
+        visible: input.visible ?? true,
+        availableFrom: input.availableFrom ?? null,
+        availableUntil: input.availableUntil ?? null,
+        hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
+        completionRule: input.completionRule ?? 'none',
+        restriction,
+        createdById: userId,
+      });
 
-      if (!created) {
-        throw new ConflictError('LEARNING_MATERIAL_NOT_CREATED', 'The material was not added');
-      }
-
-      return created;
+      return this.availability.gated(context, created);
     });
   }
 
@@ -139,31 +170,54 @@ export class LearningMaterialsService {
     materialId: string,
     userId: string,
     changes: LearningMaterialChanges,
-  ): Promise<LearningMaterial> {
+  ): Promise<Gated<LearningMaterial>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
-    const existing = await this.materialOrFail(spaceId, materialId);
+    const existing = await this.materials.findLiveOrFail(spaceId, materialId);
     assertPayloadMatchesKind({ ...existing, ...changes });
+    assertAvailabilityWindow({ ...existing, ...changes });
+    if (changes.completionRule !== undefined) {
+      assertCompletionRule({ kind: 'material', rule: changes.completionRule });
+    }
+    const placement = await this.outline.placement(spaceId, existing.sectionId, changes);
+    const restriction = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: `material:${materialId}`,
+        sectionId: placement.sectionId === undefined ? existing.sectionId : placement.sectionId,
+        restriction: existing.restriction,
+      },
+      {
+        input: changes.restriction,
+        audience: changes.audience,
+        moved: placement.sectionId !== undefined,
+      },
+    );
+    const ruleChanged =
+      changes.completionRule !== undefined &&
+      changes.completionRule !== existing.completionRule;
 
-    const [updated] = await this.client
-      .update(learningMaterials)
-      .set({
-        ...(changes.title === undefined ? {} : { title: changes.title }),
-        ...(changes.description === undefined ? {} : { description: changes.description }),
-        ...(changes.body === undefined || existing.kind !== 'text'
-          ? {}
-          : { body: changes.body }),
-        ...(changes.url === undefined || existing.kind !== 'link' ? {} : { url: changes.url }),
-        ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-        ...(changes.position === undefined ? {} : { position: changes.position }),
-      })
-      .where(eq(learningMaterials.id, materialId))
-      .returning();
+    const set = {
+      ...contentColumns(existing.kind, changes),
+      ...(changes.description === undefined ? {} : { description: changes.description }),
+      ...(changes.visible === undefined ? {} : { visible: changes.visible }),
+      ...(changes.completionRule === undefined
+        ? {}
+        : { completionRule: changes.completionRule }),
+      ...availabilityChanges(changes),
+      ...placement,
+      ...restriction,
+    };
 
-    if (!updated) throw new EntityNotFoundError('learning_material', materialId);
+    return this.txHost.run(async () => {
+      const updated =
+        Object.keys(set).length === 0 ? existing : await this.materials.update(materialId, set);
+      if (ruleChanged) await this.completion.recompute({ kind: 'material', id: materialId });
 
-    return updated;
+      return this.availability.gated(context, updated);
+    });
   }
 
   async remove(
@@ -175,80 +229,7 @@ export class LearningMaterialsService {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
-    await this.materialOrFail(spaceId, materialId);
-
-    await this.client
-      .update(learningMaterials)
-      .set({ deletedAt: new Date() })
-      .where(eq(learningMaterials.id, materialId));
-  }
-
-  async downloadUrl(
-    institutionId: string,
-    spaceId: string,
-    materialId: string,
-    userId: string,
-  ): Promise<string> {
-    const context = await this.access.contextForSpace(institutionId, spaceId, userId);
-    const material = await this.materialOrFail(spaceId, materialId);
-
-    if (!material.visible && context.stance !== 'author') {
-      throw new EntityNotFoundError('learning_material', materialId);
-    }
-
-    if (material.kind !== 'file' || material.storageKey === null) {
-      throw new InvalidInputError(
-        'LEARNING_MATERIAL_NOT_A_FILE',
-        'Only a file material can be downloaded',
-      );
-    }
-
-    assertNotInfected(material.scanStatus);
-
-    return this.storage.createDownloadUrl(
-      material.storageKey,
-      institutionId,
-      material.filename ?? undefined,
-    );
-  }
-
-  private async nextPosition(spaceId: string): Promise<number> {
-    const [row] = await this.client
-      .select({ highest: max(learningMaterials.position) })
-      .from(learningMaterials)
-      .where(
-        and(
-          eq(learningMaterials.learningSpaceId, spaceId),
-          isNull(learningMaterials.deletedAt),
-        ),
-      );
-
-    return (row?.highest ?? -1) + 1;
-  }
-
-  private async materialOrFail(spaceId: string, materialId: string): Promise<LearningMaterial> {
-    const [row] = await this.client
-      .select()
-      .from(learningMaterials)
-      .where(
-        and(
-          eq(learningMaterials.id, materialId),
-          eq(learningMaterials.learningSpaceId, spaceId),
-          isNull(learningMaterials.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (!row) throw new EntityNotFoundError('learning_material', materialId);
-
-    return row;
-  }
-
-  private get client() {
-    return this.txHost.client();
-  }
-
-  private get reader() {
-    return this.txHost.reader();
+    await this.materials.findLiveOrFail(spaceId, materialId);
+    await this.materials.tombstone(materialId);
   }
 }

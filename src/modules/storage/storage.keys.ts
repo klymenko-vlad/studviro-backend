@@ -15,7 +15,7 @@ import type { UploadRequest, StorageKey } from './storage.types';
  * or one with a newline in it becomes the store's problem.
  */
 export const StorageKeys = {
-  for(request: UploadRequest): StorageKey {
+  for(request: Pick<UploadRequest, 'institutionId' | 'purpose' | 'filename'>): StorageKey {
     const purpose = slug(request.purpose) || 'files';
 
     return `institutions/${request.institutionId}/${purpose}/${randomUUID()}/${label(request.filename)}`;

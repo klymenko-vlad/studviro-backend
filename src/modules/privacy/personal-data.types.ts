@@ -144,10 +144,13 @@ export interface ExportedAssessmentResult {
 }
 
 export interface ExportedActivityCompletion {
-  learningActivityId: string;
+  learningActivityId: string | null;
+  learningMaterialId: string | null;
   activityName: string;
   state: ActivityCompletionState;
   completedAt: Date | null;
+  viewedAt: Date | null;
+  markedDoneAt: Date | null;
 }
 
 export interface ExportedFile {
@@ -179,6 +182,25 @@ export interface ExportedDiscussionPost {
   createdAt: Date;
 }
 
+export interface ExportedPersonalTask {
+  id: string;
+  title: string;
+  note: string | null;
+  dueAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface ExportedPersonalEvent {
+  id: string;
+  title: string;
+  note: string | null;
+  location: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  createdAt: Date;
+}
+
 export interface ExportedNotification {
   type: NotificationType;
   occurredAt: Date;
@@ -206,6 +228,8 @@ export interface PersonalDataExport {
   activityCompletions: ExportedActivityCompletion[];
   submissions: ExportedSubmission[];
   discussionPosts: ExportedDiscussionPost[];
+  personalTasks: ExportedPersonalTask[];
+  personalEvents: ExportedPersonalEvent[];
   notifications: ExportedNotification[];
   files: ExportedFile[];
 }

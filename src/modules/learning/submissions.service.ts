@@ -23,7 +23,9 @@ import { StorageService } from '../storage/storage.service';
 import type { UploadTicket } from '../storage/storage.types';
 
 import { assertSubmittable } from './assignment-policy';
+import { CompletionService } from './completion.service';
 import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
+import { AvailabilityService } from './learning-availability.service';
 
 export const SUBMISSION_PURPOSE = 'submissions';
 export const MAX_SUBMISSION_FILES = 10;
@@ -65,6 +67,8 @@ export class SubmissionsService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly storage: StorageService,
+    private readonly availability: AvailabilityService,
+    private readonly completion: CompletionService,
   ) {}
 
   async listMine(
@@ -174,6 +178,8 @@ export class SubmissionsService {
         );
       }
 
+      await this.completion.recompute({ kind: 'assignment', id: assignmentId }, [userId]);
+
       return submission;
     });
 
@@ -241,7 +247,7 @@ export class SubmissionsService {
       userId,
     );
 
-    if (!activity.visible && context.stance !== 'author') {
+    if (!(await this.availability.isOpenTo(context, activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 

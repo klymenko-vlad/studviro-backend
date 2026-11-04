@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   assessmentResults,
   assessments,
   learningActivities,
   learningSpaces,
+  quizzes,
   type ActivityCompletionState,
   type LearningActivityType,
   type SubmissionState,
@@ -58,6 +59,7 @@ export class MyAssessmentResultsRepository {
     institutionId: string,
     userId: string,
     filter: MyAssessmentResultFilter,
+    now = new Date(),
   ): Promise<MyAssessmentResultRow[]> {
     const conditions: (SQL | undefined)[] = [
       eq(assessmentResults.institutionId, institutionId),
@@ -66,6 +68,11 @@ export class MyAssessmentResultsRepository {
       isNull(assessments.deletedAt),
       isNull(learningSpaces.deletedAt),
       eq(learningSpaces.visible, true),
+      or(
+        isNull(quizzes.learningActivityId),
+        eq(quizzes.reviewOverallMark, 'immediately'),
+        and(eq(quizzes.reviewOverallMark, 'after_close'), lte(learningActivities.dueAt, now)),
+      ),
     ];
 
     if (filter.offeringId) {
@@ -114,6 +121,7 @@ export class MyAssessmentResultsRepository {
           isNull(learningActivities.deletedAt),
         ),
       )
+      .leftJoin(quizzes, eq(quizzes.learningActivityId, learningActivities.id))
       .where(and(...conditions))
       .orderBy(asc(learningActivities.dueAt), asc(assessments.name));
   }

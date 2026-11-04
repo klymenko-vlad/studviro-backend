@@ -154,6 +154,19 @@ what the feed serves is read from the timetable, exam and learning tables at eac
 and cascade from `users`.
 **Retention:** none needed: the row lives exactly as long as the owner keeps the feed.
 
+### `personal_tasks` and `personal_events` — `planner.ts`
+
+`institution_id`, `user_id`, **`title`**, **`note`** (free text), `due_at`, `completed_at`;
+events also **`location`**, `starts_at`, `ends_at`.
+**Subject:** a person who uses the planner on the calendar page.
+**Why:** the person's own tasks and events, shown only to them, in their calendar, feed and
+dashboard (ADR 0054).
+**Category:** **private free text** the person wrote for themselves; it can say anything
+(a doctor's appointment, a debt). No academic purpose, and no other role can read it.
+**Deleted by:** the owner (soft delete), erasure (hard delete, soft-deleted rows included),
+and cascade from `users`.
+**Retention:** as long as the owner keeps it; nothing requires keeping it longer.
+
 ### `invitations` — `invitations.ts`
 
 `address` (contact, identifying), `role`, `scope_type`, `scope_id`, `invited_by_id`,

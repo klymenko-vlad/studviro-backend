@@ -29,6 +29,7 @@ const TITLE: Record<MailLocale, Record<NotificationType, string>> = {
     waitlist_place_free: 'A place came free on a course you are waiting for',
     discussion_thread_started: 'New thread in your course',
     discussion_reply: 'New reply in a discussion',
+    enrollment_withdrawn: 'You were withdrawn from a course',
   },
   sk: {
     exam_term_published: 'Nový skúškový termín',
@@ -49,6 +50,7 @@ const TITLE: Record<MailLocale, Record<NotificationType, string>> = {
     waitlist_place_free: 'V predmete, na ktorý čakáte, sa uvoľnilo miesto',
     discussion_thread_started: 'Nová téma vo vašom predmete',
     discussion_reply: 'Nová odpoveď v diskusii',
+    enrollment_withdrawn: 'Boli ste odhlásení z predmetu',
   },
 };
 

@@ -9,7 +9,6 @@ const keyFor = (filename: string, purpose = 'materials') =>
     institutionId: INSTITUTION,
     purpose,
     filename,
-    contentType: 'application/pdf',
   });
 
 describe('StorageKeys', () => {

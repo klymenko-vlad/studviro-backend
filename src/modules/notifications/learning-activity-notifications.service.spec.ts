@@ -49,97 +49,105 @@ describe(LearningActivityNotificationsService.name, () => {
     service = new LearningActivityNotificationsService(emitter, audience);
   });
 
-  const applied = (overrides: Partial<NotificationChange<LearningActivity>>) =>
-    service.applied(INSTITUTION, change(overrides), new Date('2026-10-20T09:00:00.000Z'));
+  const AT = new Date('2026-10-20T09:00:00.000Z');
+  const announced = (overrides: Partial<LearningActivity> = {}) =>
+    activity({ announcedAt: new Date('2026-10-01T09:00:00.000Z'), ...overrides });
 
-  it('announces a newly imported deadline against the offering its space belongs to', async () => {
-    await applied({ previous: null, current: activity() });
+  const rescheduled = (overrides: Partial<NotificationChange<LearningActivity>>) =>
+    service.rescheduled(INSTITUTION, change(overrides), AT);
 
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'assignment_due_published',
-        subjectId: 'activity-1',
-        courseOfferingId: 'offering-1',
-        learningActivityId: 'activity-1',
-        payload: expect.objectContaining({
-          dueAt: '2026-11-05T21:00:00.000Z',
-          activityName: 'Assignment 1',
-          activityType: 'assignment',
+  describe('publishing', () => {
+    it('announces a deadline against the offering its space belongs to', async () => {
+      await service.published(INSTITUTION, activity(), AT);
+
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'assignment_due_published',
+          subjectId: 'activity-1',
+          courseOfferingId: 'offering-1',
+          learningActivityId: 'activity-1',
+          payload: expect.objectContaining({
+            dueAt: '2026-11-05T21:00:00.000Z',
+            activityName: 'Assignment 1',
+            activityType: 'assignment',
+          }),
         }),
-      }),
-    );
-  });
-
-  it('reports a moved deadline with the date it moved from', async () => {
-    await applied({
-      previous: activity(),
-      current: activity({ dueAt: new Date('2026-11-12T21:00:00.000Z') }),
+      );
     });
 
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'assignment_due_rescheduled',
-        payload: expect.objectContaining({
-          dueAt: '2026-11-12T21:00:00.000Z',
-          previousDueAt: '2026-11-05T21:00:00.000Z',
+    it('leaves the audience to the offering unless told who may know', async () => {
+      await service.published(INSTITUTION, activity(), AT);
+      await service.published(INSTITUTION, activity(), AT, ['student-1']);
+
+      expect(emit.mock.calls[0]![0]).not.toHaveProperty('recipients');
+      expect(emit.mock.calls[1]![0]).toMatchObject({ recipients: ['student-1'] });
+    });
+
+    it('says nothing about an activity that carries no deadline', async () => {
+      await service.published(INSTITUTION, activity({ dueAt: null }), AT);
+
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the learning space is matched to no course offering', async () => {
+      findOfferingOfSpace.mockResolvedValue(null);
+
+      await service.published(INSTITUTION, activity(), AT);
+
+      expect(emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('rescheduling', () => {
+    it('reports a moved deadline with the date it moved from', async () => {
+      await rescheduled({
+        previous: announced(),
+        current: announced({ dueAt: new Date('2026-11-12T21:00:00.000Z') }),
+      });
+
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'assignment_due_rescheduled',
+          payload: expect.objectContaining({
+            dueAt: '2026-11-12T21:00:00.000Z',
+            previousDueAt: '2026-11-05T21:00:00.000Z',
+          }),
         }),
-      }),
-    );
-  });
-
-  it('announces an activity that gains a deadline it did not have', async () => {
-    await applied({ previous: activity({ dueAt: null }), current: activity() });
-
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'assignment_due_published' }),
-    );
-  });
-
-  it('says nothing about an activity that carries no deadline', async () => {
-    await applied({
-      previous: null,
-      current: activity({ dueAt: null, type: 'resource' }),
+      );
     });
 
-    expect(emit).not.toHaveBeenCalled();
-  });
+    it('says nothing about a deadline nobody was told of', async () => {
+      await rescheduled({
+        previous: activity({ announcedAt: null }),
+        current: activity({ announcedAt: null, dueAt: new Date('2026-11-12T21:00:00.000Z') }),
+      });
 
-  it('says nothing when a deadline is unchanged', async () => {
-    await applied({ previous: activity(), current: activity() });
-
-    expect(emit).not.toHaveBeenCalled();
-  });
-
-  it('says nothing about a hidden activity students cannot see', async () => {
-    await applied({
-      previous: null,
-      current: activity({ visible: false }),
+      expect(emit).not.toHaveBeenCalled();
     });
 
-    expect(emit).not.toHaveBeenCalled();
-  });
+    it('says nothing when a deadline is unchanged', async () => {
+      await rescheduled({ previous: announced(), current: announced() });
 
-  it('says nothing about a change with nothing on either side', async () => {
-    await applied({ previous: activity(), current: null });
-
-    expect(emit).not.toHaveBeenCalled();
-  });
-
-  it('says nothing about a tombstoned activity', async () => {
-    await applied({ removed: true, previous: activity(), current: null });
-
-    expect(emit).not.toHaveBeenCalled();
-  });
-
-  it('announces a drafted assignment the moment the students can see it', async () => {
-    await applied({
-      previous: activity({ visible: false }),
-      current: activity({ visible: true }),
+      expect(emit).not.toHaveBeenCalled();
     });
 
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'assignment_due_published' }),
-    );
+    it('says nothing when a deadline is added or taken away', async () => {
+      await rescheduled({ previous: announced({ dueAt: null }), current: announced() });
+      await rescheduled({ previous: announced(), current: announced({ dueAt: null }) });
+
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it('says nothing about a newly created, removed or hidden activity', async () => {
+      await rescheduled({ previous: null, current: announced() });
+      await rescheduled({ removed: true, previous: announced(), current: null });
+      await rescheduled({
+        previous: announced(),
+        current: announced({ visible: false, dueAt: new Date('2026-11-12T21:00:00.000Z') }),
+      });
+
+      expect(emit).not.toHaveBeenCalled();
+    });
   });
 
   describe('a mark', () => {
@@ -188,13 +196,5 @@ describe(LearningActivityNotificationsService.name, () => {
 
       expect(emit).not.toHaveBeenCalled();
     });
-  });
-
-  it('says nothing when the learning space is matched to no course offering', async () => {
-    findOfferingOfSpace.mockResolvedValue(null);
-
-    await applied({ previous: null, current: activity() });
-
-    expect(emit).not.toHaveBeenCalled();
   });
 });

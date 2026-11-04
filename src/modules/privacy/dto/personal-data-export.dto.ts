@@ -20,6 +20,8 @@ import type {
   ExportedStudyGroupMembership,
   ExportedSubmission,
   ExportedDiscussionPost,
+  ExportedPersonalEvent,
+  ExportedPersonalTask,
   ExportedTeachingAssignment,
   PersonalDataExport,
 } from '../personal-data.types';
@@ -43,6 +45,8 @@ import {
   ExportedStudyGroupMembershipDto,
   ExportedSubmissionDto,
   ExportedDiscussionPostDto,
+  ExportedPersonalEventDto,
+  ExportedPersonalTaskDto,
   ExportedTeachingAssignmentDto,
 } from './personal-data-sections.dto';
 
@@ -140,6 +144,16 @@ export class PersonalDataExportDto {
   @Type(() => ExportedDiscussionPostDto)
   @ApiProperty({ type: ExportedDiscussionPostDto, isArray: true })
   discussionPosts!: ExportedDiscussionPost[];
+
+  @Expose()
+  @Type(() => ExportedPersonalTaskDto)
+  @ApiProperty({ type: ExportedPersonalTaskDto, isArray: true })
+  personalTasks!: ExportedPersonalTask[];
+
+  @Expose()
+  @Type(() => ExportedPersonalEventDto)
+  @ApiProperty({ type: ExportedPersonalEventDto, isArray: true })
+  personalEvents!: ExportedPersonalEvent[];
 
   @Expose()
   @Type(() => ExportedNotificationDto)

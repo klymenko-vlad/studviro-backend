@@ -12,6 +12,7 @@ import {
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
+import { administersOfferings } from '../courses/administers-offering';
 
 export const LEARNING_STANCES = ['author', 'participant', 'observer'] as const;
 export type LearningStance = (typeof LEARNING_STANCES)[number];
@@ -20,6 +21,7 @@ export interface LearningSpaceContext {
   readonly space: LearningSpace;
   readonly offeringId: string | null;
   readonly stance: LearningStance;
+  readonly userId: string;
 }
 
 /**
@@ -61,7 +63,32 @@ export class LearningAccessService {
       throw new EntityNotFoundError('learning_space', spaceId);
     }
 
-    return { space, offeringId: space.courseOfferingId, stance };
+    await this.assertReader(institutionId, stance, userId);
+
+    return { space, offeringId: space.courseOfferingId, stance, userId };
+  }
+
+  async assertReaderOfOffering(
+    institutionId: string,
+    offeringId: string,
+    userId: string,
+  ): Promise<void> {
+    const stance = await this.stance(institutionId, offeringId, userId);
+    await this.assertReader(institutionId, stance, userId);
+  }
+
+  private async assertReader(
+    institutionId: string,
+    stance: LearningStance,
+    userId: string,
+  ): Promise<void> {
+    if (stance !== 'observer') return;
+    if (await administersOfferings(this.authorization, userId, institutionId)) return;
+
+    throw new PermissionDeniedError(
+      'LEARNING_SPACE_NOT_YOURS',
+      'Only somebody taking, teaching or administering this course may read its page',
+    );
   }
 
   async stance(

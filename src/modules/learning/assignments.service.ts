@@ -1,18 +1,32 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.error';
 import {
   assessments,
   learningActivities,
   type Assessment,
+  type CompletionRule,
   type LearningActivity,
 } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 import { LearningActivityNotificationsService } from '../notifications/learning-activity-notifications.service';
 
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
+import { assignmentCompletion, completionChanged } from './assignment-completion';
 import { assertAttemptPolicy, assertWindow } from './assignment-policy';
-import { LearningAccessService, type LearningStance } from './learning-access.service';
+import { CompletionService } from './completion.service';
+import { LearningAccessService, type LearningSpaceContext } from './learning-access.service';
+import {
+  assertAvailabilityWindow,
+  availabilityChanges,
+  teaserOf,
+} from './learning-availability';
+import { AvailabilityService, type Gated } from './learning-availability.service';
+import { LearningOutlineService } from './learning-outline.service';
+import type { RestrictionInput } from './restriction';
+import type { AudienceInput } from './restriction-audience';
+import { RestrictionRulesService } from './restriction-rules.service';
 
 export interface NewAssignment {
   readonly name: string;
@@ -25,6 +39,14 @@ export interface NewAssignment {
   readonly maxPoints?: number | null;
   readonly countsTowardFinalGrade?: boolean;
   readonly visible?: boolean;
+  readonly sectionId?: string | null;
+  readonly availableFrom?: Date | null;
+  readonly availableUntil?: Date | null;
+  readonly hiddenUntilAvailable?: boolean;
+  readonly completionRule?: CompletionRule;
+  readonly completionPassPoints?: number | null;
+  readonly restriction?: RestrictionInput | null;
+  readonly audience?: AudienceInput | null;
 }
 
 export type AssignmentChanges = Partial<NewAssignment> & { readonly position?: number };
@@ -33,6 +55,8 @@ export interface AssignmentEntry {
   readonly activity: LearningActivity;
   readonly assessment: Assessment;
 }
+
+const ASSIGNMENT_CONTENT = ['brief', 'opensAt', 'dueAt', 'closesAt'] as const;
 
 /**
  * A brief, a window and an attempt policy. It is a `learning_activity` of type
@@ -46,15 +70,24 @@ export class AssignmentsService {
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
     private readonly notifications: LearningActivityNotificationsService,
+    private readonly outline: LearningOutlineService,
+    private readonly announcements: AssignmentAnnouncementsService,
+    private readonly completion: CompletionService,
+    private readonly availability: AvailabilityService,
+    private readonly restrictions: RestrictionRulesService,
   ) {}
 
   async list(
     institutionId: string,
     spaceId: string,
     userId: string,
-  ): Promise<AssignmentEntry[]> {
+  ): Promise<Gated<AssignmentEntry>[]> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
 
+    return this.listFor(context);
+  }
+
+  async listFor(context: LearningSpaceContext): Promise<Gated<AssignmentEntry>[]> {
     const rows = await this.reader
       .select({ activity: learningActivities, assessment: assessments })
       .from(learningActivities)
@@ -67,14 +100,17 @@ export class AssignmentsService {
       )
       .where(
         and(
-          eq(learningActivities.learningSpaceId, spaceId),
+          eq(learningActivities.learningSpaceId, context.space.id),
           eq(learningActivities.type, 'assignment'),
           isNull(learningActivities.deletedAt),
         ),
       )
       .orderBy(asc(learningActivities.position), asc(learningActivities.createdAt));
 
-    return visibleTo(context.stance, rows);
+    return this.availability.sift(context, rows, {
+      itemOf: (row) => row.activity,
+      teaser: (row) => ({ ...row, activity: teaserOf(row.activity, ASSIGNMENT_CONTENT) }),
+    });
   }
 
   async findOne(
@@ -82,15 +118,15 @@ export class AssignmentsService {
     spaceId: string,
     assignmentId: string,
     userId: string,
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     const entry = await this.entryOrFail(spaceId, assignmentId);
 
-    if (!entry.activity.visible && context.stance !== 'author') {
+    if (!(await this.availability.isOpenTo(context, entry.activity))) {
       throw new EntityNotFoundError('assignment', assignmentId);
     }
 
-    return entry;
+    return this.gatedEntry(context, entry);
   }
 
   async create(
@@ -99,11 +135,19 @@ export class AssignmentsService {
     userId: string,
     input: NewAssignment,
     now = new Date(),
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
     assertWindow(input);
+    assertAvailabilityWindow(input);
     assertAttemptPolicy(input.maxAttempts ?? null);
+    const completion = assignmentCompletion(input);
+    await this.outline.assertSectionOf(spaceId, input.sectionId);
+    const sectionId = input.sectionId ?? null;
+    const { restriction = null } = await this.restrictions.settle(
+      { spaceId, offeringId: context.offeringId, key: null, sectionId, restriction: null },
+      { input: input.restriction, audience: input.audience },
+    );
 
     return this.txHost.run(async () => {
       const [activity] = await this.client
@@ -114,13 +158,19 @@ export class AssignmentsService {
           type: 'assignment',
           name: input.name,
           brief: input.brief ?? null,
-          position: await this.nextPosition(spaceId),
+          sectionId,
+          position: await this.outline.nextPosition(spaceId, sectionId),
           opensAt: input.opensAt ?? null,
           dueAt: input.dueAt ?? null,
           closesAt: input.closesAt ?? null,
           maxAttempts: input.maxAttempts ?? 1,
           allowsLateSubmission: input.allowsLateSubmission ?? false,
           visible: input.visible ?? true,
+          availableFrom: input.availableFrom ?? null,
+          availableUntil: input.availableUntil ?? null,
+          hiddenUntilAvailable: input.hiddenUntilAvailable ?? false,
+          restriction,
+          ...completion,
         })
         .returning();
 
@@ -144,13 +194,9 @@ export class AssignmentsService {
         throw new ConflictError('ASSIGNMENT_NOT_CREATED', 'The assignment was not created');
       }
 
-      await this.notifications.applied(
-        institutionId,
-        { previous: null, current: activity },
-        now,
-      );
+      await this.announcements.announceNewlySeen(now, spaceId);
 
-      return { activity, assessment };
+      return this.gatedEntry(context, { activity, assessment });
     });
   }
 
@@ -161,17 +207,36 @@ export class AssignmentsService {
     userId: string,
     changes: AssignmentChanges,
     now = new Date(),
-  ): Promise<AssignmentEntry> {
+  ): Promise<Gated<AssignmentEntry>> {
     const context = await this.access.contextForSpace(institutionId, spaceId, userId);
     this.access.assertAuthor(context);
 
     const existing = await this.entryOrFail(spaceId, assignmentId);
     assertWindow({ ...existing.activity, ...changes });
+    assertAvailabilityWindow({ ...existing.activity, ...changes });
     if (changes.maxAttempts !== undefined) assertAttemptPolicy(changes.maxAttempts);
+    const completion = assignmentCompletion(changes, existing);
+    const placement = await this.outline.placement(
+      spaceId,
+      existing.activity.sectionId,
+      changes,
+    );
+    const restriction = await this.restrictions.settle(
+      {
+        spaceId,
+        offeringId: context.offeringId,
+        key: `assignment:${assignmentId}`,
+        sectionId:
+          placement.sectionId === undefined ? existing.activity.sectionId : placement.sectionId,
+        restriction: existing.activity.restriction,
+      },
+      {
+        input: changes.restriction,
+        audience: changes.audience,
+        moved: placement.sectionId !== undefined,
+      },
+    );
 
-    // Drizzle refuses an `update` with no columns, so a change that touches
-    // only one of the pair — moving a deadline, or re-pricing the column —
-    // leaves the other row as it stands rather than writing nothing to it.
     const activityChanges = {
       ...(changes.name === undefined ? {} : { name: changes.name }),
       ...(changes.brief === undefined ? {} : { brief: changes.brief }),
@@ -183,7 +248,10 @@ export class AssignmentsService {
         ? {}
         : { allowsLateSubmission: changes.allowsLateSubmission }),
       ...(changes.visible === undefined ? {} : { visible: changes.visible }),
-      ...(changes.position === undefined ? {} : { position: changes.position }),
+      ...availabilityChanges(changes),
+      ...placement,
+      ...restriction,
+      ...completion,
     };
 
     const assessmentChanges = {
@@ -215,13 +283,18 @@ export class AssignmentsService {
 
       if (!assessment) throw new EntityNotFoundError('assessment', existing.assessment.id);
 
-      await this.notifications.applied(
+      if (completionChanged(existing, { activity, assessment })) {
+        await this.completion.recompute({ kind: 'assignment', id: assignmentId });
+      }
+
+      await this.notifications.rescheduled(
         institutionId,
         { previous: existing.activity, current: activity },
         now,
       );
+      await this.announcements.announceNewlySeen(now, spaceId);
 
-      return { activity, assessment };
+      return this.gatedEntry(context, { activity, assessment });
     });
   }
 
@@ -275,18 +348,13 @@ export class AssignmentsService {
     return row;
   }
 
-  private async nextPosition(spaceId: string): Promise<number> {
-    const [row] = await this.client
-      .select({ highest: max(learningActivities.position) })
-      .from(learningActivities)
-      .where(
-        and(
-          eq(learningActivities.learningSpaceId, spaceId),
-          isNull(learningActivities.deletedAt),
-        ),
-      );
+  private async gatedEntry(
+    context: LearningSpaceContext,
+    entry: AssignmentEntry,
+  ): Promise<Gated<AssignmentEntry>> {
+    const { gate } = await this.availability.gated(context, entry.activity);
 
-    return (row?.highest ?? -1) + 1;
+    return { ...entry, gate };
   }
 
   private get client() {
@@ -296,10 +364,6 @@ export class AssignmentsService {
   private get reader() {
     return this.txHost.reader();
   }
-}
-
-function visibleTo(stance: LearningStance, rows: AssignmentEntry[]): AssignmentEntry[] {
-  return stance === 'author' ? rows : rows.filter((row) => row.activity.visible);
 }
 
 function isEmpty(changes: Record<string, unknown>): boolean {

@@ -22,6 +22,7 @@ import type { ExportedFile } from '../personal-data.types';
 
 const uuid = { format: 'uuid' } as const;
 const dateTime = { type: String, format: 'date-time' } as const;
+const nullableUuid = { type: String, format: 'uuid', nullable: true } as const;
 const nullableDateTime = { type: String, format: 'date-time', nullable: true } as const;
 const nullableText = { type: String, nullable: true } as const;
 const nullableNumber = { type: Number, nullable: true } as const;
@@ -181,10 +182,13 @@ export class ExportedAssessmentResultDto {
 
 @Exclude()
 export class ExportedActivityCompletionDto {
-  @Expose() @ApiProperty(uuid) learningActivityId!: string;
+  @Expose() @ApiProperty(nullableUuid) learningActivityId!: string | null;
+  @Expose() @ApiProperty(nullableUuid) learningMaterialId!: string | null;
   @Expose() @ApiProperty() activityName!: string;
   @Expose() @ApiProperty({ enum: ACTIVITY_COMPLETION_STATES }) state!: string;
   @Expose() @ApiProperty(nullableDateTime) completedAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) viewedAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) markedDoneAt!: Date | null;
 }
 
 @Exclude()
@@ -204,6 +208,27 @@ export class ExportedDiscussionPostDto {
   @Expose() @ApiProperty() body!: string;
   @Expose() @ApiProperty(nullableDateTime) hiddenAt!: Date | null;
   @Expose() @ApiProperty({ type: String, format: 'date-time' }) createdAt!: Date;
+}
+
+@Exclude()
+export class ExportedPersonalTaskDto {
+  @Expose() @ApiProperty(uuid) id!: string;
+  @Expose() @ApiProperty() title!: string;
+  @Expose() @ApiProperty(nullableText) note!: string | null;
+  @Expose() @ApiProperty(nullableDateTime) dueAt!: Date | null;
+  @Expose() @ApiProperty(nullableDateTime) completedAt!: Date | null;
+  @Expose() @ApiProperty(dateTime) createdAt!: Date;
+}
+
+@Exclude()
+export class ExportedPersonalEventDto {
+  @Expose() @ApiProperty(uuid) id!: string;
+  @Expose() @ApiProperty() title!: string;
+  @Expose() @ApiProperty(nullableText) note!: string | null;
+  @Expose() @ApiProperty(nullableText) location!: string | null;
+  @Expose() @ApiProperty(dateTime) startsAt!: Date;
+  @Expose() @ApiProperty(dateTime) endsAt!: Date;
+  @Expose() @ApiProperty(dateTime) createdAt!: Date;
 }
 
 @Exclude()

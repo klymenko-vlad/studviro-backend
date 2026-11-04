@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import {
   discussionAttachments,
+  learningMaterialFiles,
   learningMaterials,
   submissionFiles,
   type FileScanStatus,
@@ -14,7 +15,12 @@ export interface PendingObject {
   readonly institutionId: string;
 }
 
-const FILE_TABLES = [learningMaterials, submissionFiles, discussionAttachments] as const;
+const FILE_TABLES = [
+  learningMaterials,
+  learningMaterialFiles,
+  submissionFiles,
+  discussionAttachments,
+] as const;
 
 @Injectable()
 export class ScanStatusRepository {

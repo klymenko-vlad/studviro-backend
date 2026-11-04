@@ -1,8 +1,10 @@
 import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -14,6 +16,7 @@ import {
 import { deletedAt, scanStatusColumn, timestampColumn, timestamps } from './_shared';
 import { courseOfferings } from './academic-structure';
 import { institutionId } from './institutions';
+import type { Restriction } from './learning-restrictions';
 import { users } from './users';
 
 export const learningSpaces = pgTable(
@@ -38,8 +41,46 @@ export const learningSpaces = pgTable(
   ],
 );
 
+export const learningSections = pgTable(
+  'learning_sections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    learningSpaceId: uuid('learning_space_id')
+      .notNull()
+      .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    summary: text('summary'),
+    position: integer('position').notNull().default(0),
+    visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('learning_sections_space_idx')
+      .on(table.learningSpaceId, table.position)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
+export const COMPLETION_RULES = [
+  'none',
+  'manual',
+  'viewed',
+  'submitted',
+  'marked',
+  'passed',
+] as const;
+export type CompletionRule = (typeof COMPLETION_RULES)[number];
+export const completionRule = pgEnum('completion_rule', COMPLETION_RULES);
+
 export const LEARNING_ACTIVITY_TYPES = [
   'assignment',
+  'quiz',
   'forum',
   'resource',
   'workshop',
@@ -56,6 +97,9 @@ export const learningActivities = pgTable(
     learningSpaceId: uuid('learning_space_id')
       .notNull()
       .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => learningSections.id, {
+      onDelete: 'set null',
+    }),
     type: learningActivityType('type').notNull().default('other'),
     name: text('name').notNull(),
     brief: text('brief'),
@@ -66,6 +110,13 @@ export const learningActivities = pgTable(
     maxAttempts: integer('max_attempts'),
     allowsLateSubmission: boolean('allows_late_submission').notNull().default(false),
     visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
+    announcedAt: timestampColumn('announced_at'),
+    completionRule: completionRule('completion_rule').notNull().default('none'),
+    completionPassPoints: numeric('completion_pass_points', { precision: 10, scale: 4 }),
     deletedAt,
     ...timestamps,
   },
@@ -76,10 +127,21 @@ export const learningActivities = pgTable(
     index('learning_activities_due_at_idx')
       .on(table.institutionId, table.dueAt)
       .where(isNull(table.deletedAt)),
+    index('learning_activities_unannounced_idx')
+      .on(table.dueAt)
+      .where(sql`${table.announcedAt} is null and ${table.deletedAt} is null`),
   ],
 );
 
-export const LEARNING_MATERIAL_KINDS = ['file', 'link', 'text'] as const;
+export const LEARNING_MATERIAL_KINDS = [
+  'file',
+  'link',
+  'text',
+  'page',
+  'label',
+  'video',
+  'folder',
+] as const;
 export type LearningMaterialKind = (typeof LEARNING_MATERIAL_KINDS)[number];
 export const learningMaterialKind = pgEnum('learning_material_kind', LEARNING_MATERIAL_KINDS);
 
@@ -91,6 +153,9 @@ export const learningMaterials = pgTable(
     learningSpaceId: uuid('learning_space_id')
       .notNull()
       .references(() => learningSpaces.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => learningSections.id, {
+      onDelete: 'set null',
+    }),
     kind: learningMaterialKind('kind').notNull(),
     title: text('title').notNull(),
     description: text('description'),
@@ -103,6 +168,11 @@ export const learningMaterials = pgTable(
     scanStatus: scanStatusColumn(),
     position: integer('position').notNull().default(0),
     visible: boolean('visible').notNull().default(true),
+    availableFrom: timestampColumn('available_from'),
+    availableUntil: timestampColumn('available_until'),
+    hiddenUntilAvailable: boolean('hidden_until_available').notNull().default(false),
+    restriction: jsonb('restriction').$type<Restriction>(),
+    completionRule: completionRule('completion_rule').notNull().default('none'),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt,
     ...timestamps,
@@ -113,6 +183,32 @@ export const learningMaterials = pgTable(
       .where(sql`${table.scanStatus} = 'pending'`),
     index('learning_materials_space_idx')
       .on(table.learningSpaceId, table.position)
+      .where(isNull(table.deletedAt)),
+  ],
+);
+
+export const learningMaterialFiles = pgTable(
+  'learning_material_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    institutionId: institutionId(),
+    learningMaterialId: uuid('learning_material_id')
+      .notNull()
+      .references(() => learningMaterials.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key'),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes'),
+    scanStatus: scanStatusColumn(),
+    deletedAt,
+    ...timestamps,
+  },
+  (table) => [
+    index('learning_material_files_scan_pending_idx')
+      .on(table.storageKey)
+      .where(sql`${table.scanStatus} = 'pending'`),
+    index('learning_material_files_material_idx')
+      .on(table.learningMaterialId, table.filename)
       .where(isNull(table.deletedAt)),
   ],
 );
@@ -184,14 +280,19 @@ export const activityCompletions = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     institutionId: institutionId(),
-    learningActivityId: uuid('learning_activity_id')
-      .notNull()
-      .references(() => learningActivities.id, { onDelete: 'cascade' }),
+    learningActivityId: uuid('learning_activity_id').references(() => learningActivities.id, {
+      onDelete: 'cascade',
+    }),
+    learningMaterialId: uuid('learning_material_id').references(() => learningMaterials.id, {
+      onDelete: 'cascade',
+    }),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     state: activityCompletionState('state').notNull().default('incomplete'),
     completedAt: timestampColumn('completed_at'),
+    viewedAt: timestampColumn('viewed_at'),
+    markedDoneAt: timestampColumn('marked_done_at'),
     deletedAt,
     ...timestamps,
   },
@@ -199,7 +300,14 @@ export const activityCompletions = pgTable(
     uniqueIndex('activity_completions_unique_idx')
       .on(table.learningActivityId, table.userId)
       .where(isNull(table.deletedAt)),
+    uniqueIndex('activity_completions_material_unique_idx')
+      .on(table.learningMaterialId, table.userId)
+      .where(isNull(table.deletedAt)),
     index('activity_completions_user_id_idx').on(table.userId).where(isNull(table.deletedAt)),
+    check(
+      'activity_completions_one_item',
+      sql`num_nonnulls(${table.learningActivityId}, ${table.learningMaterialId}) = 1`,
+    ),
   ],
 );
 
@@ -263,6 +371,8 @@ export const submissionFiles = pgTable(
 
 export type LearningSpace = typeof learningSpaces.$inferSelect;
 export type NewLearningSpace = typeof learningSpaces.$inferInsert;
+export type LearningSection = typeof learningSections.$inferSelect;
+export type LearningMaterialFile = typeof learningMaterialFiles.$inferSelect;
 export type LearningActivity = typeof learningActivities.$inferSelect;
 export type NewLearningActivity = typeof learningActivities.$inferInsert;
 export type LearningMaterial = typeof learningMaterials.$inferSelect;

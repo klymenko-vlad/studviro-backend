@@ -53,3 +53,11 @@ obvious moderator and an obvious end.
   quietly rewritten. No edit history is kept: the moderator sees the current text, and a
   history would be one more copy of personal data to erase.
 - Rate limiting is the global per-IP throttle; nothing is specific to posting.
+- ~~A thread is one flat list of posts, read whole.~~ Amended 2026-10-23: a post may
+  answer another (`replyToPostId`). Answering a top-level post gathers the answer under
+  it (`parent_post_id`); answering a reply keeps the answer in the same group and quotes
+  the reply (`quoted_post_id`). Groups are one level deep, so a long exchange stays
+  readable on a phone. A quote shows the start of the quoted text under the same rules
+  as the post itself: nothing of a deleted post, and nothing of a hidden one for anybody
+  who cannot restore it. A deleted or hidden post cannot be answered. Threads, top-level
+  posts and the replies of each group are keyset-paged, and threads filter by title.

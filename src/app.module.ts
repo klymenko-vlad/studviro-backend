@@ -35,10 +35,12 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PlannerModule } from './modules/planner/planner.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { SearchModule } from './modules/search/search.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { TeachersModule } from './modules/teachers/teachers.module';
 import { UsersModule } from './modules/users/users.module';
 import { QueueModule } from './queue/queue.module';
 
@@ -155,11 +157,13 @@ function workerModules(): DynamicModule[] {
     LearningModule,
     MarketingModule,
     NotificationsModule,
+    PlannerModule,
     PrivacyModule,
     SchedulingModule,
     CalendarExportModule,
     DiscussionsModule,
     SearchModule,
+    TeachersModule,
     StorageModule,
     CaptchaModule,
     EnrollmentModule,

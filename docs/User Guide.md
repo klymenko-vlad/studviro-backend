@@ -145,6 +145,37 @@ calendar, marked as cancelled, so you can see that it was meant to happen.
 
 Times are shown in your institution's time zone.
 
+### Your own tasks and events
+
+The calendar is also yours to write in. **_New event_** adds something with a start and an
+end — training, a shift, a doctor's appointment — and **_New task_** adds a to-do, with a
+due time if it has one. They appear on the calendar marked _Personal_, in your calendar
+subscription and in `studviro.ics`, and a task with a due time shows on the dashboard's
+_Deadlines_ tile beside your coursework. A fourth switch, _Show my own events and tasks_,
+hides them.
+
+The **_My tasks_** tab lists your tasks, soonest due first, with a search box and a choice
+of open, done or all. Tick the circle to mark one done; the pencil opens it to edit or
+delete it. Click an event on the calendar to change or delete it.
+
+Nobody else sees any of this — not your teachers and not the institution's administrators.
+
+### In Google Calendar, Outlook or Apple Calendar
+
+The card at the foot of the calendar page puts your StudViro calendar into the calendar app
+you already use. **_Create subscription link_** makes a private address for it; while the
+address is on screen, the buttons under it subscribe in one click: **_Google Calendar_**,
+**_Outlook.com_**, **_Microsoft 365_**, and **_Apple Calendar_**, which also opens any
+other app that understands `webcal` links. Only the service you click receives the link.
+The address is shown once; to subscribe another app later, replace the link and subscribe
+again — the old one stops working. **_Download .ics_** gives you the whole calendar as a
+file instead.
+
+To take just one thing with you, switch the calendar to **_List_** and press
+**_Add to calendar_** on a class, a deadline, or an exam you are registered for. You get a
+small `.ics` file with that one event; open it and your calendar app adds it. It is a copy:
+if the class moves later, the copy does not, unless you also subscribe.
+
 ## Exams
 
 **_Exams_** lists the exam terms of the courses you attend, upcoming and past. Each one

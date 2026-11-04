@@ -1,19 +1,28 @@
 import { InvalidInputError } from '../../common/errors/domain.error';
-import type { LearningMaterialKind } from '../../database/schema';
+import type { CompletionRule, LearningMaterialKind } from '../../database/schema';
+
+import { embedUrlOf } from './video-embed';
 
 export interface MaterialPayload {
   readonly kind: LearningMaterialKind;
+  readonly title?: string | null;
   readonly body?: string | null;
   readonly url?: string | null;
   readonly storageKey?: string | null;
+  readonly completionRule?: CompletionRule;
 }
 
-/**
- * Three kinds share one row, so the row alone cannot say which columns matter.
- * This is where a material of a kind is required to carry the one thing that
- * kind is made of, before anything is written.
- */
+const BODY_LIMITS: Partial<Record<LearningMaterialKind, number>> = {
+  text: 20_000,
+  page: 100_000,
+  label: 1000,
+};
+
 export function assertPayloadMatchesKind(input: MaterialPayload): void {
+  if (input.kind !== 'label' && !input.title?.trim()) {
+    throw new InvalidInputError('LEARNING_MATERIAL_TITLE_MISSING', 'A material needs a title');
+  }
+
   switch (input.kind) {
     case 'file': {
       if (!input.storageKey) {
@@ -35,14 +44,55 @@ export function assertPayloadMatchesKind(input: MaterialPayload): void {
 
       return;
     }
-    case 'text': {
-      if (!input.body?.trim()) {
+    case 'video': {
+      if (!input.url || embedUrlOf(input.url) === null) {
         throw new InvalidInputError(
-          'LEARNING_MATERIAL_BODY_MISSING',
-          'A text material needs something to say',
+          'LEARNING_MATERIAL_VIDEO_UNSUPPORTED',
+          'A video must be a YouTube or Vimeo address',
         );
       }
+
+      return;
     }
+    case 'label': {
+      if ((input.completionRule ?? 'none') !== 'none') {
+        throw new InvalidInputError(
+          'COMPLETION_RULE_NOT_APPLICABLE',
+          'A label cannot be completed',
+          { kind: 'label', rule: input.completionRule },
+        );
+      }
+      assertBody(input.kind, input.body);
+
+      return;
+    }
+    case 'text':
+    case 'page': {
+      assertBody(input.kind, input.body);
+
+      return;
+    }
+    case 'folder': {
+      return;
+    }
+  }
+}
+
+function assertBody(kind: LearningMaterialKind, body: string | null | undefined): void {
+  if (!body?.trim()) {
+    throw new InvalidInputError(
+      'LEARNING_MATERIAL_BODY_MISSING',
+      'This material needs something to say',
+    );
+  }
+
+  const limit = BODY_LIMITS[kind];
+  if (limit !== undefined && body.length > limit) {
+    throw new InvalidInputError(
+      'LEARNING_MATERIAL_BODY_TOO_LONG',
+      `This material can hold at most ${limit} characters`,
+      { limit },
+    );
   }
 }
 

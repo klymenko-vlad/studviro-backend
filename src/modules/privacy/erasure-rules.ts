@@ -30,6 +30,8 @@ export interface ErasureTally {
   readonly assessmentFeedback: number;
   readonly submissionNotes: number;
   readonly discussionPosts: number;
+  readonly personalTasks: number;
+  readonly personalEvents: number;
 }
 
 export function newErasureId(): string {

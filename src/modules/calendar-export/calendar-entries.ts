@@ -1,3 +1,4 @@
+import type { PersonalEvent, PersonalTask } from '../../database/schema';
 import type { MyDeadline } from '../learning/my-deadlines.service';
 import type { MyExamTerm } from '../scheduling/my-exam-terms.service';
 import type { MyTimetableEvent } from '../scheduling/my-timetable-events.service';
@@ -9,6 +10,8 @@ export interface CalendarSources {
   timetable: readonly MyTimetableEvent[];
   exams: readonly MyExamTerm[];
   deadlines: readonly MyDeadline[];
+  personalEvents: readonly PersonalEvent[];
+  personalTasks: readonly PersonalTask[];
 }
 
 type Room = MyTimetableEvent['room'];
@@ -21,6 +24,8 @@ export function toCalendarEntries(
     ...sources.timetable.map((event) => fromTimetableEvent(event, labels)),
     ...sources.exams.filter(isMine).map((term) => fromExamTerm(term, labels)),
     ...sources.deadlines.map((deadline) => fromDeadline(deadline, labels)),
+    ...sources.personalEvents.map(fromPersonalEvent),
+    ...sources.personalTasks.flatMap((task) => fromPersonalTask(task, labels)),
   ];
 }
 
@@ -60,6 +65,31 @@ function fromDeadline(deadline: MyDeadline, labels: CalendarLabels): IcalEvent {
     summary: `${labels.due}: ${deadline.name} (${deadline.course.title})`,
     description: details(deadline.course, deadline.term),
   };
+}
+
+function fromPersonalEvent(event: PersonalEvent): IcalEvent {
+  return {
+    uid: `personal-event-${event.id}@studviro`,
+    startsAt: event.startsAt,
+    endsAt: event.endsAt,
+    summary: event.title,
+    location: event.location,
+    description: event.note,
+  };
+}
+
+function fromPersonalTask(task: PersonalTask, labels: CalendarLabels): IcalEvent[] {
+  if (task.dueAt === null || task.completedAt !== null) return [];
+
+  return [
+    {
+      uid: `personal-task-${task.id}@studviro`,
+      startsAt: task.dueAt,
+      endsAt: null,
+      summary: `${labels.task}: ${task.title}`,
+      description: task.note,
+    },
+  ];
 }
 
 function place(room: Room): string | null {

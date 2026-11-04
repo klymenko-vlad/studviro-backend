@@ -3,8 +3,10 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
   COURSE_GRADES,
+  ENROLLMENT_STATUSES,
   OFFICIAL_COURSE_RESULT_STATUSES,
   type CourseGrade,
+  type EnrollmentStatus,
   type OfficialCourseResultStatus,
 } from '../../../database/schema';
 import {
@@ -109,6 +111,13 @@ export class MyCourseResultResponseDto {
   official!: OfficialCourseResultDto;
 
   @Expose() @ApiProperty({ format: 'uuid' }) enrollmentId!: string;
+
+  @Expose()
+  @ApiProperty({
+    enum: ENROLLMENT_STATUSES,
+    description: 'A withdrawn enrolment keeps the results that were officially recorded.',
+  })
+  enrollmentStatus!: EnrollmentStatus;
 
   @Expose()
   @Type(() => MyCourseResultOfferingDto)

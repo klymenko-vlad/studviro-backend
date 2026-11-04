@@ -5,6 +5,7 @@ import { ConflictError, EntityNotFoundError } from '../../common/errors/domain.e
 import { learningSpaces, type LearningSpace } from '../../database/schema';
 import { TransactionHost } from '../../database/transaction.host';
 
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { LearningAccessService } from './learning-access.service';
 
 export interface NewLearningSpace {
@@ -27,6 +28,7 @@ export class LearningSpaceAuthoringService {
   constructor(
     private readonly txHost: TransactionHost,
     private readonly access: LearningAccessService,
+    private readonly announcements: AssignmentAnnouncementsService,
   ) {}
 
   async findOne(
@@ -74,6 +76,7 @@ export class LearningSpaceAuthoringService {
     spaceId: string,
     changes: LearningSpaceChanges,
     userId: string,
+    now = new Date(),
   ): Promise<LearningSpace> {
     return this.txHost.run(async () => {
       this.access.assertAuthor(
@@ -98,6 +101,8 @@ export class LearningSpaceAuthoringService {
         .returning();
 
       if (!updated) throw new EntityNotFoundError('learning_space', spaceId);
+
+      await this.announcements.announceNewlySeen(now, spaceId);
 
       return updated;
     });

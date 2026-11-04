@@ -4,11 +4,13 @@ import {
   academicTerms,
   courseOfferings,
   courses,
+  enrollments,
   institutions,
   orgUnits,
   programs,
   roleAssignments,
   rooms,
+  teachingAssignments,
   type CanonicalRole,
 } from '../../src/database/schema';
 import { createTestHarness, type TestHarness } from '../setup/app-harness';
@@ -16,6 +18,8 @@ import { createTestHarness, type TestHarness } from '../setup/app-harness';
 describe('Search (e2e)', () => {
   let harness: TestHarness;
   let institutionId: string;
+  let offeringId: string;
+  let otherOfferingId: string;
 
   const actingAs = async (role: CanonicalRole, email?: string) => {
     const actor = await harness.actingAs(email === undefined ? {} : { email });
@@ -76,9 +80,20 @@ describe('Search (e2e)', () => {
         endsAt: new Date('2027-02-14T00:00:00.000Z'),
       })
       .returning();
-    await harness.db
+    const [offering] = await harness.db
       .insert(courseOfferings)
-      .values({ institutionId, courseId: course!.id, academicTermId: term!.id });
+      .values({ institutionId, courseId: course!.id, academicTermId: term!.id })
+      .returning();
+    offeringId = offering!.id;
+    const [otherCourse] = await harness.db
+      .insert(courses)
+      .values({ institutionId, code: 'INF/ALG2/22', title: 'Algorithms II' })
+      .returning();
+    const [otherOffering] = await harness.db
+      .insert(courseOfferings)
+      .values({ institutionId, courseId: otherCourse!.id, academicTermId: term!.id })
+      .returning();
+    otherOfferingId = otherOffering!.id;
     await harness.db
       .insert(programs)
       .values({ institutionId, code: 'INF-BC', name: 'Algorithmic Informatics' });
@@ -139,6 +154,54 @@ describe('Search (e2e)', () => {
     expect(kinds(body)).not.toContain('person');
   });
 
+  const offeringIds = (body: { hits: { kind: string; offeringId: string | null }[] }) =>
+    body.hits.filter((hit) => hit.kind === 'offering').map((hit) => hit.offeringId);
+
+  it('offers a student only the course pages they can open — the ones they take', async () => {
+    const student = await actingAs('student');
+    await harness.db.insert(enrollments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: student.user.id,
+      status: 'active',
+    });
+
+    const body = (await find(student, 'algorithms')).json();
+
+    expect(offeringIds(body)).toEqual([offeringId]);
+  });
+
+  it('does not count a withdrawn enrolment as a way in', async () => {
+    const student = await actingAs('student');
+    await harness.db.insert(enrollments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: student.user.id,
+      status: 'withdrawn',
+    });
+
+    expect(offeringIds((await find(student, 'algorithms')).json())).toEqual([]);
+  });
+
+  it('offers a teacher the courses they teach', async () => {
+    const teacher = await actingAs('teacher');
+    await harness.db.insert(teachingAssignments).values({
+      institutionId,
+      courseOfferingId: otherOfferingId,
+      userId: teacher.user.id,
+    });
+
+    expect(offeringIds((await find(teacher, 'algorithms')).json())).toEqual([otherOfferingId]);
+  });
+
+  it('offers an administrator every course page', async () => {
+    const admin = await actingAs('institution_admin');
+
+    expect(offeringIds((await find(admin, 'algorithms')).json())).toEqual(
+      expect.arrayContaining([offeringId, otherOfferingId]),
+    );
+  });
+
   it('lists only people the institution actually has', async () => {
     const admin = await actingAs('institution_admin', 'searcher@example.com');
     await harness.actingAs({ email: 'outsider@example.com' });
@@ -152,6 +215,53 @@ describe('Search (e2e)', () => {
     expect(
       people.some((hit: { subtitle: string }) => hit.subtitle === 'outsider@example.com'),
     ).toBe(false);
+  });
+
+  const teacherHits = (body: { hits: { kind: string; id: string; subtitle: string }[] }) =>
+    body.hits.filter((hit) => hit.kind === 'teacher');
+
+  const teaching = async (email: string) => {
+    const teacher = await harness.actingAs({ email });
+    await harness.db.insert(teachingAssignments).values({
+      institutionId,
+      courseOfferingId: offeringId,
+      userId: teacher.user.id,
+    });
+
+    return teacher;
+  };
+
+  it('lets a student find any teacher of the institution', async () => {
+    const student = await actingAs('student');
+    const peter = await teaching('peter.novak@example.com');
+
+    const body = (await find(student, 'peter')).json();
+
+    expect(body.searched).toContain('teacher');
+    expect(teacherHits(body)).toEqual([
+      expect.objectContaining({ id: peter.user.id, subtitle: 'peter.novak@example.com' }),
+    ]);
+  });
+
+  it('does not offer a student anybody who teaches nothing here', async () => {
+    const student = await actingAs('student');
+    await harness.actingAs({ email: 'peter.outsider@example.com' });
+    const registrar = await actingAs('registrar', 'peter.registrar@example.com');
+
+    const ids = teacherHits((await find(student, 'peter')).json()).map((hit) => hit.id);
+
+    expect(ids).not.toContain(registrar.user.id);
+    expect(ids).toEqual([]);
+  });
+
+  it('does not list a teacher twice for a reader who already searches people', async () => {
+    const admin = await actingAs('institution_admin');
+    await teaching('peter.novak@example.com');
+
+    const body = (await find(admin, 'peter')).json();
+
+    expect(body.searched).toContain('person');
+    expect(body.searched).not.toContain('teacher');
   });
 
   it('answers a one-character query with nothing rather than everything', async () => {

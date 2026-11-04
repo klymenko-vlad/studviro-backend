@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
+import { escapeLike } from '../../database/repository/escape-like';
 import {
   academicTerms,
   courseOfferings,
   courses,
+  enrollments,
   orgUnits,
   programMemberships,
   programs,
@@ -16,12 +18,15 @@ import {
 import { TransactionHost } from '../../database/transaction.host';
 import { AuthorizationService } from '../authorization/authorization.service';
 import type { Permission } from '../authorization/permissions';
+import { administersOfferings } from '../courses/administers-offering';
+import { holdsCourseRecord } from '../courses/holds-course-record';
 
 export const SEARCH_KINDS = [
   'course',
   'offering',
   'program',
   'person',
+  'teacher',
   'orgUnit',
   'room',
 ] as const;
@@ -55,6 +60,7 @@ const REQUIRED: Readonly<Record<SearchKind, Permission>> = {
   // A directory of names is the most sensitive thing here: it is the one
   // result that is personal data about somebody other than the caller.
   person: 'role:read',
+  teacher: 'course:read',
   orgUnit: 'role:read',
   room: 'schedule:read',
 };
@@ -98,7 +104,7 @@ export class SearchService {
     const pattern = `%${escapeLike(query)}%`;
 
     const groups = await Promise.all(
-      searched.map((kind) => this.searchOne(kind, institutionId, pattern)),
+      searched.map((kind) => this.searchOne(kind, institutionId, userId, pattern)),
     );
 
     const hits = groups.flat();
@@ -116,23 +122,28 @@ export class SearchService {
     const held = await this.authorization.permissionsIn(userId, scope);
     const permissions = new Set<string>(held);
 
-    return SEARCH_KINDS.filter((kind) => permissions.has(REQUIRED[kind]));
+    const visible = SEARCH_KINDS.filter((kind) => permissions.has(REQUIRED[kind]));
+
+    return visible.includes('person') ? visible.filter((kind) => kind !== 'teacher') : visible;
   }
 
   private searchOne(
     kind: SearchKind,
     institutionId: string,
+    userId: string,
     pattern: string,
   ): Promise<SearchHit[]> {
     switch (kind) {
       case 'course':
         return this.courses(institutionId, pattern);
       case 'offering':
-        return this.offerings(institutionId, pattern);
+        return this.offerings(institutionId, userId, pattern);
       case 'program':
         return this.programmes(institutionId, pattern);
       case 'person':
         return this.people(institutionId, pattern);
+      case 'teacher':
+        return this.teachers(institutionId, pattern);
       case 'orgUnit':
         return this.orgUnits(institutionId, pattern);
       case 'room':
@@ -164,7 +175,25 @@ export class SearchService {
     }));
   }
 
-  private async offerings(institutionId: string, pattern: string): Promise<SearchHit[]> {
+  /**
+   * A course page opens for those who teach it, those enrolled on it and those
+   * who administer offerings (`CourseOfferingService.resolveViewerRole`), so
+   * that is all this offers: a hit that answers 403 when followed is worse than
+   * no hit. `offering:read` alone — which a student holds — is not a way in.
+   */
+  private async offerings(
+    institutionId: string,
+    userId: string,
+    pattern: string,
+  ): Promise<SearchHit[]> {
+    const administers = await administersOfferings(this.authorization, userId, institutionId);
+    const participates: SQL | undefined = administers
+      ? undefined
+      : or(
+          sql`exists (select 1 from ${teachingAssignments} where ${teachingAssignments.courseOfferingId} = ${courseOfferings.id} and ${teachingAssignments.userId} = ${userId} and ${teachingAssignments.deletedAt} is null)`,
+          sql`exists (select 1 from ${enrollments} where ${enrollments.courseOfferingId} = ${courseOfferings.id} and ${enrollments.userId} = ${userId} and ${enrollments.deletedAt} is null and ${holdsCourseRecord()})`,
+        );
+
     const rows = await this.reader
       .select({
         id: courseOfferings.id,
@@ -180,8 +209,10 @@ export class SearchService {
           eq(courseOfferings.institutionId, institutionId),
           isNull(courseOfferings.deletedAt),
           or(ilike(courses.title, pattern), ilike(courses.code, pattern)),
+          participates,
         ),
       )
+      .orderBy(desc(academicTerms.startsAt))
       .limit(PER_KIND);
 
     return rows.map((row) => ({
@@ -254,6 +285,31 @@ export class SearchService {
     }));
   }
 
+  private async teachers(institutionId: string, pattern: string): Promise<SearchHit[]> {
+    const rows = await this.reader
+      .select({ id: users.id, displayName: users.displayName, email: users.email })
+      .from(users)
+      .where(
+        and(
+          isNull(users.deletedAt),
+          or(ilike(users.displayName, pattern), ilike(users.email, pattern)),
+          sql`exists (select 1 from ${teachingAssignments} where ${teachingAssignments.userId} = ${users.id} and ${teachingAssignments.institutionId} = ${institutionId} and ${teachingAssignments.deletedAt} is null)`,
+        ),
+      )
+      .orderBy(users.displayName)
+      .limit(PER_KIND);
+
+    return rows.map((row) => ({
+      kind: 'teacher' as const,
+      id: row.id,
+      title: row.displayName,
+      subtitle: row.email,
+      context: null,
+      offeringId: null,
+      programId: null,
+    }));
+  }
+
   private async orgUnits(institutionId: string, pattern: string): Promise<SearchHit[]> {
     const rows = await this.reader
       .select({ id: orgUnits.id, name: orgUnits.name, code: orgUnits.code })
@@ -310,12 +366,4 @@ export class SearchService {
   private get reader() {
     return this.txHost.reader();
   }
-}
-
-/**
- * `%`, `_` and `\` are wildcards to LIKE. A student searching for `100_2`
- * should not match `100X2`, and a query of `%` should not return everything.
- */
-function escapeLike(value: string): string {
-  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
 }

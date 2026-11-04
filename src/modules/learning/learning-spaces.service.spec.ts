@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PermissionDeniedError } from '../../common/errors/domain.error';
 import type { AuthorizationService } from '../authorization/authorization.service';
 
+import type { LearningAccessService } from './learning-access.service';
 import type { LearningSpacesRepository, LearningSpaceRow } from './learning-spaces.repository';
 import { LEARNING_SPACE_PAGE_SIZE, LearningSpacesService } from './learning-spaces.service';
 
@@ -29,18 +30,26 @@ const service = (
   rows: LearningSpaceRow[],
   counts = { spaces: rows.length, offerings: rows.length },
   mayManage = true,
+  readsOffering = true,
 ) => {
   const findSpaces = vi.fn().mockResolvedValue(rows);
   const countSpaces = vi.fn().mockResolvedValue(counts);
   const can = vi.fn().mockResolvedValue(mayManage);
   const repository = { findSpaces, countSpaces } as unknown as LearningSpacesRepository;
   const authorization = { can } as unknown as AuthorizationService;
+  const assertReaderOfOffering = vi
+    .fn()
+    .mockImplementation(async () =>
+      readsOffering ? undefined : Promise.reject(new PermissionDeniedError()),
+    );
+  const access = { assertReaderOfOffering } as unknown as LearningAccessService;
 
   return {
-    service: new LearningSpacesService(repository, authorization),
+    service: new LearningSpacesService(repository, authorization, access),
     findSpaces,
     countSpaces,
     can,
+    assertReaderOfOffering,
   };
 };
 
@@ -122,13 +131,27 @@ describe('LearningSpacesService', () => {
       expect(findSpaces).toHaveBeenCalledWith(INSTITUTION, LEARNING_SPACE_PAGE_SIZE, OFFERING);
     });
 
-    it('is open to a reader who cannot administer anything', async () => {
-      const { service: subject, findSpaces } = service([row()], undefined, false);
+    it('is open to whoever takes or teaches that course without administering anything', async () => {
+      const {
+        service: subject,
+        findSpaces,
+        assertReaderOfOffering,
+      } = service([row()], undefined, false);
 
       await expect(
         subject.listForInstitution(INSTITUTION, USER, OFFERING),
       ).resolves.toMatchObject({ spaces: [expect.objectContaining({ id: 'space' })] });
+      expect(assertReaderOfOffering).toHaveBeenCalledWith(INSTITUTION, OFFERING, USER);
       expect(findSpaces).toHaveBeenCalled();
+    });
+
+    it('is refused to somebody with no part in that course', async () => {
+      const { service: subject, findSpaces } = service([row()], undefined, false, false);
+
+      await expect(
+        subject.listForInstitution(INSTITUTION, USER, OFFERING),
+      ).rejects.toBeInstanceOf(PermissionDeniedError);
+      expect(findSpaces).not.toHaveBeenCalled();
     });
 
     it('does not even ask the permission question', async () => {

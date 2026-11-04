@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InvalidInputError } from '../../common/errors/domain.error';
 import type { LearningActivityType, SubmissionState } from '../../database/schema';
 
+import { AvailabilityService } from './learning-availability.service';
 import {
   MyDeadlinesRepository,
   type MyDeadlineFilter,
@@ -42,7 +43,10 @@ export interface MyDeadline {
 
 @Injectable()
 export class MyDeadlinesService {
-  constructor(private readonly repository: MyDeadlinesRepository) {}
+  constructor(
+    private readonly repository: MyDeadlinesRepository,
+    private readonly availability: AvailabilityService,
+  ) {}
 
   async listMine(
     institutionId: string,
@@ -52,10 +56,42 @@ export class MyDeadlinesService {
   ): Promise<MyDeadline[]> {
     assertRange(filter);
 
-    const rows = await this.repository.findMyDeadlines(institutionId, userId, filter);
+    const rows = await this.repository.findMyDeadlines(institutionId, userId, filter, now);
+    const unlocked = await this.unlocked(userId, rows, now);
 
-    return rows.map((row) => compose(row, now));
+    return rows.filter((row) => unlocked.has(row)).map((row) => compose(row, now));
   }
+
+  private async unlocked(
+    userId: string,
+    rows: readonly MyDeadlineRow[],
+    now: Date,
+  ): Promise<ReadonlySet<MyDeadlineRow>> {
+    const settled = rows.filter((row) => row.teaching || !isRestricted(row));
+    const bySpace = new Map<string, { offeringId: string; rows: MyDeadlineRow[] }>();
+    for (const row of rows) {
+      if (settled.includes(row)) continue;
+      const bucket = bySpace.get(row.spaceId);
+      if (bucket) bucket.rows.push(row);
+      else bySpace.set(row.spaceId, { offeringId: row.offeringId, rows: [row] });
+    }
+
+    const opened = await Promise.all(
+      [...bySpace].map(([spaceId, { offeringId, rows: spaceRows }]) =>
+        this.availability.openItems(
+          { spaceId, offeringId, stance: 'participant', userId },
+          spaceRows,
+          now,
+        ),
+      ),
+    );
+
+    return new Set([...settled, ...opened.flat()]);
+  }
+}
+
+function isRestricted(row: MyDeadlineRow): boolean {
+  return row.restriction !== null || row.sectionRestriction !== null;
 }
 
 function compose(row: MyDeadlineRow, now: Date): MyDeadline {

@@ -3,6 +3,7 @@ import { eq, inArray, like } from 'drizzle-orm';
 import type { Database } from '../database.tokens';
 import {
   academicTerms,
+  activityCompletions,
   assessmentResults,
   assessments,
   courseOfferings,
@@ -13,6 +14,7 @@ import {
   institutionSettings,
   learningActivities,
   learningMaterials,
+  learningSections,
   learningSpaces,
   officialCourseResults,
   orgUnits,
@@ -26,6 +28,7 @@ import {
   teachingAssignments,
   timetableEvents,
   users,
+  type Restriction,
 } from '../schema';
 
 import {
@@ -37,10 +40,25 @@ import {
   planTimetableEvents,
 } from './derive';
 import type { PlannedOffering } from './derive';
-import { planAssignments, planMaterials, planSpaces, planSubmissions } from './derive-learning';
+import { planCompletions } from './derive-completion';
+import {
+  planAssignments,
+  planFolderFiles,
+  planGroupAudiences,
+  planMaterials,
+  planRestrictions,
+  planSections,
+  planSpaces,
+  planSubmissions,
+} from './derive-learning';
+import { planQuizAttempts } from './derive-quiz-attempts';
+import { planQuizBank } from './derive-quiz-bank';
 import type { DemoSeedOptions } from './options';
 import { allCourses, allDepartments, allPersons, allPrograms, allRooms } from './plan';
 import type { DemoPlan } from './plan';
+import { writeFolderFiles, type SeedObjectStore } from './write-folder-files';
+import { writeQuizAttempts } from './write-quiz-attempts';
+import { writeQuizBank } from './write-quiz-bank';
 
 export type SeedDatabase = Database;
 
@@ -109,6 +127,7 @@ export async function writePlan(
   options: DemoSeedOptions,
   passwordHash: string,
   accounts: NamedAccounts = DEFAULT_NAMED_ACCOUNTS,
+  store?: SeedObjectStore,
 ): Promise<SeedSummary> {
   await db.delete(institutions).where(eq(institutions.code, plan.university.code));
   await db.delete(users).where(like(users.email, `%@${options.emailDomain}`));
@@ -526,16 +545,81 @@ export async function writePlan(
     }
   }
 
-  const materials = planMaterials(plannedSpaces).map((material) => ({
+  const sectionIds = new Map<string, string>();
+  const plannedSections = planSections(plannedSpaces);
+  for (let offset = 0; offset < plannedSections.length; offset += CHUNK) {
+    const slice = plannedSections.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningSections)
+      .values(
+        slice.map((section) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, section.spaceKey, 'learning space'),
+          title: section.title,
+          summary: section.summary,
+          position: section.position,
+          availableFrom: section.availableFrom,
+        })),
+      )
+      .returning({
+        id: learningSections.id,
+        learningSpaceId: learningSections.learningSpaceId,
+        title: learningSections.title,
+      });
+    for (const section of slice) {
+      const spaceId = required(spaceIds, section.spaceKey, 'learning space');
+      const row = inserted.find(
+        (candidate) =>
+          candidate.learningSpaceId === spaceId && candidate.title === section.title,
+      );
+      if (row) sectionIds.set(section.key, row.id);
+    }
+  }
+  const sectionOf = (key: string | null) =>
+    key === null ? null : required(sectionIds, key, 'learning section');
+
+  const plannedMaterials = planMaterials(plannedSpaces);
+  const materialIds = new Map<string, string>();
+  for (let offset = 0; offset < plannedMaterials.length; offset += CHUNK) {
+    const slice = plannedMaterials.slice(offset, offset + CHUNK);
+    const inserted = await db
+      .insert(learningMaterials)
+      .values(
+        slice.map((material) => ({
+          institutionId,
+          learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
+          sectionId: sectionOf(material.sectionKey),
+          kind: material.kind,
+          title: material.title,
+          body: material.body,
+          url: material.url,
+          position: material.position,
+          availableFrom: material.availableFrom,
+          completionRule: material.completionRule,
+        })),
+      )
+      .returning({
+        id: learningMaterials.id,
+        learningSpaceId: learningMaterials.learningSpaceId,
+        title: learningMaterials.title,
+      });
+    for (const material of slice) {
+      const spaceId = required(spaceIds, material.spaceKey, 'learning space');
+      const row = inserted.find(
+        (candidate) =>
+          candidate.learningSpaceId === spaceId && candidate.title === material.title,
+      );
+      if (row) materialIds.set(material.key, row.id);
+    }
+  }
+
+  const folderFiles = await writeFolderFiles(
+    db,
     institutionId,
-    learningSpaceId: required(spaceIds, material.spaceKey, 'learning space'),
-    kind: material.kind,
-    title: material.title,
-    body: material.body,
-    url: material.url,
-    position: material.position,
-  }));
-  await insertChunked(materials, (slice) => db.insert(learningMaterials).values(slice));
+    planFolderFiles(plannedSpaces),
+    materialIds,
+    store,
+  );
 
   const plannedAssignments = planAssignments(plannedSpaces);
   const assignmentIds = new Map<string, string>();
@@ -545,18 +629,22 @@ export async function writePlan(
     const inserted = await db
       .insert(learningActivities)
       .values(
-        slice.map((assignment, index) => ({
+        slice.map((assignment) => ({
           institutionId,
           learningSpaceId: required(spaceIds, assignment.spaceKey, 'learning space'),
+          sectionId: sectionOf(assignment.sectionKey),
           type: 'assignment' as const,
           name: assignment.name,
           brief: assignment.brief,
-          position: index,
+          position: assignment.position,
           opensAt: assignment.opensAt,
           dueAt: assignment.dueAt,
           closesAt: assignment.closesAt,
           maxAttempts: assignment.maxAttempts,
           allowsLateSubmission: assignment.allowsLateSubmission,
+          announcedAt: assignment.opensAt,
+          completionRule: assignment.completionRule,
+          completionPassPoints: assignment.completionPassPoints?.toFixed(4) ?? null,
         })),
       )
       .returning({
@@ -595,6 +683,58 @@ export async function writePlan(
     }
   }
 
+  const plannedBank = planQuizBank(plannedSpaces);
+  const writtenBank = await writeQuizBank(db, institutionId, plannedBank, spaceIds, sectionIds);
+  await writeQuizBank(db, institutionId, planQuizBank(plannedSpaces, -1), spaceIds, sectionIds);
+  const quizAttemptCount = await writeQuizAttempts(
+    db,
+    institutionId,
+    plannedBank,
+    writtenBank,
+    planQuizAttempts(plannedBank, plannedEnrollments),
+    personIds,
+  );
+
+  for (const planned of planRestrictions(plannedSpaces)) {
+    const itemId = required(assignmentIds, planned.condition.assignmentKey, 'assignment');
+    const restriction: Restriction = {
+      match: 'all',
+      hideWhenLocked: false,
+      conditions: [
+        planned.condition.type === 'completed'
+          ? { type: 'completed', itemKind: 'assignment', itemId }
+          : { type: 'mark', itemId, atLeast: planned.condition.atLeast },
+      ],
+    };
+    await (planned.target.kind === 'section'
+      ? db
+          .update(learningSections)
+          .set({ restriction })
+          .where(eq(learningSections.id, required(sectionIds, planned.target.key, 'section')))
+      : db
+          .update(learningMaterials)
+          .set({ restriction })
+          .where(
+            eq(learningMaterials.id, required(materialIds, planned.target.key, 'material')),
+          ));
+  }
+
+  for (const planned of planGroupAudiences(plannedSpaces)) {
+    const groupId = groupIds.get(planned.groupKey);
+    if (!groupId) continue;
+
+    const restriction: Restriction = {
+      match: 'all',
+      hideWhenLocked: false,
+      conditions: [],
+      audience: { groupIds: [groupId], hideFromOthers: planned.hideFromOthers },
+    };
+    await db
+      .update(learningMaterials)
+      .set({ restriction })
+      .where(eq(learningMaterials.id, required(materialIds, planned.materialKey, 'material')));
+  }
+
   const plannedSubmissions = planSubmissions(plannedAssignments, plannedEnrollments, options);
   const submissionRows = plannedSubmissions.map((submission) => ({
     institutionId,
@@ -621,6 +761,26 @@ export async function writePlan(
     }));
   await insertChunked(marks, (slice) => db.insert(assessmentResults).values(slice));
 
+  const completions = planCompletions(
+    plannedSpaces,
+    plannedMaterials,
+    plannedAssignments,
+    plannedSubmissions,
+    plannedEnrollments,
+    options,
+  ).map((completion) => ({
+    institutionId,
+    userId: required(personIds, completion.studentKey, 'person'),
+    ...(completion.target.kind === 'material'
+      ? { learningMaterialId: required(materialIds, completion.target.key, 'material') }
+      : { learningActivityId: required(assignmentIds, completion.target.key, 'assignment') }),
+    state: completion.state,
+    completedAt: completion.completedAt,
+    viewedAt: completion.viewedAt,
+    markedDoneAt: completion.markedDoneAt,
+  }));
+  await insertChunked(completions, (slice) => db.insert(activityCompletions).values(slice));
+
   return {
     institutionId,
     counts: {
@@ -640,10 +800,14 @@ export async function writePlan(
       examTerms: exams.length,
       officialCourseResults: results.length,
       learningSpaces: spaceIds.size,
-      learningMaterials: materials.length,
+      learningSections: sectionIds.size,
+      learningMaterials: materialIds.size,
+      learningMaterialFiles: folderFiles,
       assignments: assignmentIds.size,
       submissions: submissionRows.length,
       marks: marks.length,
+      completions: completions.length,
+      quizAttempts: quizAttemptCount,
     },
   };
 }

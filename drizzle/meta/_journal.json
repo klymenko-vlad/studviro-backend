@@ -246,6 +246,83 @@
       "when": 1792400721619,
       "tag": "0034_slimy_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792694484487,
+      "tag": "0035_learning_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792746167579,
+      "tag": "0036_learning_availability",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792748419321,
+      "tag": "0037_learning_completion",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792751056119,
+      "tag": "0038_learning_restrictions",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792768532695,
+      "tag": "0039_learning_material_kinds",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792853426690,
+      "tag": "0040_quizzes_and_question_bank",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792856962854,
+      "tag": "0041_quiz_attempts",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792859913003,
+      "tag": "0042_quiz_review_and_marking",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793009445227,
+      "tag": "0043_discussion_replies",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793021193234,
+      "tag": "0044_personal_planner",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793453738760,
+      "tag": "0045_enrollment_withdrawn_notification",
+      "breakpoints": true
     }
   ]
 }

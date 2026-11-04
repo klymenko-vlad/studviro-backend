@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -200,6 +201,20 @@ export class StorageService implements OnModuleDestroy {
         ResponseContentDisposition: disposition,
       }),
       { expiresIn: signedUrlTtlSeconds },
+    );
+  }
+
+  async copy(from: StorageKey, to: StorageKey, institutionId: string): Promise<void> {
+    this.assertOwnedBy(from, institutionId);
+    this.assertOwnedBy(to, institutionId);
+
+    const { bucket } = this.config.storage;
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: bucket,
+        Key: to,
+        CopySource: encodeURI(`${bucket}/${from}`),
+      }),
     );
   }
 

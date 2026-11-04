@@ -3,6 +3,8 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 
 import { AppConfigService } from '../../config/app-config.service';
 
+import { loggedRequestHeaders } from './request-headers';
+
 export const REQUEST_ID_HEADER = 'x-request-id';
 
 @Module({
@@ -15,6 +17,14 @@ export const REQUEST_ID_HEADER = 'x-request-id';
           autoLogging: {
             ignore: (req) => req.url?.startsWith('/health') === true,
           },
+          serializers: {
+            req: (req: { headers?: Record<string, unknown> }) => ({
+              ...req,
+              headers: loggedRequestHeaders(req.headers),
+            }),
+          },
+          // Request headers are allowlisted above; these stay for the body and
+          // the response, and as a second line if the allowlist ever widens.
           redact: {
             paths: [
               'req.headers.authorization',

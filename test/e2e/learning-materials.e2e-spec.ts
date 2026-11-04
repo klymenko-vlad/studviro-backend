@@ -183,6 +183,261 @@ describe('Learning materials (e2e)', () => {
     expect((await request(fixture.admin, 'GET')).json()).toEqual([]);
   });
 
+  it('answers an empty edit with the material unchanged', async () => {
+    const created = await request(fixture.admin, 'POST', '', {
+      kind: 'text',
+      title: 'Week 1',
+      body: 'Read chapter 4.',
+    });
+
+    const response = await request(fixture.admin, 'PATCH', `/${created.json().id}`, {});
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ title: 'Week 1', body: 'Read chapter 4.' });
+  });
+
+  it('puts a page on the page list without its body, and reads it whole by id', async () => {
+    const body = '# Week 1\n\nRead **chapter 4**.\n\n- one\n- two';
+    const created = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Reading guide',
+      body,
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({ kind: 'page', body });
+
+    const listed = await request(fixture.student, 'GET');
+    expect(listed.json()).toEqual([
+      expect.objectContaining({ kind: 'page', title: 'Reading guide', body: null }),
+    ]);
+
+    const read = await request(fixture.student, 'GET', `/${created.json().id}`);
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toMatchObject({ kind: 'page', title: 'Reading guide', body });
+  });
+
+  it('keeps a page a student may not open from them by id', async () => {
+    const hidden = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Draft',
+      body: 'Not yet',
+      visible: false,
+    });
+    const scheduled = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Later',
+      body: 'Soon',
+      availableFrom: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+
+    expect((await request(fixture.student, 'GET', `/${hidden.json().id}`)).statusCode).toBe(
+      404,
+    );
+    expect((await request(fixture.student, 'GET', `/${scheduled.json().id}`)).statusCode).toBe(
+      404,
+    );
+    expect(
+      (await request(fixture.teacher, 'GET', `/${hidden.json().id}`)).json(),
+    ).toMatchObject({
+      body: 'Not yet',
+    });
+  });
+
+  it('puts a label between items, titled by its own text', async () => {
+    const created = await request(fixture.admin, 'POST', '', {
+      kind: 'label',
+      body: 'Part two: graphs\nBring a laptop.',
+    });
+
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({
+      kind: 'label',
+      title: 'Part two: graphs',
+      body: 'Part two: graphs\nBring a laptop.',
+      completionRule: 'none',
+    });
+  });
+
+  it('refuses a label anyone could complete', async () => {
+    const response = await request(fixture.admin, 'POST', '', {
+      kind: 'label',
+      body: 'Part two',
+      completionRule: 'manual',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe('COMPLETION_RULE_NOT_APPLICABLE');
+  });
+
+  it('stores a video as its privacy embed address and refuses any other site', async () => {
+    const youtube = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Lecture 1 recording',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s',
+    });
+    expect(youtube.statusCode).toBe(201);
+    expect(youtube.json().url).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+
+    const vimeo = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Seminar',
+      url: 'https://vimeo.com/76979871',
+    });
+    expect(vimeo.json().url).toBe('https://player.vimeo.com/video/76979871?dnt=1');
+
+    const other = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Elsewhere',
+      url: 'https://example.org/clip.mp4',
+    });
+    expect(other.statusCode).toBe(400);
+    expect(other.json().code).toBe('LEARNING_MATERIAL_VIDEO_UNSUPPORTED');
+  });
+
+  it('edits the title and what each kind is made of', async () => {
+    const page = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Guide',
+      body: 'Old',
+    });
+    const video = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Talk',
+      url: 'https://youtu.be/dQw4w9WgXcQ',
+    });
+    const label = await request(fixture.admin, 'POST', '', { kind: 'label', body: 'Part one' });
+    const link = await request(fixture.admin, 'POST', '', {
+      kind: 'link',
+      title: 'Notes',
+      url: 'https://example.org/a',
+    });
+
+    expect(
+      (
+        await request(fixture.teacher, 'PATCH', `/${page.json().id}`, {
+          title: 'Reading guide',
+          body: '## New',
+        })
+      ).json(),
+    ).toMatchObject({ title: 'Reading guide', body: '## New' });
+    expect(
+      (
+        await request(fixture.teacher, 'PATCH', `/${video.json().id}`, {
+          url: 'https://vimeo.com/76979871',
+        })
+      ).json(),
+    ).toMatchObject({ url: 'https://player.vimeo.com/video/76979871?dnt=1' });
+    expect(
+      (
+        await request(fixture.teacher, 'PATCH', `/${label.json().id}`, { body: 'Part three' })
+      ).json(),
+    ).toMatchObject({ title: 'Part three', body: 'Part three' });
+    expect(
+      (
+        await request(fixture.teacher, 'PATCH', `/${link.json().id}`, {
+          url: 'https://example.org/b',
+        })
+      ).json(),
+    ).toMatchObject({ url: 'https://example.org/b' });
+  });
+
+  it('refuses an edit that leaves a kind without what it is made of', async () => {
+    const video = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Talk',
+      url: 'https://youtu.be/dQw4w9WgXcQ',
+    });
+    const page = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Guide',
+      body: 'Text',
+    });
+
+    const badVideo = await request(fixture.admin, 'PATCH', `/${video.json().id}`, {
+      url: 'https://example.org/x',
+    });
+    const emptyPage = await request(fixture.admin, 'PATCH', `/${page.json().id}`, {
+      body: ' ',
+    });
+    const untitled = await request(fixture.admin, 'PATCH', `/${page.json().id}`, { title: '' });
+
+    expect(badVideo.json().code).toBe('LEARNING_MATERIAL_VIDEO_UNSUPPORTED');
+    expect(emptyPage.json().code).toBe('LEARNING_MATERIAL_BODY_MISSING');
+    expect(untitled.statusCode).toBe(400);
+  });
+
+  it('needs a title on anything but a label', async () => {
+    const response = await request(fixture.admin, 'POST', '', { kind: 'page', body: 'Text' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe('LEARNING_MATERIAL_TITLE_MISSING');
+  });
+
+  it('counts reading a page as opening it, for a student and not for its author', async () => {
+    const page = await request(fixture.admin, 'POST', '', {
+      kind: 'page',
+      title: 'Guide',
+      body: 'Read me',
+      completionRule: 'viewed',
+    });
+    const progress = async () =>
+      (
+        await harness.inject({
+          method: 'GET',
+          url: `/api/v1/institutions/${fixture.institutionId}/learning-spaces/${spaceId}/my-progress`,
+          headers: fixture.student.headers,
+        })
+      ).json<{ items: { state: string }[] }>().items[0]?.state;
+
+    await request(fixture.teacher, 'GET', `/${page.json().id}`);
+    expect(await progress()).toBe('incomplete');
+
+    await request(fixture.student, 'GET', `/${page.json().id}`);
+    expect(await progress()).toBe('complete');
+  });
+
+  it('never lets anything wait for a label, which nobody completes', async () => {
+    const label = await request(fixture.admin, 'POST', '', { kind: 'label', body: 'Part two' });
+
+    const refused = await request(fixture.admin, 'POST', '', {
+      kind: 'text',
+      title: 'After the label',
+      body: 'Hi',
+      restriction: {
+        match: 'all',
+        conditions: [{ type: 'completed', itemKind: 'material', itemId: label.json().id }],
+      },
+    });
+
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().code).toBe('RESTRICTION_TARGET_UNTRACKED');
+  });
+
+  it('shows a new kind locked to a student who has not met its condition', async () => {
+    const gate = await request(fixture.admin, 'POST', '', {
+      kind: 'text',
+      title: 'Read first',
+      body: 'Hi',
+      completionRule: 'manual',
+    });
+    const video = await request(fixture.admin, 'POST', '', {
+      kind: 'video',
+      title: 'Talk',
+      url: 'https://youtu.be/dQw4w9WgXcQ',
+      restriction: {
+        match: 'all',
+        conditions: [{ type: 'completed', itemKind: 'material', itemId: gate.json().id }],
+      },
+    });
+
+    const listed = (await request(fixture.student, 'GET')).json();
+    expect(listed.find((row: { id: string }) => row.id === video.json().id)).toMatchObject({
+      title: 'Talk',
+      url: null,
+    });
+    expect((await request(fixture.student, 'GET', `/${video.json().id}`)).statusCode).toBe(404);
+  });
+
   it('refuses a download of something that is not a file', async () => {
     const created = await request(fixture.admin, 'POST', '', {
       kind: 'link',

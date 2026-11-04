@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import {
   activityCompletions,
   assessmentResults,
   assessments,
   learningActivities,
+  learningMaterials,
   notificationDeliveries,
   notificationEvents,
   submissionFiles,
@@ -64,17 +65,26 @@ export class LearningDataRepository {
     institutionId: string,
     userId: string,
   ): Promise<ExportedActivityCompletion[]> {
+    const activityName = sql<string>`coalesce(${learningActivities.name}, ${learningMaterials.title}, '')`;
+
     return this.reader
       .select({
         learningActivityId: activityCompletions.learningActivityId,
-        activityName: learningActivities.name,
+        learningMaterialId: activityCompletions.learningMaterialId,
+        activityName,
         state: activityCompletions.state,
         completedAt: activityCompletions.completedAt,
+        viewedAt: activityCompletions.viewedAt,
+        markedDoneAt: activityCompletions.markedDoneAt,
       })
       .from(activityCompletions)
-      .innerJoin(
+      .leftJoin(
         learningActivities,
         eq(learningActivities.id, activityCompletions.learningActivityId),
+      )
+      .leftJoin(
+        learningMaterials,
+        eq(learningMaterials.id, activityCompletions.learningMaterialId),
       )
       .where(
         and(
@@ -83,7 +93,7 @@ export class LearningDataRepository {
           isNull(activityCompletions.deletedAt),
         ),
       )
-      .orderBy(asc(learningActivities.name));
+      .orderBy(asc(activityName));
   }
 
   async submissions(institutionId: string, userId: string): Promise<ExportedSubmission[]> {

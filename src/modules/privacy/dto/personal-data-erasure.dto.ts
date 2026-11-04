@@ -19,6 +19,8 @@ export class ErasureTallyDto implements ErasureTally {
   @Expose() @ApiProperty() assessmentFeedback!: number;
   @Expose() @ApiProperty() submissionNotes!: number;
   @Expose() @ApiProperty() discussionPosts!: number;
+  @Expose() @ApiProperty() personalTasks!: number;
+  @Expose() @ApiProperty() personalEvents!: number;
 }
 
 export interface PersonalDataErasure {

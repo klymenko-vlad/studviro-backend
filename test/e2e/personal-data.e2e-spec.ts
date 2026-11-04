@@ -17,11 +17,15 @@ import {
   institutions,
   invitations,
   learningActivities,
+  learningMaterialFiles,
+  learningMaterials,
   learningSpaces,
   notificationDeliveries,
   notificationEvents,
   officialCourseResults,
   passwordResetTokens,
+  personalEvents,
+  personalTasks,
   programMemberships,
   programs,
   refreshTokens,
@@ -254,13 +258,32 @@ describe('Personal data export and erasure (e2e)', () => {
       gradedAt: new Date(),
       gradedById: admin.user.id,
     });
-    await harness.db.insert(activityCompletions).values({
-      institutionId,
-      learningActivityId: activity!.id,
-      userId: student.user.id,
-      state: 'complete',
-      completedAt: new Date(),
-    });
+    const [material] = await harness.db
+      .insert(learningMaterials)
+      .values({
+        institutionId,
+        learningSpaceId: space!.id,
+        kind: 'text',
+        title: 'Week 1 notes',
+      })
+      .returning();
+    await harness.db.insert(activityCompletions).values([
+      {
+        institutionId,
+        learningActivityId: activity!.id,
+        userId: student.user.id,
+        state: 'complete',
+        completedAt: new Date(),
+      },
+      {
+        institutionId,
+        learningMaterialId: material!.id,
+        userId: student.user.id,
+        state: 'complete',
+        completedAt: new Date(),
+        viewedAt: new Date(),
+      },
+    ]);
 
     const [submission] = await harness.db
       .insert(submissions)
@@ -381,11 +404,47 @@ describe('Personal data export and erasure (e2e)', () => {
       expect(document.examRegistrations[0].status).toBe('registered');
       expect(document.studyGroupMemberships[0].code).toBe('S1');
       expect(document.assessmentResults[0]).toMatchObject({ points: 17, feedback: FEEDBACK });
-      expect(document.activityCompletions[0].state).toBe('complete');
+      expect(document.activityCompletions).toEqual([
+        expect.objectContaining({ activityName: 'Assignment 1', state: 'complete' }),
+        expect.objectContaining({
+          activityName: 'Week 1 notes',
+          learningActivityId: null,
+          learningMaterialId: expect.any(String),
+          viewedAt: expect.any(String),
+        }),
+      ]);
       expect(document.submissions[0]).toMatchObject({ notes: SUBMISSION_NOTES, isLate: true });
       expect(document.submissions[0].files[0].storageKey).toBe(storageKey);
       expect(document.notifications[0].payload).toMatchObject({ grade: 'C' });
       expect(document.files[0].storageKey).toBe(storageKey);
+    });
+
+    it('includes the person’s own planner', async () => {
+      await harness.db.insert(personalTasks).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Renew the dorm contract',
+        dueAt: new Date('2026-11-30T10:00:00.000Z'),
+      });
+      await harness.db.insert(personalEvents).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Therapy session',
+        startsAt: new Date('2026-11-03T15:00:00.000Z'),
+        endsAt: new Date('2026-11-03T16:00:00.000Z'),
+      });
+
+      const document = (await exportAs(student)).json();
+      const classmates = (await exportAs(classmate)).json();
+
+      expect(document.personalTasks).toEqual([
+        expect.objectContaining({ title: 'Renew the dorm contract', completedAt: null }),
+      ]);
+      expect(document.personalEvents).toEqual([
+        expect.objectContaining({ title: 'Therapy session', location: null }),
+      ]);
+      expect(classmates.personalTasks).toEqual([]);
+      expect(classmates.personalEvents).toEqual([]);
     });
 
     it('never answers with anybody else’s data', async () => {
@@ -479,6 +538,42 @@ describe('Personal data export and erasure (e2e)', () => {
       ).toEqual([]);
     });
 
+    it('destroys the person’s planner', async () => {
+      await harness.db.insert(personalTasks).values([
+        { institutionId, userId: student.user.id, title: 'Private chore' },
+        { institutionId, userId: classmate.user.id, title: 'Someone else’s chore' },
+      ]);
+      await harness.db.insert(personalEvents).values({
+        institutionId,
+        userId: student.user.id,
+        title: 'Doctor',
+        startsAt: new Date('2026-11-03T15:00:00.000Z'),
+        endsAt: new Date('2026-11-03T16:00:00.000Z'),
+      });
+
+      const erased = await eraseAs(admin, student.user.id);
+
+      expect(erased.json()).toMatchObject({ tally: { personalTasks: 1, personalEvents: 1 } });
+      expect(
+        await harness.db
+          .select()
+          .from(personalTasks)
+          .where(eq(personalTasks.userId, student.user.id)),
+      ).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(personalEvents)
+          .where(eq(personalEvents.userId, student.user.id)),
+      ).toEqual([]);
+      expect(
+        await harness.db
+          .select()
+          .from(personalTasks)
+          .where(eq(personalTasks.userId, classmate.user.id)),
+      ).toHaveLength(1);
+    });
+
     it('leaves an erased person unable to sign in', async () => {
       const before = await harness.inject({
         method: 'POST',
@@ -531,6 +626,48 @@ describe('Personal data export and erasure (e2e)', () => {
           .from(submissionFiles)
           .where(eq(submissionFiles.storageKey, storageKey)),
       ).toEqual([]);
+    });
+
+    it('keeps the folder files a person put on a course page, which are the course’s', async () => {
+      const [space] = await harness.db
+        .select({ id: learningSpaces.id })
+        .from(learningSpaces)
+        .where(eq(learningSpaces.institutionId, institutionId));
+      const [folder] = await harness.db
+        .insert(learningMaterials)
+        .values({
+          institutionId,
+          learningSpaceId: space!.id,
+          kind: 'folder',
+          title: 'Handouts',
+          createdById: classmate.user.id,
+        })
+        .returning();
+      const ticket = await storage.createUploadTicket({
+        institutionId,
+        purpose: 'materials',
+        filename: 'sheet.pdf',
+        contentType: 'application/pdf',
+      });
+      await fetch(ticket.url, { method: 'PUT', headers: ticket.headers, body: 'handout' });
+      await harness.db.insert(learningMaterialFiles).values({
+        institutionId,
+        learningMaterialId: folder!.id,
+        storageKey: ticket.key,
+        filename: 'sheet.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 7,
+      });
+
+      expect((await eraseAs(admin, classmate.user.id)).statusCode).toBe(200);
+
+      expect(await storage.head(ticket.key)).toBeDefined();
+      expect(
+        await harness.db
+          .select({ filename: learningMaterialFiles.filename })
+          .from(learningMaterialFiles)
+          .where(eq(learningMaterialFiles.learningMaterialId, folder!.id)),
+      ).toEqual([{ filename: 'sheet.pdf' }]);
     });
 
     it('refuses while another institution still has an active relationship', async () => {

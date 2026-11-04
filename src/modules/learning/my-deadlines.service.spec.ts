@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InvalidInputError } from '../../common/errors/domain.error';
+import type { Restriction } from '../../database/schema';
 
+import type { AvailabilityService } from './learning-availability.service';
 import type { MyDeadlineRow, MyDeadlinesRepository } from './my-deadlines.repository';
 import { MAX_DEADLINE_RANGE_DAYS, MyDeadlinesService } from './my-deadlines.service';
 
@@ -25,8 +27,21 @@ const row = (overrides: Partial<MyDeadlineRow> = {}): MyDeadlineRow => ({
   termId: 'term-1',
   termCode: '2026-WS',
   termName: 'Winter 2026',
+  sectionId: null,
+  visible: true,
+  availableFrom: null,
+  availableUntil: null,
+  hiddenUntilAvailable: false,
+  restriction: null,
+  sectionRestriction: null,
   ...overrides,
 });
+
+const LOCK: Restriction = {
+  match: 'all',
+  hideWhenLocked: false,
+  conditions: [{ type: 'group', groupId: 'group-1' }],
+};
 
 const range = {
   from: new Date('2026-11-02T00:00:00.000Z'),
@@ -36,11 +51,13 @@ const range = {
 describe(MyDeadlinesService.name, () => {
   const findMyDeadlines = vi.fn();
   const repository = { findMyDeadlines } as unknown as MyDeadlinesRepository;
+  const openItems = vi.fn();
+  const availability = { openItems } as unknown as AvailabilityService;
   let service: MyDeadlinesService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new MyDeadlinesService(repository);
+    service = new MyDeadlinesService(repository, availability);
   });
 
   const list = (now = new Date('2026-11-03T09:00:00.000Z')) =>
@@ -113,12 +130,47 @@ describe(MyDeadlinesService.name, () => {
 
     await expect(list()).resolves.toEqual([]);
   });
+
+  it('asks about restricted deadlines only, once per course page, as a student', async () => {
+    const free = row({ activityId: 'free' });
+    const locked = row({ activityId: 'locked', restriction: LOCK });
+    const unlocked = row({ activityId: 'unlocked', sectionRestriction: LOCK });
+    const elsewhere = row({ activityId: 'elsewhere', spaceId: 'space-2', restriction: LOCK });
+    const taught = row({ activityId: 'taught', teaching: true, restriction: LOCK });
+    findMyDeadlines.mockResolvedValue([free, locked, unlocked, elsewhere, taught]);
+    openItems.mockImplementation((_viewer, items: MyDeadlineRow[]) =>
+      Promise.resolve(items.filter((item) => item !== locked)),
+    );
+
+    const ids = (await list()).map((deadline) => deadline.id);
+
+    expect(ids).toEqual(['free', 'unlocked', 'elsewhere', 'taught']);
+    expect(openItems).toHaveBeenCalledTimes(2);
+    expect(openItems).toHaveBeenCalledWith(
+      {
+        spaceId: 'space-1',
+        offeringId: 'offering-1',
+        stance: 'participant',
+        userId: 'student-1',
+      },
+      [locked, unlocked],
+      expect.any(Date),
+    );
+  });
+
+  it('does not ask at all when nothing is restricted', async () => {
+    findMyDeadlines.mockResolvedValue([row()]);
+
+    await list();
+
+    expect(openItems).not.toHaveBeenCalled();
+  });
 });
 
 describe(`${MyDeadlinesService.name} submissions`, () => {
   const findMyDeadlines = vi.fn();
   const repository = { findMyDeadlines } as unknown as MyDeadlinesRepository;
-  const service = new MyDeadlinesService(repository);
+  const service = new MyDeadlinesService(repository, {} as AvailabilityService);
   const now = new Date('2026-11-06T09:00:00.000Z');
 
   const listOne = async (overrides: Partial<MyDeadlineRow>) => {

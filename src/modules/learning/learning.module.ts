@@ -3,58 +3,189 @@ import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { AssessmentResultsRepository } from './assessment-results.repository';
+import { AssignmentAnnouncementSweepService } from './assignment-announcement-sweep.service';
+import { AssignmentAnnouncementsRepository } from './assignment-announcements.repository';
+import { AssignmentAnnouncementsService } from './assignment-announcements.service';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
+import { AttemptQuestionsRepository } from './attempt-questions.repository';
+import { CompletionReportService } from './completion-report.service';
+import { CompletionController } from './completion.controller';
+import { CompletionRepository } from './completion.repository';
+import { CompletionService } from './completion.service';
+import { CourseImportPlanner } from './course-import-planner.service';
+import { CourseImportSnapshotRepository } from './course-import-snapshot.repository';
+import { CourseImportSourcesRepository } from './course-import-sources.repository';
+import { CourseImportSourcesService } from './course-import-sources.service';
+import { CourseImportWriterRepository } from './course-import-writer.repository';
+import { CourseImportController } from './course-import.controller';
+import { CourseImportService } from './course-import.service';
+import { CourseStudentsRepository } from './course-students.repository';
+import { FolderFilesController } from './folder-files.controller';
+import { FolderFilesRepository } from './folder-files.repository';
+import { FolderFilesService } from './folder-files.service';
+import { GroupContentService } from './group-content.service';
 import { LearningAccessService } from './learning-access.service';
+import { AvailabilityService } from './learning-availability.service';
 import { LearningMaterialsController } from './learning-materials.controller';
+import { LearningMaterialsRepository } from './learning-materials.repository';
 import { LearningMaterialsService } from './learning-materials.service';
+import { LearningOutlineService } from './learning-outline.service';
+import { LearningSectionsController } from './learning-sections.controller';
+import { LearningSectionsService } from './learning-sections.service';
+import { LearningSightController } from './learning-sight.controller';
 import { LearningSpaceAuthoringController } from './learning-space-authoring.controller';
 import { LearningSpaceAuthoringService } from './learning-space-authoring.service';
 import { LearningSpacesController } from './learning-spaces.controller';
 import { LearningSpacesRepository } from './learning-spaces.repository';
 import { LearningSpacesService } from './learning-spaces.service';
+import { MaterialOpeningService } from './material-opening.service';
 import { MyAssessmentResultsController } from './my-assessment-results.controller';
 import { MyAssessmentResultsRepository } from './my-assessment-results.repository';
 import { MyAssessmentResultsService } from './my-assessment-results.service';
 import { MyDeadlinesController } from './my-deadlines.controller';
 import { MyDeadlinesRepository } from './my-deadlines.repository';
 import { MyDeadlinesService } from './my-deadlines.service';
+import { MyProgressService } from './my-progress.service';
+import { QuestionBankController } from './question-bank.controller';
+import { QuestionBankService } from './question-bank.service';
+import { QuestionCategoriesController } from './question-categories.controller';
+import { QuestionCategoriesRepository } from './question-categories.repository';
+import { QuestionCategoriesService } from './question-categories.service';
+import { QuestionsRepository } from './questions.repository';
+import { QuizAttemptAccessService } from './quiz-attempt-access.service';
+import { QuizAttemptBuilder } from './quiz-attempt-builder';
+import { QuizAttemptClosingService } from './quiz-attempt-closing.service';
+import { QuizAttemptListsService } from './quiz-attempt-lists.service';
+import { QuizAttemptMarkingService } from './quiz-attempt-marking.service';
+import { QuizAttemptPagesRepository } from './quiz-attempt-pages.repository';
+import { QuizAttemptReviewService } from './quiz-attempt-review.service';
+import { QuizAttemptScoringService } from './quiz-attempt-scoring.service';
+import { QuizAttemptSweepService } from './quiz-attempt-sweep.service';
+import { QuizAttemptsController } from './quiz-attempts.controller';
+import { QuizAttemptsRepository } from './quiz-attempts.repository';
+import { QuizAttemptsService } from './quiz-attempts.service';
+import { QuizGradebookService } from './quiz-gradebook.service';
+import { QuizMarkingController } from './quiz-marking.controller';
+import { QuizRegradeService } from './quiz-regrade.service';
+import { QuizResultsRepository } from './quiz-results.repository';
+import { QuizResultsService } from './quiz-results.service';
+import { QuizSlotsController } from './quiz-slots.controller';
+import { QuizSlotsRepository } from './quiz-slots.repository';
+import { QuizSlotsService } from './quiz-slots.service';
+import { QuizzesController } from './quizzes.controller';
+import { QuizzesRepository } from './quizzes.repository';
+import { QuizzesService } from './quizzes.service';
+import { RestrictionFactsRepository } from './restriction-facts.repository';
+import { RestrictionRulesService } from './restriction-rules.service';
+import { SightReportService } from './sight-report.service';
+import { StudentViewController } from './student-view.controller';
+import { StudentViewService } from './student-view.service';
+import { StudyGroupContentController } from './study-group-content.controller';
 import { SubmissionMarkingController } from './submission-marking.controller';
 import { SubmissionMarkingService } from './submission-marking.service';
 import { SubmissionsController } from './submissions.controller';
 import { SubmissionsService } from './submissions.service';
+import { TrackedItemsRepository } from './tracked-items.repository';
 
 @Module({
   imports: [AuthorizationModule, NotificationsModule],
   controllers: [
     LearningSpacesController,
     LearningSpaceAuthoringController,
+    LearningSectionsController,
     LearningMaterialsController,
+    FolderFilesController,
     AssignmentsController,
     SubmissionsController,
     SubmissionMarkingController,
     MyDeadlinesController,
     MyAssessmentResultsController,
+    CompletionController,
+    LearningSightController,
+    StudentViewController,
+    StudyGroupContentController,
+    QuestionCategoriesController,
+    QuestionBankController,
+    QuizzesController,
+    QuizSlotsController,
+    QuizAttemptsController,
+    QuizMarkingController,
+    CourseImportController,
   ],
   providers: [
     LearningAccessService,
     LearningSpacesService,
     LearningSpacesRepository,
     LearningSpaceAuthoringService,
+    LearningOutlineService,
+    AvailabilityService,
+    RestrictionFactsRepository,
+    RestrictionRulesService,
+    LearningSectionsService,
     LearningMaterialsService,
+    LearningMaterialsRepository,
+    MaterialOpeningService,
+    FolderFilesService,
+    FolderFilesRepository,
     AssignmentsService,
+    AssignmentAnnouncementsRepository,
+    AssignmentAnnouncementsService,
+    AssignmentAnnouncementSweepService,
     SubmissionsService,
     SubmissionMarkingService,
     MyDeadlinesService,
     MyDeadlinesRepository,
     MyAssessmentResultsService,
     MyAssessmentResultsRepository,
+    CompletionRepository,
+    CompletionService,
+    TrackedItemsRepository,
+    SightReportService,
+    StudentViewService,
+    GroupContentService,
+    CourseStudentsRepository,
+    MyProgressService,
+    CompletionReportService,
+    QuestionCategoriesRepository,
+    QuestionCategoriesService,
+    QuestionsRepository,
+    QuestionBankService,
+    QuizzesRepository,
+    QuizzesService,
+    QuizSlotsRepository,
+    QuizSlotsService,
+    AssessmentResultsRepository,
+    AttemptQuestionsRepository,
+    QuizAttemptsRepository,
+    QuizAttemptPagesRepository,
+    QuizAttemptAccessService,
+    QuizAttemptBuilder,
+    QuizGradebookService,
+    QuizAttemptClosingService,
+    QuizAttemptSweepService,
+    QuizAttemptsService,
+    QuizAttemptListsService,
+    QuizAttemptScoringService,
+    QuizAttemptReviewService,
+    QuizAttemptMarkingService,
+    QuizRegradeService,
+    QuizResultsRepository,
+    QuizResultsService,
+    CourseImportSnapshotRepository,
+    CourseImportSourcesRepository,
+    CourseImportSourcesService,
+    CourseImportWriterRepository,
+    CourseImportPlanner,
+    CourseImportService,
   ],
   exports: [
     LearningSpacesService,
     MyDeadlinesService,
     MyAssessmentResultsService,
     LearningAccessService,
+    CompletionService,
   ],
 })
 export class LearningModule {}
