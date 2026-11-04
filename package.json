@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Studviro backend API — NestJS on Fastify",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "commonjs",
   "engines": {
     "node": ">=22.0.0",

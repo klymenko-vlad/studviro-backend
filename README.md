@@ -112,3 +112,8 @@ Run migrations before rolling out new instances:
 ```bash
 node dist/database/migrate.js
 ```
+
+## License
+
+Copyright 2026 Vladyslav Klymenko. Licensed under the [Apache License 2.0](LICENSE);
+see [NOTICE](NOTICE).
