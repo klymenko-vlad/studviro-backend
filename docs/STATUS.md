@@ -16,8 +16,8 @@ kept for the record — believe their banners.
 
 ## Stack
 
-NestJS 11 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · MinIO (S3-compatible) · generated
-OpenAPI · Vitest + Testcontainers. The client is Next.js 16 App Router with Feature-Sliced
+NestJS 12 on Fastify · Drizzle + PostgreSQL 17 · Redis 7 · MinIO (S3-compatible) · generated
+OpenAPI · TypeScript 6 · Vitest 5 + Testcontainers. The client is Next.js 16 App Router with Feature-Sliced
 Design and acts as the BFF. Decisions live in `docs/adr/`.
 
 ## Start here
@@ -216,7 +216,8 @@ Noticed while walking, not fixed:
 ## Standing decisions — do not re-ask these
 
 - **Object storage**: Cloudflare R2 or AWS S3, both S3-compatible. MinIO runs in
-  `docker compose` for development and CI. **No credentials are needed until deploy; do not
+  `docker compose` for development. Tests start a pinned RustFS container and its bucket
+  automatically (ADR 0058). **No credentials are needed until deploy; do not
   create a bucket.** Four env vars switch targets — see `docs/Deployment.md`.
 - **Local only.** Do not deploy, do not create hosted resources, do not spend money. Record
   what a release needs in `docs/Deployment.md` instead.

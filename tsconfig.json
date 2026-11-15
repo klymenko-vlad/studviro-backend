@@ -13,7 +13,6 @@
     "resolvePackageJsonExports": true,
     "isolatedModules": true,
 
-    /* Strictness. `strict` alone leaves real holes; these close them. */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -33,9 +32,8 @@
     "skipLibCheck": true,
 
     "outDir": "./dist",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "test/**/*", "*.config.ts", "*.config.mts"],

@@ -1296,7 +1296,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           },
           {
@@ -1544,7 +1549,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           },
           {
@@ -4252,7 +4262,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           },
           {
@@ -4271,6 +4286,7 @@
             "in": "query",
             "description": "Answer with only these people. Repeat the parameter or comma-separate.",
             "schema": {
+              "maxItems": 200,
               "type": "array",
               "items": {
                 "type": "string",
@@ -12265,7 +12281,12 @@
             "in": "query",
             "description": "`hidden` (the default): every copied section and every item copied outside a section arrives hidden from students, and items inside a section keep their own setting. `source`: everything keeps the visibility it had.",
             "schema": {
-              "$ref": "#/components/schemas/CourseImportVisibility"
+              "default": "hidden",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/CourseImportVisibility"
+                }
+              ]
             }
           }
         ],
@@ -12526,7 +12547,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/PersonalTaskState"
+              "default": "open",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/PersonalTaskState"
+                }
+              ]
             }
           },
           {
@@ -18276,7 +18302,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           },
           {
@@ -18913,7 +18944,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           }
         ],
@@ -19151,7 +19187,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           }
         ],
@@ -19845,7 +19886,12 @@
             "required": false,
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SortOrder"
+              "default": "desc",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SortOrder"
+                }
+              ]
             }
           },
           {
@@ -23028,6 +23074,7 @@
         "properties": {
           "emailTypes": {
             "type": "array",
+            "maxItems": 19,
             "items": {
               "type": "string",
               "enum": [
@@ -24268,6 +24315,7 @@
           },
           "conditions": {
             "nullable": true,
+            "maxItems": 10,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LeafConditionDto"
@@ -25479,6 +25527,7 @@
         "type": "object",
         "properties": {
           "files": {
+            "maxItems": 10,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SubmissionFileInputDto"
@@ -27227,6 +27276,7 @@
           },
           "choices": {
             "nullable": true,
+            "maxItems": 21,
             "description": "Single and multiple choice.",
             "type": "array",
             "items": {
@@ -27250,6 +27300,7 @@
           },
           "acceptedAnswers": {
             "nullable": true,
+            "maxItems": 21,
             "description": "Short answer: every answer that earns the mark.",
             "type": "array",
             "items": {
@@ -27274,6 +27325,7 @@
           },
           "pairs": {
             "nullable": true,
+            "maxItems": 21,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MatchingPairDto"
@@ -27320,6 +27372,7 @@
           },
           "choices": {
             "nullable": true,
+            "maxItems": 21,
             "description": "Single and multiple choice.",
             "type": "array",
             "items": {
@@ -27343,6 +27396,7 @@
           },
           "acceptedAnswers": {
             "nullable": true,
+            "maxItems": 21,
             "description": "Short answer: every answer that earns the mark.",
             "type": "array",
             "items": {
@@ -27367,6 +27421,7 @@
           },
           "pairs": {
             "nullable": true,
+            "maxItems": 21,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MatchingPairDto"
@@ -27856,6 +27911,7 @@
           "questionIds": {
             "nullable": true,
             "minItems": 1,
+            "maxItems": 50,
             "type": "array",
             "items": {
               "type": "string",
@@ -28716,6 +28772,7 @@
           },
           "choices": {
             "nullable": true,
+            "maxItems": 20,
             "description": "Multiple choice: the ids of every choice picked.",
             "type": "array",
             "items": {
@@ -28736,6 +28793,7 @@
           },
           "pairs": {
             "nullable": true,
+            "maxItems": 20,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MatchedPairDto"
@@ -29509,10 +29567,10 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string",
             "enum": [
               "accepted"
             ],
+            "type": "string",
             "example": "accepted"
           }
         },
@@ -33587,10 +33645,10 @@
         "type": "object",
         "properties": {
           "algorithm": {
-            "type": "string",
             "enum": [
               "SHA-256"
             ],
+            "type": "string",
             "example": "SHA-256"
           },
           "challenge": {
