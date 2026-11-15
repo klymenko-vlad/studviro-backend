@@ -9,11 +9,6 @@ interface IndexBody {
   spaces: { id: string; courseCode: string | null }[];
 }
 
-/**
- * One route, two questions. Which page is on this offering, which any reader of
- * the offering may ask; and which offerings have a page at all, which is an
- * administrator's index of courses the caller has nothing to do with.
- */
 describe('Learning space index (e2e)', () => {
   let harness: TestHarness;
   let fixture: LearningFixture;
@@ -104,11 +99,17 @@ describe('Learning space index (e2e)', () => {
     });
 
     it('answers with nothing when the offering has no page yet', async () => {
-      const body = (
-        await list(fixture.student, `?offeringId=${fixture.otherOfferingId}`)
-      ).json<IndexBody>();
+      const response = await list(fixture.student, `?offeringId=${fixture.offeringId}`);
 
-      expect(body.spaces).toEqual([]);
+      expect(response.statusCode).toBe(200);
+      expect(response.json<IndexBody>().spaces).toEqual([]);
+    });
+
+    it('refuses a student who does not take the offering, even before a page exists', async () => {
+      const response = await list(fixture.student, `?offeringId=${fixture.otherOfferingId}`);
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().code).toBe('LEARNING_SPACE_NOT_YOURS');
     });
 
     it('still refuses somebody from another institution', async () => {

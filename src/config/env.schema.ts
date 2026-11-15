@@ -23,11 +23,6 @@ export const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().default('0.0.0.0'),
 
-  /**
-   * The commit this build was made from. Render sets it on every deploy; the
-   * post-deploy check reads it back from `/health/live` to know the new build
-   * is the one answering before it trusts `/health/ready`.
-   */
   RENDER_GIT_COMMIT: z.string().min(1).optional(),
 
   APP_URL: z.url().default('http://localhost:3000'),
@@ -39,9 +34,6 @@ export const envSchema = z.object({
 
   CORS_ORIGINS: z.string().default('*'),
 
-  // Comma-separated CIDRs / IPs, or `loopback`. Never `true`: trusting every
-  // hop lets a client forge X-Forwarded-For and walk straight past the
-  // per-IP throttler.
   TRUSTED_PROXIES: z.string().default('loopback'),
 
   BODY_LIMIT_BYTES: z.coerce.number().int().positive().default(1_048_576),
@@ -59,15 +51,6 @@ export const envSchema = z.object({
   REDIS_DB: z.coerce.number().int().min(0).default(0),
   REDIS_TLS: bool('false'),
 
-  /**
-   * Object storage, S3-compatible. The production target is Cloudflare R2 or
-   * AWS S3; `docker compose` runs MinIO locally and in CI so neither an
-   * account nor a bill is needed to develop against it.
-   *
-   * `STORAGE_ENDPOINT` is what makes it portable: unset for AWS, set to the
-   * R2 or MinIO endpoint otherwise. Anything that is not AWS also needs
-   * path-style addressing, because virtual-host style requires DNS per bucket.
-   */
   STORAGE_ENABLED: bool('true'),
   STORAGE_BUCKET: z.string().default('studviro'),
   STORAGE_REGION: z.string().default('auto'),
@@ -76,58 +59,23 @@ export const envSchema = z.object({
   STORAGE_ACCESS_KEY_ID: z.string().default('studviro'),
   STORAGE_SECRET_ACCESS_KEY: z.string().default('studviro'),
 
-  /**
-   * 64 MiB. Large enough for a slide deck or a recorded seminar's handout,
-   * small enough that one submission cannot fill a bucket. Enforced twice:
-   * pinned into the presigned upload so the store itself refuses a larger
-   * body, and checked again when the upload is confirmed.
-   */
   STORAGE_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(67_108_864),
 
-  /**
-   * `clamav` streams every confirmed upload through clamd before any row
-   * names it; `off` trusts the files as they come (ADR 0042).
-   */
   MALWARE_SCAN: z.enum(['off', 'clamav']).default('off'),
   CLAMAV_HOST: z.string().min(1).default('localhost'),
   CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
   CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
 
-  /** Short-lived by design: a read link that outlives the reader's session is a leak. */
   STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(3_600).default(300),
 
-  /**
-   * How long a removed file's object outlives the row that named it. Removing
-   * a material tombstones the row; the object behind it is dropped by the
-   * nightly sweep once this has passed. It is an operational grace period, not
-   * a retention policy — nothing in the product restores a removed material,
-   * so the window exists to make an accidental delete recoverable by hand, and
-   * to let a failed delete be retried rather than lost.
-   */
   STORAGE_RECLAIM_AFTER_DAYS: z.coerce.number().int().positive().max(365).default(30),
 
-  /**
-   * A proof-of-work captcha on the four forms open to the internet: sign-up,
-   * sign-in, the password-reset request and the demo request. ALTCHA's protocol
-   * (ADR 0033) — the client hashes until it finds a number, so there is no
-   * third-party script, no site key and nothing to pay.
-   *
-   * Off by default, which is what keeps development and the e2e suite
-   * unchallenged. An institution turns it on at deploy.
-   */
   CAPTCHA_ENABLED: bool('false'),
 
-  /** Signs a challenge so the server need not remember one it has not seen back. */
   CAPTCHA_SECRET: z.string().min(32).default(DEV_CAPTCHA_SECRET),
 
-  /**
-   * The search space. A browser hashes roughly a million times a second, so
-   * 100k averages well under a second of work for one visitor and makes a
-   * thousand forged sign-ups genuinely expensive.
-   */
   CAPTCHA_MAX_NUMBER: z.coerce.number().int().positive().max(10_000_000).default(100_000),
 
-  /** How long a challenge stays solvable. Long enough to fill a form in, not to stockpile. */
   CAPTCHA_TTL_S: z.coerce.number().int().positive().max(3_600).default(600),
 
   QUEUE_PREFIX: z.string().default('studviro'),
@@ -138,16 +86,9 @@ export const envSchema = z.object({
   THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
 
-  // Credential endpoints get their own, far tighter budget. The global limit
-  // exists for ordinary reads; applying it to a login form would permit
-  // thousands of password guesses a minute from a single address.
   AUTH_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   AUTH_THROTTLE_LIMIT: z.coerce.number().int().positive().default(10),
 
-  // Unauthenticated form submissions. Reached through the BFF proxy they all
-  // arrive from one address, so this budget is effectively site-wide: small
-  // enough to blunt a script, large enough that one submitter cannot shut the
-  // form for everyone else.
   PUBLIC_FORM_THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   PUBLIC_FORM_THROTTLE_LIMIT: z.coerce.number().int().positive().default(60),
 
@@ -168,20 +109,12 @@ export const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 
   SWAGGER_ENABLED: bool('false'),
-  // Serving the docs from a deployed box is only acceptable behind a lock, so
-  // these are what turn SWAGGER_ENABLED from a production error into a
-  // password-protected staging convenience.
+
   SWAGGER_USER: z.string().min(1).optional(),
   SWAGGER_PASSWORD: z.string().min(16).optional(),
 
-  /** The client's public origin, for links in mail: reset, invitation, sign-in. */
   WEB_APP_URL: z.url().default('http://localhost:3001'),
 
-  /**
-   * `log` writes each message to the log and sends nothing, so development and
-   * CI need no mail server. `smtp` sends through any provider that speaks it;
-   * locally that is the Mailpit in `docker compose` (ADR 0039).
-   */
   MAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
   MAIL_FROM: z.string().min(3).default(DEV_MAIL_FROM),
   SMTP_HOST: z.string().min(1).optional(),
@@ -189,10 +122,6 @@ export const envSchema = z.object({
   SMTP_SECURE: bool('false'),
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASSWORD: z.string().min(1).optional(),
-  /**
-   * How long a notification waits unread in the application before its e-mail
-   * copy goes out. Whoever saw it in the meantime gets no mail about it (F15).
-   */
   NOTIFICATION_MAIL_DELAY_S: z.coerce.number().int().min(0).default(300),
 
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
@@ -201,12 +130,6 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-/**
- * Defaults are tuned for a laptop, so the same value that is convenient in
- * development is usually a vulnerability in production. Rather than making
- * every default hostile to work with, the risky combinations are rejected only
- * where they matter.
- */
 function assertMailTransport(env: Env, ctx: z.RefinementCtx): void {
   if (env.MAIL_TRANSPORT !== 'smtp') return;
 
@@ -267,8 +190,6 @@ function assertProductionHardening(env: Env, ctx: z.RefinementCtx): void {
     );
   }
 
-  // The shipped secret would let anyone sign their own challenge, which is the
-  // whole of the check — so it is only rejected where the captcha is actually on.
   if (env.CAPTCHA_ENABLED && env.CAPTCHA_SECRET === DEV_CAPTCHA_SECRET) {
     reject(
       'CAPTCHA_SECRET',

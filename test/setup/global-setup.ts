@@ -8,10 +8,13 @@ import {
 import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 import type { TestProject } from 'vitest/node';
 
+import { startTestStorage } from './test-storage';
+
 const run = promisify(execFile);
 
 let postgres: StartedPostgreSqlContainer | undefined;
 let redis: StartedTestContainer | undefined;
+let storage: StartedTestContainer | undefined;
 
 export async function setup(project: TestProject): Promise<void> {
   let databaseUrl = process.env.DATABASE_URL;
@@ -37,23 +40,35 @@ export async function setup(project: TestProject): Promise<void> {
     process.env.REDIS_PORT = String(redis.getMappedPort(6379));
   }
 
+  if (!process.env.STORAGE_ENDPOINT) {
+    const started = await startTestStorage();
+    storage = started.container;
+    process.env.STORAGE_ENDPOINT = started.endpoint;
+  }
+
   await run('pnpm', ['exec', 'tsx', 'src/database/migrate.ts'], {
     env: { ...process.env, DATABASE_URL: databaseUrl },
   });
 
   process.env.DATABASE_URL = databaseUrl;
 
+  project.provide('storageEndpoint', process.env.STORAGE_ENDPOINT);
   project.provide('databaseUrl', databaseUrl);
   project.provide('redisHost', process.env.REDIS_HOST);
   project.provide('redisPort', process.env.REDIS_PORT ?? '6379');
 }
 
 export async function teardown(): Promise<void> {
-  await Promise.all([postgres?.stop({ remove: true }), redis?.stop({ remove: true })]);
+  await Promise.all([
+    postgres?.stop({ remove: true }),
+    redis?.stop({ remove: true }),
+    storage?.stop({ remove: true }),
+  ]);
 }
 
 declare module 'vitest' {
   interface ProvidedContext {
+    storageEndpoint: string;
     databaseUrl: string;
     redisHost: string;
     redisPort: string;

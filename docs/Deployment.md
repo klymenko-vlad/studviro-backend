@@ -102,8 +102,8 @@ roles screen.
 ## Object storage
 
 Learning materials and student submissions live in an S3-compatible bucket, never on the
-application's disk (ADR 0027). `docker compose` runs MinIO for development and CI; a
-deployment points the same client somewhere real by changing these:
+application's disk (ADR 0027). `docker compose` runs MinIO for development; tests start a pinned RustFS container
+automatically (ADR 0058). A deployment points the same client somewhere real by changing these:
 
 | Variable                     | Default             | Meaning                                                    |
 | ---------------------------- | ------------------- | ---------------------------------------------------------- |
