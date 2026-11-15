@@ -221,8 +221,8 @@ describe('Assignment submissions (e2e)', () => {
       notes: 'let me in',
     });
 
-    expect(response.statusCode).toBe(409);
-    expect(response.json().code).toBe('STUDENT_NOT_ENROLLED');
+    expect(response.statusCode).toBe(403);
+    expect(response.json().code).toBe('LEARNING_SPACE_NOT_YOURS');
   });
 
   it('will not show one student another student’s submission', async () => {

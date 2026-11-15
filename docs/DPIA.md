@@ -42,7 +42,7 @@ anything, and with it went the connectors, the sync engine and the provenance co
 Practically, this means **there is no second copy**. An error here is not a stale mirror of
 a correct record elsewhere; it is the record.
 
-Architecture: a NestJS 11 modular monolith on Fastify, PostgreSQL 17 through Drizzle, Redis
+Architecture: a NestJS 12 modular monolith on Fastify, PostgreSQL 17 through Drizzle, Redis
 7 for idempotency, rate limiting and one BullMQ queue. A Next.js 16 client acts as the BFF
 and holds the session cookies. `ROLE=api|worker|all` splits the process.
 

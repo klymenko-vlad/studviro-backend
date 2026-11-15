@@ -1,6 +1,6 @@
 # AGENTS.md
 
-NestJS 11 · Fastify · Drizzle · PostgreSQL 17 · Redis 7. The client is `../frontend`.
+NestJS 12 · Fastify · Drizzle · PostgreSQL 17 · Redis 7. The client is `../frontend`.
 
 ## Delivery
 

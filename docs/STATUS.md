@@ -2,7 +2,7 @@
 
 Handoff note for the next agent. Keep it under ~120 lines; trim rather than append.
 
-Last updated: 2026-10-31 (W3, W4 and W9 shipped in parallel and merged)
+Last updated: 2026-11-15 (dependency/toolchain and CI upgrade, ADR 0058)
 
 ## What this is
 
@@ -187,12 +187,9 @@ Noticed while walking, not fixed:
   session records the BFF's IP and the credential throttle counts all sign-ins through one
   BFF instance together. Forwarding `X-Forwarded-For` as-is would let a caller pick their
   throttle key; it needs the API to trust the BFF as a proxy hop (ADR 0037).
-- **The backend e2e suite deletes the demo seed's stored files.** It shares the dev bucket,
-  and its orphan-sweep tests remove every object the test database does not name. Run
-  `pnpm db:seed` after `pnpm test:cov` before walking anything with files.
-- **This machine's disk is full** (5.8 GB free of 687 GB). MinIO answers every upload
-  `507`, so the storage, submissions, materials and personal-data e2e suites fail locally.
-  They pass against a MinIO with room (`STORAGE_ENDPOINT=…`).
+- **The backend e2e suite uses an isolated S3 container by default** (ADR 0058). An
+  explicit `STORAGE_ENDPOINT` selects an external bucket; orphan-sweep tests delete
+  objects the test database does not name, so use a dedicated test bucket for that path.
 - **StudViro's Postgres container cannot start here**: another project's `db` holds port 5432. The 2026-10-04 walk ran against a throwaway Postgres on 5440 and Redis on 6390.
 - The account menu has _Account_ and _Account settings_ as two entries. A single account
   page with tabs may read better once there is more to put there.

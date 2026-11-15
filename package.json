@@ -1,12 +1,12 @@
 {
   "name": "@studviro/backend",
   "version": "0.1.0",
-  "description": "Studviro backend API — NestJS on Fastify",
+  "description": "Studviro backend API \u2014 NestJS on Fastify",
   "private": true,
   "license": "Apache-2.0",
   "type": "commonjs",
   "engines": {
-    "node": ">=22.0.0",
+    "node": "^22.22.3 || ^24.13.1 || >=26.0.0",
     "pnpm": ">=10.0.0"
   },
   "packageManager": "pnpm@10.33.2",

@@ -20,6 +20,9 @@ Nest stack, and refresh vulnerable production transitive dependencies.
 TypeScript paths are relative to the config without the deprecated baseUrl.
 The build explicitly sets rootDir to src to preserve dist/main.js. Regenerate the
 OpenAPI document with Swagger 12, including the defaults and constraints it now emits.
+Use Node 22.23.4 for CI and the image; constrain supported Node versions to the
+release lines accepted by the upgraded toolchain. Upgrade the fixable Alpine
+runtime libraries so the image vulnerability gate passes.
 
 Keep the existing typed repository boundary. The new typescript-eslint
 no-generated-empty-object-type rule treats Drizzle's generic PgUpdateSetSource
@@ -44,7 +47,3 @@ The Redis throttler adapter 1.2.0 still declares peers only through NestJS 11;
 there is no newer release. Keep it pending an upstream peer update and validate
 its behavior through the real Redis E2E tests. Do not pretend its metadata claims
 NestJS 12 support.
-
-GitHub Actions currently refuses to start jobs because the owner's account is
-locked for a billing issue. Local checks can verify the code; the account owner
-must resolve billing before GitHub can run those same checks.
