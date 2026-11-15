@@ -7,11 +7,6 @@ import { createTestHarness, type TestHarness } from '../setup/app-harness';
 const INSTITUTION = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
 
-/**
- * Runs against the MinIO in `docker compose`, not a mock: the whole point of
- * L1 is that a presigned round trip works against a real S3 implementation,
- * and a mocked signature proves nothing about that.
- */
 describe('Object storage (e2e)', () => {
   let harness: TestHarness;
   let storage: StorageService;
@@ -110,7 +105,6 @@ describe('Object storage (e2e)', () => {
     );
     await expect(storage.delete(ticket.key, OTHER)).rejects.toThrow(EntityNotFoundError);
 
-    // and the object is still there, untouched
     await expect(storage.head(ticket.key)).resolves.toMatchObject({ sizeBytes: 9 });
   });
 

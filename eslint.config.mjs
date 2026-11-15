@@ -1,4 +1,3 @@
-// @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import importPlugin from 'eslint-plugin-import-x';
@@ -14,8 +13,6 @@ export default tseslint.config(
       'drizzle/**',
       'node_modules/**',
       '*.config.mjs',
-      // Runs under k6's own runtime with `k6/*` module imports, so it is
-      // deliberately outside the TypeScript program.
       'load-test/**',
     ],
   },
@@ -80,6 +77,11 @@ export default tseslint.config(
       'unicorn/filename-case': ['error', { case: 'kebabCase', ignore: [/\.md$/] }],
       'unicorn/prefer-node-protocol': 'error',
     },
+  },
+
+  {
+    files: ['src/database/repository/base.repository.ts'],
+    rules: { '@typescript-eslint/no-generated-empty-object-type': 'off' },
   },
 
   {

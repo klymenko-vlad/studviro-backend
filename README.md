@@ -1,6 +1,6 @@
 # Studviro Backend
 
-NestJS 11 on Fastify, Postgres via Drizzle, BullMQ on Redis, TypeScript strict.
+NestJS 12 on Fastify, Postgres via Drizzle, BullMQ on Redis, TypeScript strict.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ src/
   modules/              feature modules (controller → service → repository)
   queue/                BullMQ producer, BaseProcessor, job schemas
 test/
-  e2e/                  full-app tests against real Postgres + Redis
+  e2e/                  full-app tests against real Postgres + Redis + S3
   setup/                Testcontainers bootstrap and app harness
 ```
 
@@ -77,6 +77,11 @@ test/
 | `pnpm db:migrate`             | Apply migrations                         |
 | `pnpm db:studio`              | Drizzle Studio                           |
 | `pnpm docker:reset`           | Wipe and recreate local services         |
+
+The E2E setup starts PostgreSQL, Redis and a pinned RustFS S3 container, including its
+throwaway bucket. `STORAGE_ENDPOINT` can select an existing S3-compatible service;
+that service must already have the configured bucket. `pnpm test` runs unit tests;
+`pnpm test:cov` covers both projects. See ADR 0058 for upgrade compatibility decisions.
 
 ## Conventions
 
